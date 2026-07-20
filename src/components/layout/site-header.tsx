@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 
+import { SignOutButton } from "@/components/auth/sign-out-button";
+import { ProfileIcon } from "@/components/icons/profile-icon";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
-import { SignOutButton } from "@/components/auth/sign-out-button";
 
 const roleLabels: Record<UserRole, string> = {
   [UserRole.PATIENT]: "Pacient",
@@ -27,16 +28,23 @@ export async function SiteHeader() {
         </Link>
 
         {session ? (
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="hidden min-w-0 text-right sm:block">
-              <p className="truncate text-sm font-medium">
-                {session.user.name}
-              </p>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              href="/cont"
+              className="flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 transition hover:bg-muted"
+            >
+              <ProfileIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
 
-              <p className="text-xs text-muted-foreground">
-                {roleLabels[session.user.role]}
-              </p>
-            </div>
+              <span className="min-w-0 text-right">
+                <span className="block max-w-32 truncate text-sm font-medium sm:max-w-48">
+                  {session.user.name}
+                </span>
+
+                <span className="block text-xs text-muted-foreground">
+                  {roleLabels[session.user.role]}
+                </span>
+              </span>
+            </Link>
 
             <SignOutButton />
           </div>
