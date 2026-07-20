@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type SubmitEvent, useState } from "react";
 
@@ -15,19 +16,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type SignUpFormProps = {
-  accountType?: "patient" | "student";
-};
-
-export function SignUpForm({
-  accountType = "patient",
-}: SignUpFormProps) {
+export function SignInForm() {
   const router = useRouter();
 
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const isStudent = accountType === "student";
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,42 +30,18 @@ export function SignUpForm({
 
     const formData = new FormData(event.currentTarget);
 
-    const name = String(formData.get("name") ?? "");
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
 
     try {
-      const { error } = await authClient.signUp.email({
-        name,
+      const { error } = await authClient.signIn.email({
         email,
         password,
       });
 
       if (error) {
-        setErrorMessage(error.message ?? "Contul nu a putut fi creat.");
+        setErrorMessage("Emailul sau parola sunt incorecte.");
         return;
-      }
-
-      if (isStudent) {
-        const response = await fetch("/api/account/become-student", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        });
-
-        const result = (await response.json()) as {
-          error?: string;
-        };
-
-        if (!response.ok) {
-          setErrorMessage(
-            result.error ??
-              "Contul a fost creat, dar rolul de student nu a putut fi atribuit.",
-          );
-          return;
-        }
       }
 
       router.replace("/");
@@ -89,31 +58,14 @@ export function SignUpForm({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>
-          {isStudent
-            ? "Creează un cont de student"
-            : "Creează un cont"}
-        </CardTitle>
-
+        <CardTitle>Autentificare</CardTitle>
         <CardDescription>
-          {isStudent
-            ? "Completează datele pentru a începe configurarea profilului de student."
-            : "Completează datele pentru a crea un cont de pacient."}
+          Introdu datele contului tău Universident.
         </CardDescription>
       </CardHeader>
 
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="name">Nume</Label>
-            <Input
-              id="name"
-              name="name"
-              autoComplete="name"
-              required
-            />
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="email">Adresă de email</Label>
             <Input
@@ -131,17 +83,13 @@ export function SignUpForm({
               id="password"
               name="password"
               type="password"
-              autoComplete="new-password"
-              minLength={8}
+              autoComplete="current-password"
               required
             />
           </div>
 
           {errorMessage ? (
-            <p
-              role="alert"
-              className="text-sm text-destructive"
-            >
+            <p role="alert" className="text-sm text-destructive">
               {errorMessage}
             </p>
           ) : null}
@@ -151,12 +99,18 @@ export function SignUpForm({
             type="submit"
             disabled={isPending}
           >
-            {isPending
-              ? "Se creează contul..."
-              : isStudent
-                ? "Creează cont de student"
-                : "Creează cont"}
+            {isPending ? "Se autentifică..." : "Autentificare"}
           </Button>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Nu ai încă un cont?{" "}
+            <Link
+              href="/inregistrare"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Creează unul
+            </Link>
+          </p>
         </form>
       </CardContent>
     </Card>
