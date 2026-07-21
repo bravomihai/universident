@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { UserRole } from "@/generated/prisma/enums";
-import { auth } from "@/lib/auth";
 import {
   Card,
   CardContent,
@@ -11,6 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { UserRole } from "@/generated/prisma/enums";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Contul meu",
@@ -32,6 +34,21 @@ export default async function AccountPage() {
     redirect("/autentificare");
   }
 
+  const studentProfile =
+    session.user.role === UserRole.STUDENT
+      ? await prisma.studentProfile.findUnique({
+          where: {
+            userId: session.user.id,
+          },
+          select: {
+            university: true,
+            studyYear: true,
+            city: true,
+            isPublished: true,
+          },
+        })
+      : null;
+
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-3xl space-y-6">
@@ -45,7 +62,7 @@ export default async function AccountPage() {
           </h1>
 
           <p className="text-muted-foreground">
-            Aici vei putea gestiona informațiile și activitatea contului.
+            Aici poți gestiona informațiile și activitatea contului.
           </p>
         </div>
 
@@ -81,6 +98,73 @@ export default async function AccountPage() {
             </div>
           </CardContent>
         </Card>
+
+        {session.user.role === UserRole.STUDENT ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Profil profesional</CardTitle>
+
+              <CardDescription>
+                Informațiile prin care pacienții te vor putea găsi.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-5">
+              {studentProfile ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Universitate
+                    </p>
+                    <p className="font-medium">
+                      {studentProfile.university}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      An de studiu
+                    </p>
+                    <p className="font-medium">
+                      Anul {studentProfile.studyYear}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Oraș
+                    </p>
+                    <p className="font-medium">{studentProfile.city}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Starea profilului
+                    </p>
+                    <p className="font-medium">
+                      {studentProfile.isPublished
+                        ? "Publicat"
+                        : "Nepublicat"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Profilul profesional nu este completat încă.
+                </p>
+              )}
+
+              <Link
+                href="/cont/profil-student"
+                className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90"
+              >
+                {studentProfile
+                  ? "Editează profilul"
+                  : "Completează profilul"}
+              </Link>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </main>
   );
