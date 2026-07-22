@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { ProfileIcon } from "@/components/icons/profile-icon";
+import { AccountMenu } from "@/components/account/account-menu";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
+
+import { ThemeSelector } from "@/components/theme/theme-selector";
 
 const roleLabels: Record<UserRole, string> = {
   [UserRole.PATIENT]: "Pacient",
@@ -19,55 +20,48 @@ export async function SiteHeader() {
 
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="shrink-0 text-xl font-semibold tracking-tight"
+          className="min-w-0 shrink truncate text-lg font-semibold tracking-tight sm:text-xl"
         >
           Universident
         </Link>
 
-        {session ? (
-          <div className="flex min-w-0 items-center gap-2">
-            <Link
-              href="/cont"
-              className="flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 transition hover:bg-muted"
+        <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-1 sm:gap-2">
+          {session ? (
+            <>
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <AccountMenu
+                  name={session.user.name}
+                  roleLabel={roleLabels[session.user.role]}
+                  showStudentProfile={session.user.role === UserRole.STUDENT}
+                />
+              </div>
+            </>
+          ) : (
+            <nav
+              aria-label="Navigare cont"
+              className="flex items-center gap-1 sm:gap-2"
             >
-              <ProfileIcon className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <Link
+                href="/autentificare"
+                className="rounded-lg px-2 py-2 text-sm font-medium transition hover:bg-muted sm:px-3"
+              >
+                Autentificare
+              </Link>
 
-              <span className="min-w-0 text-right">
-                <span className="block max-w-32 truncate text-sm font-medium sm:max-w-48">
-                  {session.user.name}
-                </span>
+              <Link
+                href="/inregistrare"
+                className="rounded-lg bg-primary px-2 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 sm:px-3"
+              >
+                Creează cont
+              </Link>
+            </nav>
+          )}
 
-                <span className="block text-xs text-muted-foreground">
-                  {roleLabels[session.user.role]}
-                </span>
-              </span>
-            </Link>
-
-            <SignOutButton />
-          </div>
-        ) : (
-          <nav
-            aria-label="Navigare cont"
-            className="flex items-center gap-2"
-          >
-            <Link
-              href="/autentificare"
-              className="rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-muted"
-            >
-              Autentificare
-            </Link>
-
-            <Link
-              href="/inregistrare"
-              className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-            >
-              Creează cont
-            </Link>
-          </nav>
-        )}
+          <ThemeSelector />
+        </div>
       </div>
     </header>
   );

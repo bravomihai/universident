@@ -3,6 +3,8 @@ import { Figtree, Geist_Mono } from "next/font/google";
 
 import { SiteHeader } from "@/components/layout/site-header";
 
+import { ThemeProvider } from "@/components/theme/theme-provider";
+
 import "./globals.css";
 
 const figtree = Figtree({
@@ -32,11 +34,19 @@ export default function RootLayout({
   return (
     <html
       lang="ro"
+      suppressHydrationWarning
       className={`${figtree.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <SiteHeader />
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SiteHeader />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
