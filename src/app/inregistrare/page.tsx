@@ -3,10 +3,16 @@ import type { Metadata } from "next";
 import { SignUpForm } from "@/components/auth/sign-up-form";
 
 export const metadata: Metadata = {
-  title: "Înregistrare pacient",
-  description: "Creează un cont de pacient pe Universident.",
+  title: "Înregistrare",
+  description: "Creează un cont pe Universident.",
 };
 
-export default function PatientSignUpPage() {
-  return <SignUpForm />;
+export default function SignUpPage() {
+  return (
+    <main className="flex flex-1 items-start justify-center px-4 py-10 sm:px-6 sm:py-16">
+      <div className="w-full max-w-md">
+        <SignUpForm />
+      </div>
+    </main>
+  );
 }

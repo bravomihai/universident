@@ -13,38 +13,126 @@ datasource db {
 }
 
 model User {
-  id             String          @id
-  name           String
-  email          String
-  emailVerified  Boolean         @default(false)
-  role           UserRole        @default(PATIENT)
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  sessions       Session[]
-  accounts       Account[]
-  studentProfile StudentProfile?
+  id                         String                      @id
+  name                       String
+  email                      String
+  emailVerified              Boolean                     @default(false)
+  role                       UserRole                    @default(PATIENT)
+  image                      String?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  sessions                   Session[]
+  accounts                   Account[]
+  studentProfile             StudentProfile?
+  studentVerificationReviews StudentVerificationReview[] @relation("StudentVerificationReviewer")
 
   @@unique([email])
   @@map("user")
 }
 
 model StudentProfile {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  publicSlug  String?  @unique
-  university  String
-  studyYear   Int
-  city        String
-  bio         String?
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                         String                    @id @default(cuid())
+  userId                     String                    @unique
+  publicSlug                 String?                   @unique
+  university                 String
+  studyYear                  Int
+  bio                        String?
+  verificationStatus         StudentVerificationStatus @default(NOT_SUBMITTED)
+  submittedForVerificationAt DateTime?
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
 
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  listings StudentListing[]
+  user                User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations           StudentLocation[]
+  studentTreatments   StudentTreatment[]
+  verificationReviews StudentVerificationReview[]
 
+  @@index([verificationStatus, submittedForVerificationAt])
   @@map("student_profile")
+}
+
+model StudentVerificationReview {
+  id               String                      @id @default(cuid())
+  studentProfileId String
+  reviewerId       String
+  decision         StudentVerificationDecision
+  reason           String?
+  createdAt        DateTime                    @default(now())
+
+  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  reviewer       User           @relation("StudentVerificationReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+
+  @@index([studentProfileId, createdAt])
+  @@index([reviewerId, createdAt])
+  @@map("student_verification_review")
+}
+
+model StudentLocation {
+  id               String    @id @default(cuid())
+  studentProfileId String
+  cityId           String
+  routeKey         String
+  name             String
+  address          String
+  details          String?
+  isActive         Boolean   @default(true)
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  studentProfile     StudentProfile             @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
+  city               City                       @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  treatmentLocations StudentTreatmentLocation[]
+
+  @@unique([id, studentProfileId])
+  @@unique([studentProfileId, routeKey])
+  @@index([studentProfileId, deletedAt, isActive])
+  @@index([cityId, deletedAt, isActive, studentProfileId])
+  @@map("student_location")
+}
+
+model StudentTreatment {
+  id               String    @id @default(cuid())
+  studentProfileId String
+  treatmentId      String
+  description      String?
+  durationMinutes  Int
+  isActive         Boolean   @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  studentProfile     StudentProfile             @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
+  treatment          Treatment                  @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
+  treatmentLocations StudentTreatmentLocation[]
+
+  @@unique([studentProfileId, treatmentId])
+  @@unique([id, studentProfileId])
+  @@index([studentProfileId, deletedAt, isActive])
+  @@index([treatmentId, deletedAt, isActive, studentProfileId])
+  @@map("student_treatment")
+}
+
+model StudentTreatmentLocation {
+  id                 String    @id @default(cuid())
+  studentProfileId   String
+  studentTreatmentId String
+  studentLocationId  String
+  isActive           Boolean   @default(true)
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  studentTreatment StudentTreatment @relation(fields: [studentTreatmentId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_treatment_location_treatment_owner_fkey")
+
+  studentLocation StudentLocation @relation(fields: [studentLocationId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_treatment_location_location_owner_fkey")
+
+  @@unique([studentTreatmentId, studentLocationId])
+  @@unique([id, studentProfileId])
+  @@index([studentProfileId, deletedAt, isActive])
+  @@index([studentTreatmentId, deletedAt, isActive])
+  @@index([studentLocationId, deletedAt, isActive])
+  @@map("student_treatment_location")
 }
 
 model Treatment {
@@ -56,7 +144,7 @@ model Treatment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  listings StudentListing[]
+  studentTreatments StudentTreatment[]
 
   @@map("treatment")
 }
@@ -69,37 +157,9 @@ model City {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  listings StudentListing[]
+  studentLocations StudentLocation[]
 
   @@map("city")
-}
-
-model StudentListing {
-  id               String               @id @default(cuid())
-  studentProfileId String
-  treatmentId      String
-  cityId           String
-  title            String
-  description      String
-  clinicName       String
-  clinicAddress    String?
-  availableFrom    DateTime?
-  availableUntil   DateTime?
-  status           StudentListingStatus @default(DRAFT)
-  publishedAt      DateTime?
-  refreshedAt      DateTime             @default(now())
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  deletedAt        DateTime?
-
-  studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
-  treatment      Treatment      @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
-  city           City           @relation(fields: [cityId], references: [id], onDelete: Restrict)
-
-  @@index([treatmentId, cityId, status, deletedAt, refreshedAt])
-  @@index([studentProfileId, deletedAt, status])
-  @@index([status, deletedAt, refreshedAt])
-  @@map("student_listing")
 }
 
 model Session {
@@ -111,7 +171,8 @@ model Session {
   ipAddress String?
   userAgent String?
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
   @@index([userId])
@@ -123,7 +184,6 @@ model Account {
   accountId             String
   providerId            String
   userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
   idToken               String?
@@ -133,6 +193,8 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("account")
@@ -156,8 +218,14 @@ enum UserRole {
   ADMIN
 }
 
-enum StudentListingStatus {
-  DRAFT
-  OPEN
-  CLOSED
+enum StudentVerificationStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum StudentVerificationDecision {
+  APPROVED
+  REJECTED
 }

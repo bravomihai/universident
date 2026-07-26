@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, GraduationCap, LogOut, UserRound } from "lucide-react";
+import {
+    ChevronDown,
+    GraduationCap,
+    LogOut,
+    MapPin,
+    Stethoscope,
+    UserRound,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -20,13 +27,13 @@ import { authClient } from "@/lib/auth-client";
 type AccountMenuProps = {
     name: string;
     roleLabel: string;
-    showStudentProfile: boolean;
+    showStudentNavigation: boolean;
 };
 
 export function AccountMenu({
     name,
     roleLabel,
-    showStudentProfile,
+    showStudentNavigation,
 }: AccountMenuProps) {
     const router = useRouter();
 
@@ -102,13 +109,29 @@ export function AccountMenu({
                     </Link>
                 </DropdownMenuItem>
 
-                {showStudentProfile ? (
-                    <DropdownMenuItem asChild>
-                        <Link href="/cont/profil-student">
-                            <GraduationCap />
-                            Profil profesional
-                        </Link>
-                    </DropdownMenuItem>
+                {showStudentNavigation ? (
+                    <>
+                        <DropdownMenuItem asChild>
+                            <Link href="/cont/profil-student">
+                                <GraduationCap />
+                                Profil profesional
+                            </Link>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem asChild>
+                            <Link href="/cont/locatii">
+                                <MapPin />
+                                Locații
+                            </Link>
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem asChild>
+                            <Link href="/cont/tratamente">
+                                <Stethoscope />
+                                Tratamente
+                            </Link>
+                        </DropdownMenuItem>
+                    </>
                 ) : null}
 
                 <DropdownMenuSeparator />

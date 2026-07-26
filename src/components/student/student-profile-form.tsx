@@ -11,9 +11,7 @@ type StudentProfileFormProps = {
   initialProfile?: {
     university: string;
     studyYear: number;
-    city: string;
     bio: string | null;
-    isPublished: boolean;
   } | null;
 };
 
@@ -37,9 +35,7 @@ export function StudentProfileForm({
 
     const university = String(formData.get("university") ?? "");
     const studyYear = Number(formData.get("studyYear"));
-    const city = String(formData.get("city") ?? "");
     const bio = String(formData.get("bio") ?? "");
-    const isPublished = formData.get("isPublished") === "on";
 
     try {
       const response = await fetch("/api/student-profile", {
@@ -50,9 +46,7 @@ export function StudentProfileForm({
         body: JSON.stringify({
           university,
           studyYear,
-          city,
           bio,
-          isPublished,
         }),
       });
 
@@ -105,17 +99,6 @@ export function StudentProfileForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="city">Oraș</Label>
-        <Input
-          id="city"
-          name="city"
-          defaultValue={initialProfile?.city}
-          maxLength={80}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="bio">Descriere</Label>
         <textarea
           id="bio"
@@ -128,23 +111,6 @@ export function StudentProfileForm({
         <p className="text-xs text-muted-foreground">
           Maximum 1000 de caractere.
         </p>
-      </div>
-
-      <div className="flex items-start gap-3">
-        <input
-          id="isPublished"
-          name="isPublished"
-          type="checkbox"
-          defaultChecked={initialProfile?.isPublished}
-          className="mt-1 h-4 w-4"
-        />
-
-        <div className="space-y-1">
-          <Label htmlFor="isPublished">Publică profilul</Label>
-          <p className="text-sm text-muted-foreground">
-            Profilul va putea apărea în lista publică de studenți.
-          </p>
-        </div>
       </div>
 
       {errorMessage ? (

@@ -35,7 +35,9 @@ export async function SiteHeader() {
                 <AccountMenu
                   name={session.user.name}
                   roleLabel={roleLabels[session.user.role]}
-                  showStudentProfile={session.user.role === UserRole.STUDENT}
+                  showStudentNavigation={
+                    session.user.role === UserRole.STUDENT
+                  }
                 />
               </div>
             </>

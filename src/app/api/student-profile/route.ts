@@ -7,10 +7,14 @@ import { createStudentPublicSlug } from "@/lib/student-public-slug";
 type StudentProfileBody = {
     university?: unknown;
     studyYear?: unknown;
-    city?: unknown;
     bio?: unknown;
-    isPublished?: unknown;
 };
+
+const allowedBodyFields = new Set([
+    "university",
+    "studyYear",
+    "bio",
+]);
 
 export async function PUT(request: Request) {
     const configuredUrl = process.env.BETTER_AUTH_URL;
@@ -95,18 +99,27 @@ export async function PUT(request: Request) {
         );
     }
 
+    if (
+        typeof body !== "object" ||
+        body === null ||
+        Array.isArray(body) ||
+        Object.keys(body).some(
+            (field) => !allowedBodyFields.has(field),
+        )
+    ) {
+        return Response.json(
+            { error: "Datele trimise nu sunt valide." },
+            { status: 400 },
+        );
+    }
+
     const university =
         typeof body.university === "string" ? body.university.trim() : "";
-
-    const city = typeof body.city === "string" ? body.city.trim() : "";
 
     const bio = typeof body.bio === "string" ? body.bio.trim() : "";
 
     const studyYear =
         typeof body.studyYear === "number" ? body.studyYear : Number.NaN;
-
-    const isPublished =
-        typeof body.isPublished === "boolean" ? body.isPublished : false;
 
     if (university.length < 2 || university.length > 120) {
         return Response.json(
@@ -118,13 +131,6 @@ export async function PUT(request: Request) {
     if (!Number.isInteger(studyYear) || studyYear < 1 || studyYear > 6) {
         return Response.json(
             { error: "Anul de studiu trebuie să fie între 1 și 6." },
-            { status: 400 },
-        );
-    }
-
-    if (city.length < 2 || city.length > 80) {
-        return Response.json(
-            { error: "Orașul trebuie să conțină între 2 și 80 de caractere." },
             { status: 400 },
         );
     }
@@ -154,18 +160,14 @@ export async function PUT(request: Request) {
                 publicSlug,
                 university,
                 studyYear,
-                city,
                 bio: bio || null,
-                isPublished,
             },
             create: {
                 userId: userId,
                 publicSlug,
                 university,
                 studyYear,
-                city,
                 bio: bio || null,
-                isPublished,
             },
         });
     }
@@ -174,7 +176,7 @@ export async function PUT(request: Request) {
 
     let profile: Awaited<ReturnType<typeof saveProfile>> | undefined;
 
-    if (existingPublicSlug || !isPublished) {
+    if (existingPublicSlug) {
         profile = await saveProfile(existingPublicSlug);
     } else {
         const maximumAttempts = 5;

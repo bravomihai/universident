@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { StudentVerificationStatusBadge } from "@/components/student/student-verification-status-badge";
 import {
   Card,
   CardContent,
@@ -43,8 +44,7 @@ export default async function AccountPage() {
           select: {
             university: true,
             studyYear: true,
-            city: true,
-            isPublished: true,
+            verificationStatus: true,
           },
         })
       : null;
@@ -132,20 +132,11 @@ export default async function AccountPage() {
 
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Oraș
+                      Statusul verificării
                     </p>
-                    <p className="font-medium">{studentProfile.city}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      Starea profilului
-                    </p>
-                    <p className="font-medium">
-                      {studentProfile.isPublished
-                        ? "Publicat"
-                        : "Nepublicat"}
-                    </p>
+                    <StudentVerificationStatusBadge
+                      status={studentProfile.verificationStatus}
+                    />
                   </div>
                 </div>
               ) : (

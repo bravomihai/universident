@@ -1,47 +1,51 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-
 import { cn } from "@/lib/utils";
 
-export function AccountTypeSwitcher() {
-  const pathname = usePathname();
+type AccountType = "patient" | "student";
 
-  const activeType = pathname.startsWith("/inregistrare/student")
-    ? "student"
-    : "patient";
+type AccountTypeSwitcherProps = {
+  value: AccountType;
+  onChange: (value: AccountType) => void;
+};
 
+export function AccountTypeSwitcher({
+  value,
+  onChange,
+}: AccountTypeSwitcherProps) {
   return (
-    <nav
+    <div
+      role="group"
       aria-label="Alege tipul contului"
       className="grid grid-cols-2 rounded-xl bg-muted p-1"
     >
-      <Link
-        href="/inregistrare"
-        aria-current={activeType === "patient" ? "page" : undefined}
+      <button
+        type="button"
+        aria-pressed={value === "patient"}
         className={cn(
           "rounded-lg px-4 py-2 text-center text-sm font-medium transition",
-          activeType === "patient"
+          value === "patient"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground",
         )}
+        onClick={() => onChange("patient")}
       >
         Pacient
-      </Link>
+      </button>
 
-      <Link
-        href="/inregistrare/student"
-        aria-current={activeType === "student" ? "page" : undefined}
+      <button
+        type="button"
+        aria-pressed={value === "student"}
         className={cn(
           "rounded-lg px-4 py-2 text-center text-sm font-medium transition",
-          activeType === "student"
+          value === "student"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground",
         )}
+        onClick={() => onChange("student")}
       >
         Student
-      </Link>
-    </nav>
+      </button>
+    </div>
   );
 }
