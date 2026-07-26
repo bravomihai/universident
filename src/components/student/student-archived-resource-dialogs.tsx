@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, TriangleAlert } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 import {
   AlertDialog,
@@ -14,24 +14,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type StudentTreatmentDeactivateDialogProps = {
-  open: boolean;
+type ArchivedLocationRestoreDialogProps = {
+  locationName: string | null;
   isPending: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
 
-export function StudentTreatmentDeactivateDialog({
-  open,
+export function ArchivedLocationRestoreDialog({
+  locationName,
   isPending,
   onCancel,
   onConfirm,
-}: StudentTreatmentDeactivateDialogProps) {
+}: ArchivedLocationRestoreDialogProps) {
   return (
     <AlertDialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen && !isPending) {
+      open={locationName !== null}
+      onOpenChange={(open) => {
+        if (!open && !isPending) {
           onCancel();
         }
       }}
@@ -39,14 +39,22 @@ export function StudentTreatmentDeactivateDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogMedia>
-            <TriangleAlert aria-hidden="true" />
+            <RotateCcw aria-hidden="true" />
           </AlertDialogMedia>
           <AlertDialogTitle>
-            Tratamentul va deveni inactiv
+            Restaurezi locația „{locationName}”?
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            Tratamentul nu va mai avea nicio locație activă și va fi
-            dezactivat automat. Continui salvarea?
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p>
+                Locația va reveni în lista obișnuită ca inactivă.
+              </p>
+              <p>
+                Tratamentele și asocierile dezactivate sau arhivate
+                anterior nu vor fi reactivate automat. Verifică
+                locația și tratamentele asociate înainte de activare.
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -58,7 +66,7 @@ export function StudentTreatmentDeactivateDialog({
             disabled={isPending}
             onClick={onConfirm}
           >
-            Salvează și dezactivează tratamentul
+            Restaurează locația
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -66,19 +74,19 @@ export function StudentTreatmentDeactivateDialog({
   );
 }
 
-type StudentTreatmentArchiveDialogProps = {
+type ArchivedTreatmentRestoreDialogProps = {
   treatmentName: string | null;
   isPending: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 };
 
-export function StudentTreatmentArchiveDialog({
+export function ArchivedTreatmentRestoreDialog({
   treatmentName,
   isPending,
   onCancel,
   onConfirm,
-}: StudentTreatmentArchiveDialogProps) {
+}: ArchivedTreatmentRestoreDialogProps) {
   return (
     <AlertDialog
       open={treatmentName !== null}
@@ -91,17 +99,22 @@ export function StudentTreatmentArchiveDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogMedia>
-            <Archive aria-hidden="true" />
+            <RotateCcw aria-hidden="true" />
           </AlertDialogMedia>
           <AlertDialogTitle>
-            Arhivezi tratamentul „{treatmentName}”?
+            Restaurezi tratamentul „{treatmentName}”?
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            Tratamentul nu va mai apărea în lista obișnuită și nu va
-            mai putea fi selectat pentru programări. Îl vei găsi în
-            Cont → Resurse arhivate și îl vei putea restaura ulterior
-            ca tratament inactiv. Asocierile sale cu locațiile vor fi
-            arhivate.
+          <AlertDialogDescription asChild>
+            <div className="space-y-3">
+              <p>
+                Tratamentul va reveni în lista obișnuită ca inactiv.
+              </p>
+              <p>
+                Locațiile și asocierile anterioare nu vor fi
+                reactivate automat. Intră în editare și selectează
+                locațiile înainte de activare.
+              </p>
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -110,11 +123,10 @@ export function StudentTreatmentArchiveDialog({
             Anulează
           </AlertDialogCancel>
           <AlertDialogAction
-            variant="destructive"
             disabled={isPending}
             onClick={onConfirm}
           >
-            Arhivează tratamentul
+            Restaurează tratamentul
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

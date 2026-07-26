@@ -45,12 +45,12 @@ export function StudentLocationArchiveDialog({
             Arhivezi locația „{locationName}”?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Locația nu va mai apărea în cont și nu va mai putea fi
-            folosită pentru tratamente sau programări. Nu o vei putea
-            restaura singur din interfață. Datele rămân păstrate
-            pentru istoric și nu sunt șterse definitiv. Această
-            operație poate dezactiva și tratamentele care nu mai au
-            nicio altă locație activă.
+            Locația nu va mai apărea în lista obișnuită și nu va mai
+            putea fi folosită pentru tratamente sau programări. O vei
+            găsi în Cont → Resurse arhivate și o vei putea restaura
+            ulterior ca locație inactivă. Această operație poate
+            dezactiva și tratamentele care nu mai au nicio altă
+            locație activă.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

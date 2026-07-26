@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { StudentCardFeedback } from "@/components/student/student-card-feedback";
 import {
   StudentLocationCard,
   type StudentLocationCardData,
@@ -14,6 +13,7 @@ import {
   StudentLocationArchiveDialog,
   StudentLocationCascadeDialog,
 } from "@/components/student/student-location-dialogs";
+import { useCardFeedback } from "@/components/student/use-card-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -90,21 +90,6 @@ function toLocationCardData(
   };
 }
 
-function sortLocations(
-  locations: StudentLocationCardData[],
-): StudentLocationCardData[] {
-  return [...locations].sort((first, second) => {
-    if (first.isActive !== second.isActive) {
-      return first.isActive ? -1 : 1;
-    }
-
-    return (
-      new Date(second.createdAt).getTime() -
-      new Date(first.createdAt).getTime()
-    );
-  });
-}
-
 async function readApiResponse(
   response: Response,
 ): Promise<ApiResponse> {
@@ -124,46 +109,22 @@ export function StudentLocationsManager({
     useState<StudentLocationCardData[]>(initialLocations);
   const [pendingOperation, setPendingOperation] =
     useState<PendingOperation | null>(null);
-  const [cardFeedback, setCardFeedback] = useState<
-    Record<string, StudentCardFeedback>
-  >({});
+  const {
+    feedbackById: cardFeedback,
+    showFeedback,
+    clearFeedback,
+  } = useCardFeedback();
   const [cascadeConflict, setCascadeConflict] =
     useState<CascadeConflict | null>(null);
   const [archiveCandidate, setArchiveCandidate] =
     useState<StudentLocationCardData | null>(null);
 
-  function clearFeedback(locationId: string) {
-    setCardFeedback((currentFeedback) => {
-      if (!(locationId in currentFeedback)) {
-        return currentFeedback;
-      }
-
-      const nextFeedback = {
-        ...currentFeedback,
-      };
-      delete nextFeedback[locationId];
-      return nextFeedback;
-    });
-  }
-
-  function showFeedback(
-    locationId: string,
-    feedback: StudentCardFeedback,
-  ) {
-    setCardFeedback((currentFeedback) => ({
-      ...currentFeedback,
-      [locationId]: feedback,
-    }));
-  }
-
   function replaceLocation(updatedLocation: StudentLocationCardData) {
     setLocations((currentLocations) =>
-      sortLocations(
-        currentLocations.map((location) =>
-          location.id === updatedLocation.id
-            ? updatedLocation
-            : location,
-        ),
+      currentLocations.map((location) =>
+        location.id === updatedLocation.id
+          ? updatedLocation
+          : location,
       ),
     );
   }
@@ -213,12 +174,6 @@ export function StudentLocationsManager({
         result.requiresConfirmation &&
         result.affectedTreatments
       ) {
-        showFeedback(mutation.locationId, {
-          type: "error",
-          message:
-            result.error ??
-            "Operația necesită confirmarea dezactivării tratamentelor afectate.",
-        });
         setCascadeConflict({
           mutation,
           affectedTreatments: result.affectedTreatments,
@@ -245,6 +200,7 @@ export function StudentLocationsManager({
           ),
         );
         clearFeedback(mutation.locationId);
+        router.refresh();
       } else if (result.location) {
         const isActivating = mutation.data.isActive;
         const deactivatedTreatmentCount =
@@ -270,7 +226,6 @@ export function StudentLocationsManager({
         return;
       }
 
-      router.refresh();
     } catch {
       showFeedback(mutation.locationId, {
         type: "error",

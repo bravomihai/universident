@@ -107,10 +107,6 @@ export function StudentLocationFormController(
         result.requiresConfirmation &&
         result.affectedTreatments
       ) {
-        setErrorMessage(
-          result.error ??
-            "Operația necesită confirmarea dezactivării tratamentelor afectate.",
-        );
         setCascadeConflict({
           values,
           affectedTreatments: result.affectedTreatments,

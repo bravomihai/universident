@@ -105,10 +105,6 @@ export function StudentTreatmentFormController(
         result.requiresConfirmation &&
         result.consequence === "DEACTIVATE_TREATMENT"
       ) {
-        setErrorMessage(
-          result.error ??
-            "Tratamentul trebuie dezactivat pentru a salva aceste locații.",
-        );
         setDeactivationConflict(values);
         return;
       }

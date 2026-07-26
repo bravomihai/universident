@@ -5,12 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import type { StudentCardFeedback } from "@/components/student/student-card-feedback";
 import {
   StudentTreatmentCard,
   type StudentTreatmentCardData,
 } from "@/components/student/student-treatment-card";
 import { StudentTreatmentArchiveDialog } from "@/components/student/student-treatment-dialogs";
+import { useCardFeedback } from "@/components/student/use-card-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -82,18 +82,6 @@ function toTreatmentCardData(
   };
 }
 
-function sortTreatments(
-  treatments: StudentTreatmentCardData[],
-): StudentTreatmentCardData[] {
-  return [...treatments].sort((first, second) => {
-    if (first.isActive !== second.isActive) {
-      return first.isActive ? -1 : 1;
-    }
-
-    return first.name.localeCompare(second.name, "ro");
-  });
-}
-
 async function readApiResponse(
   response: Response,
 ): Promise<ApiResponse> {
@@ -113,44 +101,20 @@ export function StudentTreatmentsManager({
     useState<StudentTreatmentCardData[]>(initialTreatments);
   const [pendingOperation, setPendingOperation] =
     useState<PendingOperation | null>(null);
-  const [cardFeedback, setCardFeedback] = useState<
-    Record<string, StudentCardFeedback>
-  >({});
+  const {
+    feedbackById: cardFeedback,
+    showFeedback,
+    clearFeedback,
+  } = useCardFeedback();
   const [archiveCandidate, setArchiveCandidate] =
     useState<StudentTreatmentCardData | null>(null);
 
-  function clearFeedback(treatmentId: string) {
-    setCardFeedback((currentFeedback) => {
-      if (!(treatmentId in currentFeedback)) {
-        return currentFeedback;
-      }
-
-      const nextFeedback = {
-        ...currentFeedback,
-      };
-      delete nextFeedback[treatmentId];
-      return nextFeedback;
-    });
-  }
-
-  function showFeedback(
-    treatmentId: string,
-    feedback: StudentCardFeedback,
-  ) {
-    setCardFeedback((currentFeedback) => ({
-      ...currentFeedback,
-      [treatmentId]: feedback,
-    }));
-  }
-
   function replaceTreatment(updatedTreatment: StudentTreatmentCardData) {
     setTreatments((currentTreatments) =>
-      sortTreatments(
-        currentTreatments.map((treatment) =>
-          treatment.id === updatedTreatment.id
-            ? updatedTreatment
-            : treatment,
-        ),
+      currentTreatments.map((treatment) =>
+        treatment.id === updatedTreatment.id
+          ? updatedTreatment
+          : treatment,
       ),
     );
   }
@@ -204,7 +168,6 @@ export function StudentTreatmentsManager({
           ? "Tratamentul a fost activat."
           : "Tratamentul a fost dezactivat.",
       });
-      router.refresh();
     } catch {
       showFeedback(treatment.id, {
         type: "error",
