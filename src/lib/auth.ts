@@ -1,13 +1,25 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { after } from "next/server";
 
 import { UserRole } from "@/generated/prisma/enums";
+import { sendEmailVerificationMessage } from "@/lib/email/email-verification";
 import { prisma } from "@/lib/prisma";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+
+  rateLimit: {
+    enabled: true,
+    customRules: {
+      "/send-verification-email": {
+        window: 10 * 60,
+        max: 3,
+      },
+    },
+  },
 
   user: {
     additionalFields: {
@@ -45,7 +57,29 @@ export const auth = betterAuth({
     },
   },
 
+  emailVerification: {
+    sendVerificationEmail: async ({ user, url }) => {
+      after(async () => {
+        try {
+          await sendEmailVerificationMessage({
+            email: user.email,
+            name: user.name,
+            verificationUrl: url,
+          });
+        } catch {
+          // Livrarea rulează după răspuns și nu expune datele
+          // destinatarului sau detaliile providerului.
+        }
+      });
+    },
+    sendOnSignUp: true,
+    sendOnSignIn: false,
+    autoSignInAfterVerification: false,
+    expiresIn: 60 * 60,
+  },
+
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
   },
 });

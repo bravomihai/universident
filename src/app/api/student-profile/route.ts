@@ -47,6 +47,17 @@ export async function PUT(request: Request) {
         );
     }
 
+    if (!session.user.emailVerified) {
+        return Response.json(
+            {
+                error:
+                    "Verifică adresa de email înainte de a continua.",
+                code: "EMAIL_NOT_VERIFIED",
+            },
+            { status: 403 },
+        );
+    }
+
     if (session.user.role !== UserRole.STUDENT) {
         return Response.json(
             { error: "Doar studenții își pot configura profilul profesional." },

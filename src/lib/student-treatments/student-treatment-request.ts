@@ -74,6 +74,20 @@ export async function authorizeStudentTreatmentRequest(
     };
   }
 
+  if (!session.user.emailVerified) {
+    return {
+      ok: false,
+      response: Response.json(
+        {
+          error:
+            "Verifică adresa de email înainte de a continua.",
+          code: "EMAIL_NOT_VERIFIED",
+        },
+        { status: 403 },
+      ),
+    };
+  }
+
   if (session.user.role !== UserRole.STUDENT) {
     return {
       ok: false,

@@ -12,5 +12,9 @@ export async function requireAccountPageSession() {
     redirect("/autentificare");
   }
 
+  if (!session.user.emailVerified) {
+    redirect("/verifica-email");
+  }
+
   return session;
 }

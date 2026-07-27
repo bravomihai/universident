@@ -40,6 +40,20 @@ export function SignInForm() {
       });
 
       if (error) {
+        if (error.code === "EMAIL_NOT_VERIFIED") {
+          try {
+            window.sessionStorage.setItem(
+              "universident-verification-email",
+              email.trim(),
+            );
+          } catch {
+            // Formularul de retrimitere rămâne utilizabil manual.
+          }
+
+          router.replace("/verifica-email");
+          return;
+        }
+
         setErrorMessage("Emailul sau parola sunt incorecte.");
         return;
       }

@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
@@ -14,10 +12,9 @@ import {
 } from "@/components/ui/card";
 import {
     StudentVerificationStatus,
-    UserRole,
 } from "@/generated/prisma/enums";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
 export const metadata: Metadata = {
     title: "Profil profesional",
@@ -25,17 +22,7 @@ export const metadata: Metadata = {
 };
 
 export default async function StudentProfilePage() {
-    const session = await auth.api.getSession({
-        headers: await headers(),
-    });
-
-    if (!session) {
-        redirect("/autentificare");
-    }
-
-    if (session.user.role !== UserRole.STUDENT) {
-        redirect("/cont");
-    }
+    const session = await requireStudentPageSession();
 
     const profile = await prisma.studentProfile.findUnique({
         where: {

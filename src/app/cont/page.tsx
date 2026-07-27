@@ -8,9 +8,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { StudentVerificationStatusBadge } from "@/components/student/student-verification-status-badge";
 import {
@@ -21,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { UserRole } from "@/generated/prisma/enums";
-import { auth } from "@/lib/auth";
+import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -77,13 +75,7 @@ function archivedSummary(
 }
 
 export default async function AccountPage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    redirect("/autentificare");
-  }
+  const session = await requireAccountPageSession();
 
   const studentData =
     session.user.role === UserRole.STUDENT

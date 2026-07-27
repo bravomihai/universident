@@ -53,6 +53,7 @@ export function SignUpForm({
           name,
           email,
           password,
+          callbackURL: "/verifica-email?verificat=1",
         },
         {
           headers: {
@@ -62,11 +63,22 @@ export function SignUpForm({
       );
 
       if (error) {
-        setErrorMessage(error.message ?? "Contul nu a putut fi creat.");
+        setErrorMessage(
+          "Contul nu a putut fi creat. Verifică datele și încearcă din nou.",
+        );
         return;
       }
 
-      router.replace("/");
+      try {
+        window.sessionStorage.setItem(
+          "universident-verification-email",
+          email.trim(),
+        );
+      } catch {
+        // Formularul de retrimitere rămâne utilizabil manual.
+      }
+
+      router.replace("/verifica-email?trimis=1");
       router.refresh();
     } catch {
       setErrorMessage(

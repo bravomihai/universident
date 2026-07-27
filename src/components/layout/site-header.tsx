@@ -17,6 +17,9 @@ export async function SiteHeader() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+  const verifiedSession = session?.user.emailVerified
+    ? session
+    : null;
 
   return (
     <header className="border-b bg-background">
@@ -29,14 +32,14 @@ export async function SiteHeader() {
         </Link>
 
         <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-1 sm:gap-2">
-          {session ? (
+          {verifiedSession ? (
             <>
               <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                 <AccountMenu
-                  name={session.user.name}
-                  roleLabel={roleLabels[session.user.role]}
+                  name={verifiedSession.user.name}
+                  roleLabel={roleLabels[verifiedSession.user.role]}
                   showStudentNavigation={
-                    session.user.role === UserRole.STUDENT
+                    verifiedSession.user.role === UserRole.STUDENT
                   }
                 />
               </div>
