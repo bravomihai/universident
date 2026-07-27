@@ -44,5 +44,4 @@ next-env.d.ts
 !.env.example
 
 /src/generated/prisma
-
-analiza-universident.txt
+*.txt

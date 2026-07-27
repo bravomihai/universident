@@ -3,7 +3,9 @@ import {
   ChevronRight,
   GraduationCap,
   MapPin,
+  ShieldCheck,
   Stethoscope,
+  UserRound,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -191,207 +193,39 @@ export default async function AccountPage() {
           </p>
         </div>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informații despre cont</CardTitle>
-
-              <CardDescription>
-                Datele asociate contului tău Universident.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Nume</p>
-                <p className="font-medium">{session.user.name}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Adresă de email
-                </p>
-                <p className="font-medium">{session.user.email}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Tipul contului
-                </p>
-                <p className="font-medium">
-                  {roleLabels[session.user.role]}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {studentData ? (
-            <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Link
-                href="/cont/profil-student"
-                aria-label="Deschide profilul profesional"
-                className={resourceCardLinkClassName}
-              >
-                <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                  <CardHeader>
-                    <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                      <GraduationCap
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </span>
-                    <CardTitle>Profil profesional</CardTitle>
-                    <CardDescription>
-                      Universitate, an de studiu, descriere și
-                      verificare.
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="mt-auto space-y-4">
-                    {studentData.profile ? (
-                      <div className="space-y-2">
-                        <p className="font-medium">
-                          {studentData.profile.university} · Anul{" "}
-                          {studentData.profile.studyYear}
-                        </p>
-                        <StudentVerificationStatusBadge
-                          status={
-                            studentData.profile.verificationStatus
-                          }
-                        />
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Profilul profesional nu este completat încă.
-                      </p>
-                    )}
-
-                    <span className="inline-flex items-center gap-1 text-sm font-medium">
-                      {studentData.profile
-                        ? "Editează profilul"
-                        : "Completează profilul"}
-                      <ChevronRight
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link
-                href="/cont/locatii"
-                aria-label="Deschide administrarea locațiilor"
-                className={resourceCardLinkClassName}
-              >
-                <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                  <CardHeader>
-                    <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                      <MapPin
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </span>
-                    <CardTitle>Locații</CardTitle>
-                    <CardDescription>
-                      Locurile în care poți primi pacienți.
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="mt-auto space-y-4">
-                    <p className="font-medium">
-                      {locationSummary(
-                        studentData.locationCount,
-                        studentData.activeLocationCount,
-                      )}
-                    </p>
-
-                    <span className="inline-flex items-center gap-1 text-sm font-medium">
-                      Gestionează locațiile
-                      <ChevronRight
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link
-                href="/cont/tratamente"
-                aria-label="Deschide administrarea tratamentelor"
-                className={resourceCardLinkClassName}
-              >
-                <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                  <CardHeader>
-                    <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                      <Stethoscope
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </span>
-                    <CardTitle>Tratamente</CardTitle>
-                    <CardDescription>
-                      Serviciile oferite și locațiile asociate.
-                    </CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="mt-auto space-y-4">
-                    <p className="font-medium">
-                      {treatmentSummary(
-                        studentData.treatmentCount,
-                        studentData.activeTreatmentCount,
-                      )}
-                    </p>
-
-                    <span className="inline-flex items-center gap-1 text-sm font-medium">
-                      Gestionează tratamentele
-                      <ChevronRight
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
-
+        <div className="space-y-8">
+          <div className="grid gap-4 md:grid-cols-2">
             <Link
-              href="/cont/arhivate"
-              aria-label="Deschide resursele arhivate"
+              href="/cont/informatii-cont"
               className={resourceCardLinkClassName}
             >
-              <Card
-                size="sm"
-                className="cursor-pointer transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35"
-              >
+              <Card className="h-full cursor-pointer transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
                 <CardHeader>
-                  <span className="inline-flex size-8 items-center justify-center rounded-full border bg-background">
-                    <Archive
-                      className="size-3.5"
+                  <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
+                    <UserRound
+                      className="size-4"
                       aria-hidden="true"
                     />
                   </span>
-                  <CardTitle className="text-sm">
-                    Resurse arhivate
-                  </CardTitle>
+                  <CardTitle>Informații despre cont</CardTitle>
                   <CardDescription>
-                    Locațiile și tratamentele păstrate pentru
-                    restaurare.
+                    Nume, email și datele generale ale contului
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
-                  <p className="font-medium">
-                    {archivedSummary(
-                      studentData.archivedLocationCount,
-                      studentData.archivedTreatmentCount,
-                    )}
-                  </p>
+                <CardContent className="mt-auto space-y-4">
+                  <div className="space-y-1">
+                    <p className="font-medium">{session.user.name}</p>
+                    <p className="break-all text-sm text-muted-foreground">
+                      {session.user.email}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Rol: {roleLabels[session.user.role]}
+                    </p>
+                  </div>
 
-                  <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
-                    Vezi resursele arhivate
+                  <span className="inline-flex items-center gap-1 text-sm font-medium">
+                    Gestionează informațiile
                     <ChevronRight
                       className="size-4"
                       aria-hidden="true"
@@ -400,6 +234,221 @@ export default async function AccountPage() {
                 </CardContent>
               </Card>
             </Link>
+
+            <Link
+              href="/cont/securitate"
+              className={resourceCardLinkClassName}
+            >
+              <Card className="h-full cursor-pointer transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+                <CardHeader>
+                  <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
+                    <ShieldCheck
+                      className="size-4"
+                      aria-hidden="true"
+                    />
+                  </span>
+                  <CardTitle>
+                    Confidențialitate și securitate
+                  </CardTitle>
+                  <CardDescription>
+                    Parolă, autentificare și recuperarea contului
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="mt-auto space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Consultă structura viitoarelor opțiuni de
+                    protecție și confidențialitate.
+                  </p>
+
+                  <span className="inline-flex items-center gap-1 text-sm font-medium">
+                    Gestionează securitatea
+                    <ChevronRight
+                      className="size-4"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+
+          {studentData ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Link
+                  href="/cont/profil-student"
+                  aria-label="Deschide profilul profesional"
+                  className={resourceCardLinkClassName}
+                >
+                  <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+                    <CardHeader>
+                      <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
+                        <GraduationCap
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <CardTitle>Profil profesional</CardTitle>
+                      <CardDescription>
+                        Universitate, an de studiu, descriere și
+                        verificare.
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="mt-auto space-y-4">
+                      {studentData.profile ? (
+                        <div className="space-y-2">
+                          <p className="font-medium">
+                            {studentData.profile.university} · Anul{" "}
+                            {studentData.profile.studyYear}
+                          </p>
+                          <StudentVerificationStatusBadge
+                            status={
+                              studentData.profile.verificationStatus
+                            }
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          Profilul profesional nu este completat
+                          încă.
+                        </p>
+                      )}
+
+                      <span className="inline-flex items-center gap-1 text-sm font-medium">
+                        {studentData.profile
+                          ? "Editează profilul"
+                          : "Completează profilul"}
+                        <ChevronRight
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
+
+                <Link
+                  href="/cont/locatii"
+                  aria-label="Deschide administrarea locațiilor"
+                  className={resourceCardLinkClassName}
+                >
+                  <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+                    <CardHeader>
+                      <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
+                        <MapPin
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <CardTitle>Locații</CardTitle>
+                      <CardDescription>
+                        Locurile în care poți primi pacienți.
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="mt-auto space-y-4">
+                      <p className="font-medium">
+                        {locationSummary(
+                          studentData.locationCount,
+                          studentData.activeLocationCount,
+                        )}
+                      </p>
+
+                      <span className="inline-flex items-center gap-1 text-sm font-medium">
+                        Gestionează locațiile
+                        <ChevronRight
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
+
+                <Link
+                  href="/cont/tratamente"
+                  aria-label="Deschide administrarea tratamentelor"
+                  className={resourceCardLinkClassName}
+                >
+                  <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+                    <CardHeader>
+                      <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
+                        <Stethoscope
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <CardTitle>Tratamente</CardTitle>
+                      <CardDescription>
+                        Serviciile oferite și locațiile asociate.
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent className="mt-auto space-y-4">
+                      <p className="font-medium">
+                        {treatmentSummary(
+                          studentData.treatmentCount,
+                          studentData.activeTreatmentCount,
+                        )}
+                      </p>
+
+                      <span className="inline-flex items-center gap-1 text-sm font-medium">
+                        Gestionează tratamentele
+                        <ChevronRight
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
+
+              <Link
+                href="/cont/arhivate"
+                aria-label="Deschide resursele arhivate"
+                className={resourceCardLinkClassName}
+              >
+                <Card
+                  size="sm"
+                  className="cursor-pointer transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35"
+                >
+                  <CardHeader>
+                    <span className="inline-flex size-8 items-center justify-center rounded-full border bg-background">
+                      <Archive
+                        className="size-3.5"
+                        aria-hidden="true"
+                      />
+                    </span>
+                    <CardTitle className="text-sm">
+                      Resurse arhivate
+                    </CardTitle>
+                    <CardDescription>
+                      Locațiile și tratamentele păstrate pentru
+                      restaurare.
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4">
+                    <p className="font-medium">
+                      {archivedSummary(
+                        studentData.archivedLocationCount,
+                        studentData.archivedTreatmentCount,
+                      )}
+                    </p>
+
+                    <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
+                      Vezi resursele arhivate
+                      <ChevronRight
+                        className="size-4"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           ) : null}
         </div>
