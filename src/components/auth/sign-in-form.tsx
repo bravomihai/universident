@@ -4,17 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type SubmitEvent, useState } from "react";
 
+import { AuthFormField } from "@/components/auth/auth-form-field";
+import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export function SignInForm() {
   const router = useRouter();
@@ -70,63 +63,70 @@ export function SignInForm() {
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Autentificare</CardTitle>
-        <CardDescription>
-          Introdu datele contului tău Universident.
-        </CardDescription>
-      </CardHeader>
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <AuthFormField htmlFor="email" label="Adresă de email">
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+        />
+      </AuthFormField>
 
-      <CardContent>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="email">Adresă de email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-            />
-          </div>
+      <AuthFormField htmlFor="password" label="Parolă">
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+        />
+      </AuthFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Parolă</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </div>
+      {errorMessage ? (
+        <p role="alert" className="text-sm text-destructive">
+          {errorMessage}
+        </p>
+      ) : null}
 
-          {errorMessage ? (
-            <p role="alert" className="text-sm text-destructive">
-              {errorMessage}
-            </p>
-          ) : null}
+      <PendingSubmitButton
+        isPending={isPending}
+        pendingText="Se autentifică..."
+      >
+        Autentificare
+      </PendingSubmitButton>
 
-          <Button
-            className="w-full"
-            type="submit"
-            disabled={isPending}
+      <div
+        className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 md:flex-nowrap"
+        data-auth-secondary-actions
+      >
+        <p
+          className="shrink-0 text-center text-sm text-muted-foreground"
+          data-auth-secondary-action
+        >
+          Ai uitat parola?{" "}
+          <Link
+            href="/parola-uitata"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
           >
-            {isPending ? "Se autentifică..." : "Autentificare"}
-          </Button>
+            Resetează parola
+          </Link>
+        </p>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Nu ai încă un cont?{" "}
-            <Link
-              href="/inregistrare"
-              className="font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              Creează unul
-            </Link>
-          </p>
-        </form>
-      </CardContent>
-    </Card>
+        <p
+          className="shrink-0 text-center text-sm text-muted-foreground"
+          data-auth-secondary-action
+        >
+          Nu ai încă un cont?{" "}
+          <Link
+            href="/inregistrare"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Creează unul
+          </Link>
+        </p>
+      </div>
+    </form>
   );
 }

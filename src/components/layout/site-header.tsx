@@ -1,24 +1,23 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 
-import { AccountMenu } from "@/components/account/account-menu";
-import { UserRole } from "@/generated/prisma/enums";
+import {
+  HeaderAccount,
+  type HeaderUser,
+} from "@/components/layout/header-account";
 import { auth } from "@/lib/auth";
 
 import { ThemeSelector } from "@/components/theme/theme-selector";
-
-const roleLabels: Record<UserRole, string> = {
-  [UserRole.PATIENT]: "Pacient",
-  [UserRole.STUDENT]: "Student",
-  [UserRole.ADMIN]: "Administrator",
-};
 
 export async function SiteHeader() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  const verifiedSession = session?.user.emailVerified
-    ? session
+  const initialUser: HeaderUser | null = session?.user.emailVerified
+    ? {
+        name: session.user.name,
+        role: session.user.role,
+      }
     : null;
 
   return (
@@ -32,38 +31,7 @@ export async function SiteHeader() {
         </Link>
 
         <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-1 sm:gap-2">
-          {verifiedSession ? (
-            <>
-              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-                <AccountMenu
-                  name={verifiedSession.user.name}
-                  roleLabel={roleLabels[verifiedSession.user.role]}
-                  showStudentNavigation={
-                    verifiedSession.user.role === UserRole.STUDENT
-                  }
-                />
-              </div>
-            </>
-          ) : (
-            <nav
-              aria-label="Navigare cont"
-              className="flex items-center gap-1 sm:gap-2"
-            >
-              <Link
-                href="/autentificare"
-                className="rounded-lg px-2 py-2 text-sm font-medium transition hover:bg-muted sm:px-3"
-              >
-                Autentificare
-              </Link>
-
-              <Link
-                href="/inregistrare"
-                className="rounded-lg bg-primary px-2 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 sm:px-3"
-              >
-                Creează cont
-              </Link>
-            </nav>
-          )}
+          <HeaderAccount initialUser={initialUser} />
 
           <ThemeSelector />
         </div>

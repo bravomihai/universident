@@ -1,51 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import {
-  type SubmitEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type SubmitEvent, useState } from "react";
 
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { Input } from "@/components/ui/input";
 
-type EmailVerificationFormProps = {
-  emailWasSent?: boolean;
-};
-
 const genericSuccessMessage =
-  "Dacă adresa corespunde unui cont neverificat, vei primi un nou email de verificare.";
+  "Dacă adresa corespunde unui cont, vei primi un link valabil timp de o oră.";
 
-export function EmailVerificationForm({
-  emailWasSent = false,
-}: EmailVerificationFormProps) {
-  const emailInputRef = useRef<HTMLInputElement>(null);
+export function PasswordResetRequestForm() {
   const [isPending, setIsPending] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(
-    emailWasSent
-      ? "Dacă adresa poate fi verificată, emailul a fost trimis. Verifică și folderul Spam."
-      : null,
-  );
+  const [statusMessage, setStatusMessage] =
+    useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(
     null,
   );
-
-  useEffect(() => {
-    try {
-      const storedEmail = window.sessionStorage.getItem(
-        "universident-verification-email",
-      );
-
-      if (storedEmail && emailInputRef.current) {
-        emailInputRef.current.value = storedEmail;
-      }
-    } catch {
-      // Adresa poate fi introdusă manual.
-    }
-  }, []);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +31,7 @@ export function EmailVerificationForm({
     ).trim();
 
     try {
-      const response = await fetch("/api/email-verification/resend", {
+      const response = await fetch("/api/password-reset/request", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -71,16 +42,7 @@ export function EmailVerificationForm({
       });
 
       if (!response.ok) {
-        throw new Error("RESEND_REQUEST_FAILED");
-      }
-
-      try {
-        window.sessionStorage.setItem(
-          "universident-verification-email",
-          normalizedEmail,
-        );
-      } catch {
-        // Retrimiterea a fost deja procesată.
+        throw new Error("PASSWORD_RESET_REQUEST_FAILED");
       }
 
       setStatusMessage(genericSuccessMessage);
@@ -97,24 +59,22 @@ export function EmailVerificationForm({
     <div className="space-y-4">
       <form className="space-y-4" onSubmit={handleSubmit}>
         <AuthFormField
-          htmlFor="verification-email"
+          htmlFor="password-reset-email"
           label="Adresă de email"
         >
           <Input
-            id="verification-email"
+            id="password-reset-email"
             name="email"
             type="email"
             autoComplete="email"
-            ref={emailInputRef}
             required
           />
         </AuthFormField>
-
         <PendingSubmitButton
           isPending={isPending}
           pendingText="Se trimite..."
         >
-          Retrimite emailul de verificare
+          Trimite linkul de resetare
         </PendingSubmitButton>
       </form>
 
@@ -139,7 +99,7 @@ export function EmailVerificationForm({
         ) : null}
 
         <p className="text-center text-sm text-muted-foreground">
-          Ai verificat deja adresa?{" "}
+          Ți-ai amintit parola?{" "}
           <Link
             href="/autentificare"
             className="font-medium text-foreground underline-offset-4 hover:underline"

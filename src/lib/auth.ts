@@ -4,6 +4,7 @@ import { after } from "next/server";
 
 import { UserRole } from "@/generated/prisma/enums";
 import { sendEmailVerificationMessage } from "@/lib/email/email-verification";
+import { sendPasswordResetMessage } from "@/lib/email/password-reset";
 import { prisma } from "@/lib/prisma";
 
 export const auth = betterAuth({
@@ -17,6 +18,14 @@ export const auth = betterAuth({
       "/send-verification-email": {
         window: 10 * 60,
         max: 3,
+      },
+      "/request-password-reset": {
+        window: 10 * 60,
+        max: 3,
+      },
+      "/reset-password": {
+        window: 60,
+        max: 10,
       },
     },
   },
@@ -39,8 +48,8 @@ export const auth = betterAuth({
           const accountType =
             context?.path === "/sign-up/email"
               ? context.headers?.get(
-                  "x-universident-account-type",
-                )
+                "x-universident-account-type",
+              )
               : null;
 
           return {
@@ -81,5 +90,23 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
+
+    sendResetPassword: async ({ user, url }) => {
+      after(async () => {
+        try {
+          await sendPasswordResetMessage({
+            email: user.email,
+            name: user.name,
+            resetUrl: url,
+          });
+        } catch {
+          // Livrarea rulează după răspuns și nu expune datele
+          // destinatarului sau detaliile providerului.
+        }
+      });
+    },
+
+    resetPasswordTokenExpiresIn: 60 * 60,
+    revokeSessionsOnPasswordReset: true,
   },
 });

@@ -2,15 +2,9 @@ import { MailCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AuthFormCard } from "@/components/auth/auth-form-card";
 import { EmailVerificationForm } from "@/components/auth/email-verification-form";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "Verifică adresa de email",
@@ -47,52 +41,36 @@ export default async function VerifyEmailPage({
         : null;
 
   return (
-    <main className="flex flex-1 items-start justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <span className="inline-flex size-11 items-center justify-center rounded-full border bg-muted/30">
-            <MailCheck className="size-5" aria-hidden="true" />
-          </span>
-          <CardTitle>Verifică adresa de email</CardTitle>
-          <CardDescription>
-            Confirmarea adresei este obligatorie înainte de folosirea
-            contului.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          {emailWasVerified ? (
-            <>
-              <p role="status" className="text-sm text-muted-foreground">
-                Linkul de verificare a fost procesat. Autentifică-te
-                pentru a continua în contul Universident.
+    <AuthFormCard
+      title="Verifică adresa de email"
+      description="Introdu adresa de email pentru a retrimite linkul de verificare."
+      icon={<MailCheck className="size-5" aria-hidden="true" />}
+    >
+      <div className="space-y-6">
+        {emailWasVerified ? (
+          <>
+            <p role="status" className="text-sm text-muted-foreground">
+              Linkul de verificare a fost procesat. Autentifică-te
+              pentru a continua în contul Universident.
+            </p>
+            <Button asChild className="w-full">
+              <Link href="/autentificare">
+                Continuă către autentificare
+              </Link>
+            </Button>
+          </>
+        ) : (
+          <>
+            {errorMessage ? (
+              <p role="alert" className="text-sm text-destructive">
+                {errorMessage}
               </p>
-              <Button asChild className="w-full">
-                <Link href="/autentificare">
-                  Continuă către autentificare
-                </Link>
-              </Button>
-            </>
-          ) : (
-            <>
-              {errorMessage ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {errorMessage}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Deschide linkul primit prin email. Linkul este
-                  valabil timp de o oră.
-                </p>
-              )}
+            ) : null}
 
-              <EmailVerificationForm
-                emailWasSent={emailWasSent}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </main>
+            <EmailVerificationForm emailWasSent={emailWasSent} />
+          </>
+        )}
+      </div>
+    </AuthFormCard>
   );
 }

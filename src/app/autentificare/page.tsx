@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { AuthFormCard } from "@/components/auth/auth-form-card";
 import { SignInForm } from "@/components/auth/sign-in-form";
 import { auth } from "@/lib/auth";
 
@@ -22,10 +23,11 @@ export default async function SignInPage() {
   }
 
   return (
-    <main className="flex flex-1 items-start justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-md">
-        <SignInForm />
-      </div>
-    </main>
+    <AuthFormCard
+      title="Autentificare"
+      description="Introdu datele contului tău Universident."
+    >
+      <SignInForm />
+    </AuthFormCard>
   );
 }

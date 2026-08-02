@@ -10,6 +10,7 @@ const unverifiedSessionAllowedPaths = new Set([
   "/sign-out",
   "/sign-up/email",
   "/verify-email",
+  "/reset-password",
 ]);
 
 async function blockProtectedRequestForUnverifiedSession(
@@ -20,7 +21,10 @@ async function blockProtectedRequestForUnverifiedSession(
     ? pathname.slice("/api/auth".length) || "/"
     : pathname;
 
-  if (unverifiedSessionAllowedPaths.has(authPath)) {
+  if (
+    unverifiedSessionAllowedPaths.has(authPath) ||
+    authPath.startsWith("/reset-password/")
+  ) {
     return null;
   }
 
@@ -49,10 +53,12 @@ export async function GET(request: Request) {
     return blockedResponse;
   }
 
+  const pathname = new URL(request.url).pathname;
   const response = await handlers.GET(request);
 
   if (
-    new URL(request.url).pathname === "/api/auth/verify-email"
+    pathname === "/api/auth/verify-email" ||
+    pathname.startsWith("/api/auth/reset-password/")
   ) {
     const responseHeaders = new Headers(response.headers);
     responseHeaders.set("referrer-policy", "no-referrer");
@@ -68,6 +74,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const pathname = new URL(request.url).pathname.replace(/\/+$/, "");
+
+  if (
+    pathname === "/api/auth/request-password-reset" ||
+    pathname === "/api/auth/reset-password"
+  ) {
+    return Response.json(
+      { error: "Ruta nu este disponibilă." },
+      { status: 404 },
+    );
+  }
+
   const blockedResponse =
     await blockProtectedRequestForUnverifiedSession(request);
 

@@ -21,11 +21,5 @@ export default async function SignUpPage() {
     );
   }
 
-  return (
-    <main className="flex flex-1 items-start justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-md">
-        <SignUpForm />
-      </div>
-    </main>
-  );
+  return <SignUpForm />;
 }
