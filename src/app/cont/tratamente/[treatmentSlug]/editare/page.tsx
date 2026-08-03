@@ -37,7 +37,7 @@ export default async function EditStudentTreatmentPage({
     notFound();
   }
 
-  const [studentTreatment, locations] = await Promise.all([
+  const [studentTreatment, locations, supervisors] = await Promise.all([
     prisma.studentTreatment.findFirst({
       where: {
         studentProfileId: studentProfile.id,
@@ -73,6 +73,19 @@ export default async function EditStudentTreatmentPage({
         },
       },
     }),
+    prisma.studentSupervisor.findMany({
+      where: {
+        studentProfileId: studentProfile.id,
+      },
+      orderBy: [{ isActive: "desc" }, { fullName: "asc" }],
+      select: {
+        id: true,
+        fullName: true,
+        academicTitle: true,
+        isActive: true,
+        deletedAt: true,
+      },
+    }),
   ]);
 
   if (!studentTreatment) {
@@ -81,7 +94,7 @@ export default async function EditStudentTreatmentPage({
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-3xl space-y-6">
+      <div className="w-full max-w-6xl space-y-6">
         <Link
           href="/cont/tratamente"
           className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground"
@@ -112,12 +125,12 @@ export default async function EditStudentTreatmentPage({
               studentTreatment.treatment.description,
             description: studentTreatment.description,
             durationMinutes: studentTreatment.durationMinutes,
-            locationIds: studentTreatment.treatmentLocations
+            locationAssignments: studentTreatment.treatmentLocations
               .filter((association) => association.isActive)
-              .map(
-                (association) =>
-                  association.studentLocation.id,
-              ),
+              .map((association) => ({
+                studentLocationId: association.studentLocation.id,
+                supervisorId: association.supervisorId,
+              })),
             isActive: studentTreatment.isActive,
           }}
           catalogTreatments={[]}
@@ -127,6 +140,10 @@ export default async function EditStudentTreatmentPage({
             address: location.address,
             cityName: location.city.name,
             isActive: location.isActive,
+          }))}
+          supervisors={supervisors.map((supervisor) => ({
+            ...supervisor,
+            deletedAt: supervisor.deletedAt?.toISOString() ?? null,
           }))}
           isDisabled={false}
         />

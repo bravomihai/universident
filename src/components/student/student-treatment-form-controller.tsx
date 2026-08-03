@@ -10,7 +10,8 @@ import {
   type StudentTreatmentFormInitialValues,
   type StudentTreatmentFormValues,
 } from "@/components/student/student-treatment-form";
-import type { StudentTreatmentLocationOption } from "@/components/student/student-treatment-location-selector";
+import type { StudentSupervisorOption } from "@/components/student/student-supervisor-form";
+import type { StudentTreatmentLocationOption } from "@/components/student/student-treatment-assignment-editor";
 
 type ApiResponse = {
   error?: string;
@@ -24,6 +25,7 @@ type ApiResponse = {
 type StudentTreatmentFormControllerProps = {
   catalogTreatments: StudentTreatmentCatalogOption[];
   locations: StudentTreatmentLocationOption[];
+  supervisors: StudentSupervisorOption[];
   isDisabled: boolean;
 } & (
   | {
@@ -88,7 +90,7 @@ export function StudentTreatmentFormController(
               ? {
                   description: values.description,
                   durationMinutes: values.durationMinutes,
-                  locationIds: values.locationIds,
+                  locationAssignments: values.locationAssignments,
                   isActive: values.isActive,
                   confirmDeactivate,
                 }
@@ -145,6 +147,7 @@ export function StudentTreatmentFormController(
       <StudentTreatmentForm
         catalogTreatments={props.catalogTreatments}
         locations={props.locations}
+        supervisors={props.supervisors}
         initialValues={
           props.mode === "edit" ? props.initialValues : undefined
         }

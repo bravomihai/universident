@@ -27,6 +27,7 @@ export const studentTreatmentSelect = {
     select: {
       id: true,
       studentLocationId: true,
+      supervisorId: true,
       isActive: true,
       studentLocation: {
         select: {
@@ -41,6 +42,15 @@ export const studentTreatmentSelect = {
               slug: true,
             },
           },
+        },
+      },
+      supervisor: {
+        select: {
+          id: true,
+          fullName: true,
+          academicTitle: true,
+          isActive: true,
+          deletedAt: true,
         },
       },
     },

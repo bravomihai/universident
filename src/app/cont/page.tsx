@@ -6,18 +6,14 @@ import {
   ShieldCheck,
   Stethoscope,
   UserRound,
+  UsersRound,
+  type LucideIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
-import { StudentVerificationStatusBadge } from "@/components/student/student-verification-status-badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { prisma } from "@/lib/prisma";
@@ -33,417 +29,365 @@ const roleLabels: Record<UserRole, string> = {
   [UserRole.ADMIN]: "Administrator",
 };
 
-const resourceCardLinkClassName =
-  "group block cursor-pointer rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
+const dashboardLinkClassName =
+  "group block h-full rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-function locationSummary(total: number, active: number) {
-  const configuredLabel =
-    total === 1
-      ? "1 locație configurată"
-      : `${total} locații configurate`;
-  const activeLabel =
-    active === 1 ? "1 activă" : `${active} active`;
+type DashboardLinkCardProps = {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  action: string;
+  children: ReactNode;
+};
 
-  return `${configuredLabel} · ${activeLabel}`;
+function DashboardLinkCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+  action,
+  children,
+}: DashboardLinkCardProps) {
+  return (
+    <Link href={href} className={dashboardLinkClassName}>
+      <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+        <CardContent className="flex h-full flex-col gap-4 p-5">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
+              <Icon className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 space-y-1">
+              <h2 className="font-semibold">{title}</h2>
+              <p className="text-sm text-muted-foreground">{description}</p>
+            </div>
+          </div>
+
+          <div className="mt-auto text-sm">{children}</div>
+
+          <span className="inline-flex items-center gap-1 text-sm font-medium">
+            {action}
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </span>
+        </CardContent>
+      </Card>
+    </Link>
+  );
 }
 
-function treatmentSummary(total: number, active: number) {
-  const configuredLabel =
-    total === 1
-      ? "1 tratament configurat"
-      : `${total} tratamente configurate`;
-  const activeLabel =
-    active === 1 ? "1 activ" : `${active} active`;
-
-  return `${configuredLabel} · ${activeLabel}`;
-}
-
-function archivedSummary(
-  archivedLocations: number,
-  archivedTreatments: number,
+function activeResourceLabel(
+  count: number,
+  singularLabel: string,
+  pluralLabel: string,
 ) {
-  const locationLabel =
-    archivedLocations === 1
-      ? "1 locație"
-      : `${archivedLocations} locații`;
-  const treatmentLabel =
-    archivedTreatments === 1
-      ? "1 tratament"
-      : `${archivedTreatments} tratamente`;
+  return count === 1 ? `1 ${singularLabel}` : `${count} ${pluralLabel}`;
+}
 
-  return `${locationLabel} · ${treatmentLabel}`;
+function resourceCountLabel(
+  count: number,
+  singularLabel: string,
+  pluralLabel: string,
+) {
+  return count === 1 ? `1 ${singularLabel}` : `${count} ${pluralLabel}`;
+}
+
+function compactBio(bio: string | null) {
+  if (!bio?.trim()) return "Adaugă o scurtă descriere profesională.";
+  const normalized = bio.trim().replace(/\s+/g, " ");
+  return normalized.length > 180
+    ? `${normalized.slice(0, 177).trimEnd()}...`
+    : normalized;
 }
 
 export default async function AccountPage() {
   const session = await requireAccountPageSession();
+  const isStudent = session.user.role === UserRole.STUDENT;
 
-  const studentData =
-    session.user.role === UserRole.STUDENT
-      ? await (async () => {
-          const profile = await prisma.studentProfile.findUnique({
-            where: {
-              userId: session.user.id,
-            },
-            select: {
-              id: true,
-              university: true,
-              studyYear: true,
-              verificationStatus: true,
-            },
-          });
+  const studentData = isStudent
+    ? await (async () => {
+        const profile = await prisma.studentProfile.findUnique({
+          where: { userId: session.user.id },
+          select: {
+            id: true,
+            university: true,
+            studyYear: true,
+            bio: true,
+          },
+        });
 
-          if (!profile) {
-            return {
-              profile: null,
-              locationCount: 0,
-              activeLocationCount: 0,
-              treatmentCount: 0,
-              activeTreatmentCount: 0,
-              archivedLocationCount: 0,
-              archivedTreatmentCount: 0,
-            };
-          }
-
-          const [
-            locationCount,
-            activeLocationCount,
-            treatmentCount,
-            activeTreatmentCount,
-            archivedLocationCount,
-            archivedTreatmentCount,
-          ] = await Promise.all([
-            prisma.studentLocation.count({
-              where: {
-                studentProfileId: profile.id,
-                deletedAt: null,
-              },
-            }),
-            prisma.studentLocation.count({
-              where: {
-                studentProfileId: profile.id,
-                deletedAt: null,
-                isActive: true,
-              },
-            }),
-            prisma.studentTreatment.count({
-              where: {
-                studentProfileId: profile.id,
-                deletedAt: null,
-              },
-            }),
-            prisma.studentTreatment.count({
-              where: {
-                studentProfileId: profile.id,
-                deletedAt: null,
-                isActive: true,
-              },
-            }),
-            prisma.studentLocation.count({
-              where: {
-                studentProfileId: profile.id,
-                deletedAt: {
-                  not: null,
-                },
-              },
-            }),
-            prisma.studentTreatment.count({
-              where: {
-                studentProfileId: profile.id,
-                deletedAt: {
-                  not: null,
-                },
-              },
-            }),
-          ]);
-
+        if (!profile) {
           return {
-            profile,
-            locationCount,
-            activeLocationCount,
-            treatmentCount,
-            activeTreatmentCount,
-            archivedLocationCount,
-            archivedTreatmentCount,
+            profile: null,
+            activeTreatments: 0,
+            activeLocations: 0,
+            activeSupervisors: 0,
+            archivedTreatments: 0,
+            archivedLocations: 0,
+            archivedSupervisors: 0,
           };
-        })()
-      : null;
+        }
+
+        const [
+          activeTreatments,
+          activeLocations,
+          activeSupervisors,
+          archivedTreatments,
+          archivedLocations,
+          archivedSupervisors,
+        ] = await Promise.all([
+          prisma.studentTreatment.count({
+            where: {
+              studentProfileId: profile.id,
+              isActive: true,
+              deletedAt: null,
+            },
+          }),
+          prisma.studentLocation.count({
+            where: {
+              studentProfileId: profile.id,
+              isActive: true,
+              deletedAt: null,
+            },
+          }),
+          prisma.studentSupervisor.count({
+            where: {
+              studentProfileId: profile.id,
+              isActive: true,
+              deletedAt: null,
+            },
+          }),
+          prisma.studentTreatment.count({
+            where: { studentProfileId: profile.id, deletedAt: { not: null } },
+          }),
+          prisma.studentLocation.count({
+            where: { studentProfileId: profile.id, deletedAt: { not: null } },
+          }),
+          prisma.studentSupervisor.count({
+            where: { studentProfileId: profile.id, deletedAt: { not: null } },
+          }),
+        ]);
+
+        return {
+          profile,
+          activeTreatments,
+          activeLocations,
+          activeSupervisors,
+          archivedTreatments,
+          archivedLocations,
+          archivedSupervisors,
+        };
+      })()
+    : null;
+
+  const profileCompletion = !studentData?.profile
+    ? "Profil necompletat"
+    : studentData.profile.bio?.trim()
+      ? "Profil complet"
+      : "Profil parțial";
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-5xl space-y-8">
-        <div className="space-y-2">
+      <div className="w-full max-w-6xl space-y-8">
+        <header className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">
             Contul meu
           </p>
-
           <h1 className="text-3xl font-semibold tracking-tight">
             Bun venit, {session.user.name}
           </h1>
-
           <p className="text-muted-foreground">
             Aici poți gestiona informațiile și activitatea contului.
           </p>
-        </div>
+        </header>
 
-        <div className="space-y-8">
-          <div className="grid gap-4 md:grid-cols-2">
+        {studentData ? (
+          <section aria-labelledby="professional-profile-title">
             <Link
-              href="/cont/informatii-cont"
-              className={resourceCardLinkClassName}
+              href="/cont/profil-student"
+              className={dashboardLinkClassName}
             >
-              <Card className="h-full cursor-pointer transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                <CardHeader>
-                  <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                    <UserRound
-                      className="size-4"
-                      aria-hidden="true"
-                    />
-                  </span>
-                  <CardTitle>Informații despre cont</CardTitle>
-                  <CardDescription>
-                    Nume, email și datele generale ale contului
-                  </CardDescription>
-                </CardHeader>
+              <Card className="transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+                <CardContent className="grid gap-5 p-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-center">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="inline-flex size-10 items-center justify-center rounded-full border bg-muted/30">
+                        <GraduationCap className="size-5" aria-hidden="true" />
+                      </span>
+                      <div>
+                        <h2 id="professional-profile-title" className="font-semibold">
+                          Profil profesional
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          Datele profesionale afișate în profilul tău.
+                        </p>
+                      </div>
+                      <span className="ml-auto rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-medium">
+                        {profileCompletion}
+                      </span>
+                    </div>
 
-                <CardContent className="mt-auto space-y-4">
-                  <div className="space-y-1">
-                    <p className="font-medium">{session.user.name}</p>
-                    <p className="break-all text-sm text-muted-foreground">
-                      {session.user.email}
-                    </p>
                     <p className="text-sm text-muted-foreground">
-                      Rol: {roleLabels[session.user.role]}
+                      {studentData.profile
+                        ? compactBio(studentData.profile.bio)
+                        : "Completează universitatea, anul de studiu și descrierea profesională."}
                     </p>
                   </div>
 
-                  <span className="inline-flex items-center gap-1 text-sm font-medium">
-                    Gestionează informațiile
-                    <ChevronRight
-                      className="size-4"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link
-              href="/cont/securitate"
-              className={resourceCardLinkClassName}
-            >
-              <Card className="h-full cursor-pointer transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                <CardHeader>
-                  <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                    <ShieldCheck
-                      className="size-4"
-                      aria-hidden="true"
-                    />
-                  </span>
-                  <CardTitle>
-                    Confidențialitate și securitate
-                  </CardTitle>
-                  <CardDescription>
-                    Parolă, autentificare și recuperarea contului
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="mt-auto space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Consultă structura viitoarelor opțiuni de
-                    protecție și confidențialitate.
-                  </p>
-
-                  <span className="inline-flex items-center gap-1 text-sm font-medium">
-                    Gestionează securitatea
-                    <ChevronRight
-                      className="size-4"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-
-          {studentData ? (
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-3">
-                <Link
-                  href="/cont/profil-student"
-                  aria-label="Deschide profilul profesional"
-                  className={resourceCardLinkClassName}
-                >
-                  <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                    <CardHeader>
-                      <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                        <GraduationCap
-                          className="size-4"
-                          aria-hidden="true"
-                        />
-                      </span>
-                      <CardTitle>Profil profesional</CardTitle>
-                      <CardDescription>
-                        Universitate, an de studiu, descriere și
-                        verificare.
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="mt-auto space-y-4">
-                      {studentData.profile ? (
-                        <div className="space-y-2">
-                          <p className="font-medium">
-                            {studentData.profile.university} · Anul{" "}
-                            {studentData.profile.studyYear}
-                          </p>
-                          <StudentVerificationStatusBadge
-                            status={
-                              studentData.profile.verificationStatus
-                            }
-                          />
+                  <div className="space-y-3 md:border-l md:pl-5">
+                    {studentData.profile ? (
+                      <dl className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <dt className="text-xs text-muted-foreground">Universitate</dt>
+                          <dd className="font-medium">{studentData.profile.university}</dd>
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          Profilul profesional nu este completat
-                          încă.
-                        </p>
-                      )}
-
-                      <span className="inline-flex items-center gap-1 text-sm font-medium">
-                        {studentData.profile
-                          ? "Editează profilul"
-                          : "Completează profilul"}
-                        <ChevronRight
-                          className="size-4"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </CardContent>
-                  </Card>
-                </Link>
-
-                <Link
-                  href="/cont/locatii"
-                  aria-label="Deschide administrarea locațiilor"
-                  className={resourceCardLinkClassName}
-                >
-                  <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                    <CardHeader>
-                      <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                        <MapPin
-                          className="size-4"
-                          aria-hidden="true"
-                        />
-                      </span>
-                      <CardTitle>Locații</CardTitle>
-                      <CardDescription>
-                        Locurile în care poți primi pacienți.
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="mt-auto space-y-4">
-                      <p className="font-medium">
-                        {locationSummary(
-                          studentData.locationCount,
-                          studentData.activeLocationCount,
-                        )}
-                      </p>
-
-                      <span className="inline-flex items-center gap-1 text-sm font-medium">
-                        Gestionează locațiile
-                        <ChevronRight
-                          className="size-4"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </CardContent>
-                  </Card>
-                </Link>
-
-                <Link
-                  href="/cont/tratamente"
-                  aria-label="Deschide administrarea tratamentelor"
-                  className={resourceCardLinkClassName}
-                >
-                  <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                    <CardHeader>
-                      <span className="inline-flex size-9 items-center justify-center rounded-full border bg-muted/30">
-                        <Stethoscope
-                          className="size-4"
-                          aria-hidden="true"
-                        />
-                      </span>
-                      <CardTitle>Tratamente</CardTitle>
-                      <CardDescription>
-                        Serviciile oferite și locațiile asociate.
-                      </CardDescription>
-                    </CardHeader>
-
-                    <CardContent className="mt-auto space-y-4">
-                      <p className="font-medium">
-                        {treatmentSummary(
-                          studentData.treatmentCount,
-                          studentData.activeTreatmentCount,
-                        )}
-                      </p>
-
-                      <span className="inline-flex items-center gap-1 text-sm font-medium">
-                        Gestionează tratamentele
-                        <ChevronRight
-                          className="size-4"
-                          aria-hidden="true"
-                        />
-                      </span>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </div>
-
-              <Link
-                href="/cont/arhivate"
-                aria-label="Deschide resursele arhivate"
-                className={resourceCardLinkClassName}
-              >
-                <Card
-                  size="sm"
-                  className="cursor-pointer transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35"
-                >
-                  <CardHeader>
-                    <span className="inline-flex size-8 items-center justify-center rounded-full border bg-background">
-                      <Archive
-                        className="size-3.5"
-                        aria-hidden="true"
-                      />
+                        <div>
+                          <dt className="text-xs text-muted-foreground">An de studiu</dt>
+                          <dd className="font-medium">Anul {studentData.profile.studyYear}</dd>
+                        </div>
+                      </dl>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1 text-sm font-medium">
+                      Editează profilul profesional
+                      <ChevronRight className="size-4" aria-hidden="true" />
                     </span>
-                    <CardTitle className="text-sm">
-                      Resurse arhivate
-                    </CardTitle>
-                    <CardDescription>
-                      Locațiile și tratamentele păstrate pentru
-                      restaurare.
-                    </CardDescription>
-                  </CardHeader>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </section>
+        ) : null}
 
-                  <CardContent className="space-y-4">
-                    <p className="font-medium">
-                      {archivedSummary(
-                        studentData.archivedLocationCount,
-                        studentData.archivedTreatmentCount,
-                      )}
-                    </p>
+        {studentData ? (
+          <section
+            aria-label="Administrare profesională"
+            className="grid gap-4 md:grid-cols-3"
+          >
+            <DashboardLinkCard
+              href="/cont/tratamente"
+              icon={Stethoscope}
+              title="Tratamente"
+              description="Serviciile oferite și asocierile lor."
+              action="Gestionează tratamentele"
+            >
+              <p className="font-medium">
+                {activeResourceLabel(
+                  studentData.activeTreatments,
+                  "tratament activ",
+                  "tratamente active",
+                )}
+              </p>
+            </DashboardLinkCard>
+            <DashboardLinkCard
+              href="/cont/locatii"
+              icon={MapPin}
+              title="Locații"
+              description="Locurile în care poți primi pacienți."
+              action="Gestionează locațiile"
+            >
+              <p className="font-medium">
+                {activeResourceLabel(
+                  studentData.activeLocations,
+                  "locație activă",
+                  "locații active",
+                )}
+              </p>
+            </DashboardLinkCard>
+            <DashboardLinkCard
+              href="/cont/supervizori"
+              icon={UsersRound}
+              title="Supervizori"
+              description="Profesorii disponibili pentru asocieri."
+              action="Gestionează supervizorii"
+            >
+              <p className="font-medium">
+                {activeResourceLabel(
+                  studentData.activeSupervisors,
+                  "supervizor activ",
+                  "supervizori activi",
+                )}
+              </p>
+            </DashboardLinkCard>
+          </section>
+        ) : null}
 
-                    <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
-                      Vezi resursele arhivate
-                      <ChevronRight
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
+        <section
+          aria-label="Administrarea contului"
+          className="grid gap-4 md:grid-cols-2"
+        >
+          <DashboardLinkCard
+            href="/cont/informatii-cont"
+            icon={UserRound}
+            title="Informații despre cont"
+            description="Identitatea și datele generale ale contului."
+            action="Gestionează informațiile"
+          >
+            <div className="space-y-1">
+              <p className="font-medium">{session.user.name}</p>
+              <p className="break-all text-muted-foreground">{session.user.email}</p>
+              <p className="text-muted-foreground">
+                Rol: {roleLabels[session.user.role]}
+              </p>
             </div>
-          ) : null}
-        </div>
+          </DashboardLinkCard>
+          <DashboardLinkCard
+            href="/cont/securitate"
+            icon={ShieldCheck}
+            title="Confidențialitate și securitate"
+            description="Parolă, sesiuni și recuperarea contului."
+            action="Gestionează securitatea"
+          >
+            <p className="font-medium">Protecția contului</p>
+          </DashboardLinkCard>
+        </section>
+
+        {studentData ? (
+          <section aria-labelledby="archived-resources-title">
+            <Link
+              href="/cont/resurse-arhivate"
+              className={dashboardLinkClassName}
+            >
+              <Card className="transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
+                    <Archive className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 id="archived-resources-title" className="font-semibold">
+                      Resurse arhivate
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Tratamente, locații și supervizori păstrați pentru restaurare.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    <span>
+                      {resourceCountLabel(
+                        studentData.archivedTreatments,
+                        "tratament",
+                        "tratamente",
+                      )}
+                    </span>
+                    <span>
+                      {resourceCountLabel(
+                        studentData.archivedLocations,
+                        "locație",
+                        "locații",
+                      )}
+                    </span>
+                    <span>
+                      {resourceCountLabel(
+                        studentData.archivedSupervisors,
+                        "supervizor",
+                        "supervizori",
+                      )}
+                    </span>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+                </CardContent>
+              </Card>
+            </Link>
+          </section>
+        ) : null}
       </div>
     </main>
   );

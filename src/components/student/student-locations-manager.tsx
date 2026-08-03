@@ -13,6 +13,7 @@ import {
   StudentLocationArchiveDialog,
   StudentLocationCascadeDialog,
 } from "@/components/student/student-location-dialogs";
+import { StudentProfessionalNavigation } from "@/components/student/student-professional-navigation";
 import { useCardFeedback } from "@/components/student/use-card-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -280,6 +281,8 @@ export function StudentLocationsManager({
       >
         ← Înapoi la cont
       </Link>
+
+      <StudentProfessionalNavigation current="locations" />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl space-y-2">

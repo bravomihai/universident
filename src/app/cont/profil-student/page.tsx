@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
-import { StudentVerificationStatusBadge } from "@/components/student/student-verification-status-badge";
 import {
     Card,
     CardContent,
@@ -10,9 +9,6 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    StudentVerificationStatus,
-} from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
@@ -32,17 +28,12 @@ export default async function StudentProfilePage() {
             university: true,
             studyYear: true,
             bio: true,
-            verificationStatus: true,
         },
     });
 
-    const verificationStatus =
-        profile?.verificationStatus ??
-        StudentVerificationStatus.NOT_SUBMITTED;
-
     return (
         <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-            <div className="w-full max-w-3xl space-y-6">
+            <div className="w-full max-w-6xl space-y-6">
                 <Link
                     href="/cont"
                     className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground"
@@ -64,24 +55,6 @@ export default async function StudentProfilePage() {
                         toate locațiile și tratamentele tale.
                     </p>
                 </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Statusul verificării</CardTitle>
-
-                        <CardDescription>
-                            Verificarea administrativă este separată de
-                            configurarea locațiilor și tratamentelor.
-                        </CardDescription>
-                    </CardHeader>
-
-                    <CardContent>
-                        <StudentVerificationStatusBadge
-                            status={verificationStatus}
-                            showDescription
-                        />
-                    </CardContent>
-                </Card>
 
                 <Card>
                     <CardHeader>

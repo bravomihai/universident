@@ -3,9 +3,11 @@
 import { type SubmitEvent, useState } from "react";
 
 import {
-  StudentTreatmentLocationSelector,
+  StudentTreatmentAssignmentEditor,
+  type StudentTreatmentAssignmentDraft,
   type StudentTreatmentLocationOption,
-} from "@/components/student/student-treatment-location-selector";
+} from "@/components/student/student-treatment-assignment-editor";
+import type { StudentSupervisorOption } from "@/components/student/student-supervisor-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,7 +36,10 @@ export type StudentTreatmentFormValues = {
   treatmentId: string;
   description: string;
   durationMinutes: number;
-  locationIds: string[];
+  locationAssignments: {
+    studentLocationId: string;
+    supervisorId: string;
+  }[];
   isActive: boolean;
 };
 
@@ -44,13 +49,14 @@ export type StudentTreatmentFormInitialValues = {
   catalogDescription: string;
   description: string | null;
   durationMinutes: number;
-  locationIds: string[];
+  locationAssignments: StudentTreatmentAssignmentDraft[];
   isActive: boolean;
 };
 
 type StudentTreatmentFormProps = {
   catalogTreatments: StudentTreatmentCatalogOption[];
   locations: StudentTreatmentLocationOption[];
+  supervisors: StudentSupervisorOption[];
   initialValues?: StudentTreatmentFormInitialValues;
   isPending: boolean;
   isDisabled?: boolean;
@@ -62,6 +68,7 @@ type StudentTreatmentFormProps = {
 export function StudentTreatmentForm({
   catalogTreatments,
   locations,
+  supervisors,
   initialValues,
   isPending,
   isDisabled = false,
@@ -74,8 +81,10 @@ export function StudentTreatmentForm({
       catalogTreatments[0]?.id ??
       "",
   );
-  const [selectedLocationIds, setSelectedLocationIds] = useState(
-    initialValues?.locationIds ?? [],
+  const [locationAssignments, setLocationAssignments] = useState<
+    StudentTreatmentAssignmentDraft[]
+  >(
+    initialValues?.locationAssignments ?? [],
   );
   const [isActive, setIsActive] = useState(
     initialValues?.isActive ?? false,
@@ -100,21 +109,39 @@ export function StudentTreatmentForm({
       return;
     }
 
-    const hasActiveSelectedLocation = selectedLocationIds.some(
-      (locationId) =>
-        locations.some(
-          (location) =>
-            location.id === locationId && location.isActive,
-        ),
+    const locationIds = locationAssignments.map(
+      (assignment) => assignment.studentLocationId,
     );
+
+    if (new Set(locationIds).size !== locationIds.length) {
+      setClientError("O locație poate apărea o singură dată în tratament.");
+      return;
+    }
+
+    const hasInvalidAssignment = locationAssignments.some((assignment) => {
+      const location = locations.find(
+        (option) => option.id === assignment.studentLocationId,
+      );
+      return (
+        !location?.isActive ||
+        !assignment.supervisorId
+      );
+    });
+
+    if (hasInvalidAssignment) {
+      setClientError(
+        "Fiecare asociere trebuie să aibă o locație activă și un profesor disponibil.",
+      );
+      return;
+    }
 
     if (
       isActive &&
-      !hasActiveSelectedLocation &&
+      locationAssignments.length === 0 &&
       !initialValues?.isActive
     ) {
       setClientError(
-        "Pentru activare, selectează cel puțin o locație activă.",
+        "Pentru activare, adaugă cel puțin o locație cu profesor atribuit.",
       );
       return;
     }
@@ -126,7 +153,10 @@ export function StudentTreatmentForm({
         initialValues?.treatmentId ?? selectedTreatmentId,
       description: String(formData.get("description") ?? ""),
       durationMinutes: Number(formData.get("durationMinutes")),
-      locationIds: selectedLocationIds,
+      locationAssignments: locationAssignments.map((assignment) => ({
+        studentLocationId: assignment.studentLocationId,
+        supervisorId: assignment.supervisorId as string,
+      })),
       isActive,
     });
   }
@@ -234,21 +264,21 @@ export function StudentTreatmentForm({
 
           <fieldset className="space-y-3">
             <legend className="text-sm font-medium">
-              Locații asociate
+              Locații și supervizare
             </legend>
 
             <p className="text-sm text-muted-foreground">
-              Selectează numai locațiile în care oferi efectiv acest
-              tratament. Locațiile inactive pot fi asociate, dar nu
-              permit activarea tratamentului.
+              Fiecare locație în care oferi tratamentul trebuie să aibă
+              un profesor supervizor activ din lista ta.
             </p>
 
-            <StudentTreatmentLocationSelector
+            <StudentTreatmentAssignmentEditor
               locations={locations}
-              selectedLocationIds={selectedLocationIds}
+              supervisors={supervisors}
+              assignments={locationAssignments}
               disabled={formDisabled}
-              onChange={(locationIds) => {
-                setSelectedLocationIds(locationIds);
+              onChange={(assignments) => {
+                setLocationAssignments(assignments);
                 setClientError(null);
               }}
             />
@@ -273,7 +303,7 @@ export function StudentTreatmentForm({
               </Label>
               <p className="text-sm text-muted-foreground">
                 Un tratament activ trebuie să aibă minimum o locație
-                activă asociată.
+                activă cu profesor disponibil atribuit.
               </p>
             </div>
           </div>

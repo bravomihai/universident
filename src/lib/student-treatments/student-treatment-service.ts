@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { studentTreatmentSelect } from "@/lib/student-treatments/student-treatment-data";
 import type {
   CreateStudentTreatmentInput,
+  StudentTreatmentLocationAssignmentInput,
   UpdateStudentTreatmentInput,
 } from "@/lib/student-treatments/student-treatment-input";
 
@@ -12,7 +13,8 @@ export type StudentTreatmentDomainErrorCode =
   | "CATALOG_TREATMENT_INVALID"
   | "TREATMENT_ALREADY_ADDED"
   | "LOCATIONS_INVALID"
-  | "ACTIVATION_REQUIRES_LOCATION"
+  | "SUPERVISORS_INVALID"
+  | "ACTIVATION_REQUIRES_COMPLETE_ASSIGNMENT"
   | "DEACTIVATION_CONFIRMATION_REQUIRED";
 
 export class StudentTreatmentDomainError extends Error {
@@ -24,42 +26,60 @@ export class StudentTreatmentDomainError extends Error {
   }
 }
 
-type ValidatedLocation = {
-  id: string;
-  isActive: boolean;
-};
-
-async function validateOwnedLocations(
+async function validateOwnedAssignments(
   transaction: Prisma.TransactionClient,
   studentProfileId: string,
-  locationIds: string[],
-): Promise<ValidatedLocation[]> {
-  if (locationIds.length === 0) {
+  assignments: StudentTreatmentLocationAssignmentInput[],
+) {
+  if (assignments.length === 0) {
     return [];
   }
 
-  const locations = await transaction.studentLocation.findMany({
-    where: {
-      id: {
-        in: locationIds,
+  const locationIds = assignments.map(
+    (assignment) => assignment.studentLocationId,
+  );
+  const supervisorIds = [
+    ...new Set(
+      assignments.map((assignment) => assignment.supervisorId),
+    ),
+  ];
+
+  const [locations, supervisors] = await Promise.all([
+    transaction.studentLocation.findMany({
+      where: {
+        id: { in: locationIds },
+        studentProfileId,
+        isActive: true,
+        deletedAt: null,
       },
-      studentProfileId,
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      isActive: true,
-    },
-  });
+      select: { id: true },
+    }),
+    transaction.studentSupervisor.findMany({
+      where: {
+        id: { in: supervisorIds },
+        studentProfileId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true },
+    }),
+  ]);
 
   if (locations.length !== locationIds.length) {
     throw new StudentTreatmentDomainError(
       "LOCATIONS_INVALID",
-      "Una sau mai multe locații nu există, sunt arhivate sau nu îți aparțin.",
+      "Una sau mai multe locații nu există, sunt inactive, arhivate sau nu îți aparțin.",
     );
   }
 
-  return locations;
+  if (supervisors.length !== supervisorIds.length) {
+    throw new StudentTreatmentDomainError(
+      "SUPERVISORS_INVALID",
+      "Unul sau mai mulți profesori nu există, sunt inactivi, arhivați sau nu îți aparțin.",
+    );
+  }
+
+  return assignments;
 }
 
 export async function createStudentTreatment(
@@ -110,19 +130,16 @@ export async function createStudentTreatment(
         );
       }
 
-      const locations = await validateOwnedLocations(
+      const assignments = await validateOwnedAssignments(
         transaction,
         studentProfileId,
-        input.locationIds,
+        input.locationAssignments,
       );
 
-      if (
-        input.isActive &&
-        !locations.some((location) => location.isActive)
-      ) {
+      if (input.isActive && assignments.length === 0) {
         throw new StudentTreatmentDomainError(
-          "ACTIVATION_REQUIRES_LOCATION",
-          "Tratamentul poate fi activat numai dacă are cel puțin o locație activă asociată.",
+          "ACTIVATION_REQUIRES_COMPLETE_ASSIGNMENT",
+          "Tratamentul poate fi activat numai dacă are cel puțin o locație activă cu profesor atribuit.",
         );
       }
 
@@ -140,12 +157,13 @@ export async function createStudentTreatment(
           },
         });
 
-      if (input.locationIds.length > 0) {
+      if (assignments.length > 0) {
         await transaction.studentTreatmentLocation.createMany({
-          data: input.locationIds.map((studentLocationId) => ({
+          data: assignments.map((assignment) => ({
             studentProfileId,
             studentTreatmentId: studentTreatment.id,
-            studentLocationId,
+            studentLocationId: assignment.studentLocationId,
+            supervisorId: assignment.supervisorId,
             isActive: true,
           })),
         });
@@ -168,7 +186,7 @@ async function updateTreatmentLocationAssociations(
   transaction: Prisma.TransactionClient,
   studentProfileId: string,
   studentTreatmentId: string,
-  locationIds: string[],
+  assignments: StudentTreatmentLocationAssignmentInput[],
 ) {
   const existingAssociations =
     await transaction.studentTreatmentLocation.findMany({
@@ -189,7 +207,8 @@ async function updateTreatmentLocationAssociations(
     ]),
   );
 
-  for (const studentLocationId of locationIds) {
+  for (const assignment of assignments) {
+    const { studentLocationId, supervisorId } = assignment;
     const existingAssociation =
       associationsByLocationId.get(studentLocationId);
 
@@ -199,6 +218,7 @@ async function updateTreatmentLocationAssociations(
           id: existingAssociation.id,
         },
         data: {
+          supervisorId,
           isActive: true,
           deletedAt: null,
         },
@@ -209,6 +229,7 @@ async function updateTreatmentLocationAssociations(
           studentProfileId,
           studentTreatmentId,
           studentLocationId,
+          supervisorId,
           isActive: true,
         },
       });
@@ -220,10 +241,12 @@ async function updateTreatmentLocationAssociations(
       studentProfileId,
       studentTreatmentId,
       deletedAt: null,
-      ...(locationIds.length > 0
+      ...(assignments.length > 0
         ? {
             studentLocationId: {
-              notIn: locationIds,
+              notIn: assignments.map(
+                (assignment) => assignment.studentLocationId,
+              ),
             },
           }
         : {}),
@@ -268,14 +291,15 @@ export async function updateStudentTreatment(
         );
       }
 
-      let selectedLocations: ValidatedLocation[];
+      let hasCompleteActiveConfiguration: boolean;
 
-      if (input.data.locationIds !== undefined) {
-        selectedLocations = await validateOwnedLocations(
+      if (input.data.locationAssignments !== undefined) {
+        const assignments = await validateOwnedAssignments(
           transaction,
           studentProfileId,
-          input.data.locationIds,
+          input.data.locationAssignments,
         );
+        hasCompleteActiveConfiguration = assignments.length > 0;
       } else {
         const currentAssociations =
           await transaction.studentTreatmentLocation.findMany({
@@ -291,53 +315,61 @@ export async function updateStudentTreatment(
             select: {
               studentLocation: {
                 select: {
-                  id: true,
                   isActive: true,
+                  deletedAt: true,
+                },
+              },
+              supervisor: {
+                select: {
+                  isActive: true,
+                  deletedAt: true,
                 },
               },
             },
           });
 
-        selectedLocations = currentAssociations.map(
-          (association) => association.studentLocation,
-        );
+        hasCompleteActiveConfiguration =
+          currentAssociations.length > 0 &&
+          currentAssociations.every(
+            (association) =>
+              association.studentLocation.isActive &&
+              association.studentLocation.deletedAt === null &&
+              association.supervisor.isActive === true &&
+              association.supervisor.deletedAt === null,
+          );
       }
-
-      const hasActiveLocation = selectedLocations.some(
-        (location) => location.isActive,
-      );
 
       if (
         input.data.isActive === true &&
         !existingTreatment.isActive &&
-        !hasActiveLocation
+        !hasCompleteActiveConfiguration
       ) {
         throw new StudentTreatmentDomainError(
-          "ACTIVATION_REQUIRES_LOCATION",
-          "Tratamentul poate fi activat numai dacă are cel puțin o locație activă asociată.",
+          "ACTIVATION_REQUIRES_COMPLETE_ASSIGNMENT",
+          "Tratamentul poate fi activat numai dacă fiecare locație activă are un profesor disponibil atribuit.",
         );
       }
 
       let nextIsActive =
         input.data.isActive ?? existingTreatment.isActive;
 
-      if (nextIsActive && !hasActiveLocation) {
+      if (nextIsActive && !hasCompleteActiveConfiguration) {
         if (!input.confirmDeactivate) {
           throw new StudentTreatmentDomainError(
             "DEACTIVATION_CONFIRMATION_REQUIRED",
-            "Tratamentul nu va mai avea nicio locație activă și trebuie dezactivat.",
+            "Tratamentul nu va mai avea o configurație completă de locații și profesori și trebuie dezactivat.",
           );
         }
 
         nextIsActive = false;
       }
 
-      if (input.data.locationIds !== undefined) {
+      if (input.data.locationAssignments !== undefined) {
         await updateTreatmentLocationAssociations(
           transaction,
           studentProfileId,
           studentTreatmentId,
-          input.data.locationIds,
+          input.data.locationAssignments,
         );
       }
 

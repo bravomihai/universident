@@ -29,7 +29,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 
 export const metadata: Metadata = {
@@ -48,12 +47,11 @@ const plannedProtectionItems = [
 ];
 
 export default async function AccountSecurityPage() {
-  const session = await requireAccountPageSession();
-  const isStudent = session.user.role === UserRole.STUDENT;
+  await requireAccountPageSession();
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-5xl space-y-8">
+      <div className="w-full max-w-6xl space-y-8">
         <Link
           href="/cont"
           className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -321,14 +319,6 @@ export default async function AccountSecurityPage() {
                 <li>• regenerarea codurilor de recuperare;</li>
                 <li>• revocarea sesiunilor;</li>
                 <li>• ștergerea contului.</li>
-                {isStudent ? (
-                  <>
-                    <li>• înlocuirea documentelor profesionale;</li>
-                    <li>
-                      • retrimiterea profilului pentru verificare.
-                    </li>
-                  </>
-                ) : null}
               </ul>
             </CardContent>
           </Card>
@@ -370,13 +360,6 @@ export default async function AccountSecurityPage() {
               description="Află cum sunt păstrate și protejate datele contului."
               actionLabel="Vezi informațiile"
             />
-
-            {isStudent ? (
-              <p className="my-5 rounded-xl border bg-muted/15 px-4 py-3 text-sm text-muted-foreground">
-                Documentele profesionale și verificarea identității
-                pot avea reguli diferite de păstrare a datelor.
-              </p>
-            ) : null}
 
             <AccountScaffoldRow
               icon={

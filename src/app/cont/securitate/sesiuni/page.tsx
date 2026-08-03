@@ -17,7 +17,7 @@ export default async function AccountSessionsPage() {
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-4xl space-y-8">
+      <div className="w-full max-w-6xl space-y-8">
         <Link
           href="/cont/securitate"
           className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"

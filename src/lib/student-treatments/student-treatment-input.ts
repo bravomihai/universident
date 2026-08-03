@@ -12,14 +12,19 @@ export type CreateStudentTreatmentInput = {
   treatmentId: string;
   description: string | null;
   durationMinutes: number;
-  locationIds: string[];
+  locationAssignments: StudentTreatmentLocationAssignmentInput[];
   isActive: boolean;
+};
+
+export type StudentTreatmentLocationAssignmentInput = {
+  studentLocationId: string;
+  supervisorId: string;
 };
 
 export type UpdateStudentTreatmentData = {
   description?: string | null;
   durationMinutes?: number;
-  locationIds?: string[];
+  locationAssignments?: StudentTreatmentLocationAssignmentInput[];
   isActive?: boolean;
 };
 
@@ -32,14 +37,14 @@ const createFields = new Set([
   "treatmentId",
   "description",
   "durationMinutes",
-  "locationIds",
+  "locationAssignments",
   "isActive",
 ]);
 
 const updateFields = new Set([
   "description",
   "durationMinutes",
-  "locationIds",
+  "locationAssignments",
   "isActive",
   "confirmDeactivate",
 ]);
@@ -160,19 +165,44 @@ function parseBoolean(
   };
 }
 
-function parseLocationIds(value: unknown): ParseResult<string[]> {
+function parseLocationAssignments(
+  value: unknown,
+): ParseResult<StudentTreatmentLocationAssignmentInput[]> {
   if (!Array.isArray(value)) {
     return {
       ok: false,
-      error: "Locațiile trebuie trimise ca listă.",
+      error: "Locațiile și profesorii trebuie trimiși ca listă.",
     };
   }
 
-  const locationIds: string[] = [];
+  const assignments: StudentTreatmentLocationAssignmentInput[] = [];
+  const assignmentFields = new Set([
+    "studentLocationId",
+    "supervisorId",
+  ]);
 
-  for (const locationIdValue of value) {
+  for (const assignmentValue of value) {
+    if (!isRecord(assignmentValue)) {
+      return {
+        ok: false,
+        error: "Fiecare asociere trebuie să conțină o locație și un profesor.",
+      };
+    }
+
+    const unexpectedField = findUnexpectedField(
+      assignmentValue,
+      assignmentFields,
+    );
+
+    if (unexpectedField) {
+      return {
+        ok: false,
+        error: `Câmpul „${unexpectedField}” nu este permis în asociere.`,
+      };
+    }
+
     const locationId = parseIdentifier(
-      locationIdValue,
+      assignmentValue.studentLocationId,
       "Identificatorul locației",
     );
 
@@ -180,19 +210,35 @@ function parseLocationIds(value: unknown): ParseResult<string[]> {
       return locationId;
     }
 
-    locationIds.push(locationId.data);
+    const supervisorId = parseIdentifier(
+      assignmentValue.supervisorId,
+      "Identificatorul profesorului",
+    );
+
+    if (!supervisorId.ok) {
+      return supervisorId;
+    }
+
+    assignments.push({
+      studentLocationId: locationId.data,
+      supervisorId: supervisorId.data,
+    });
   }
 
-  if (new Set(locationIds).size !== locationIds.length) {
+  const locationIds = assignments.map(
+    (assignment) => assignment.studentLocationId,
+  );
+
+  if (new Set(locationIds).size !== assignments.length) {
     return {
       ok: false,
-      error: "Lista locațiilor nu poate conține duplicate.",
+      error: "O locație poate apărea o singură dată în același tratament.",
     };
   }
 
   return {
     ok: true,
-    data: locationIds,
+    data: assignments,
   };
 }
 
@@ -236,16 +282,18 @@ export function parseCreateStudentTreatmentInput(
     return durationMinutes;
   }
 
-  let locationIds: string[] = [];
+  let locationAssignments: StudentTreatmentLocationAssignmentInput[] = [];
 
-  if (hasOwn(value, "locationIds")) {
-    const parsedLocationIds = parseLocationIds(value.locationIds);
+  if (hasOwn(value, "locationAssignments")) {
+    const parsedAssignments = parseLocationAssignments(
+      value.locationAssignments,
+    );
 
-    if (!parsedLocationIds.ok) {
-      return parsedLocationIds;
+    if (!parsedAssignments.ok) {
+      return parsedAssignments;
     }
 
-    locationIds = parsedLocationIds.data;
+    locationAssignments = parsedAssignments.data;
   }
 
   let isActive = false;
@@ -269,7 +317,7 @@ export function parseCreateStudentTreatmentInput(
       treatmentId: treatmentId.data,
       description: description.data,
       durationMinutes: durationMinutes.data,
-      locationIds,
+      locationAssignments,
       isActive,
     },
   };
@@ -319,14 +367,16 @@ export function parseUpdateStudentTreatmentInput(
     hasUpdate = true;
   }
 
-  if (hasOwn(value, "locationIds")) {
-    const locationIds = parseLocationIds(value.locationIds);
+  if (hasOwn(value, "locationAssignments")) {
+    const locationAssignments = parseLocationAssignments(
+      value.locationAssignments,
+    );
 
-    if (!locationIds.ok) {
-      return locationIds;
+    if (!locationAssignments.ok) {
+      return locationAssignments;
     }
 
-    data.locationIds = locationIds.data;
+    data.locationAssignments = locationAssignments.data;
     hasUpdate = true;
   }
 

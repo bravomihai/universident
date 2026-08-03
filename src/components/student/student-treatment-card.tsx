@@ -5,6 +5,7 @@ import {
   CircleCheck,
   CirclePause,
   Clock3,
+  GraduationCap,
   MapPin,
   Pencil,
   Power,
@@ -26,10 +27,17 @@ import {
 
 export type StudentTreatmentLocationData = {
   id: string;
+  studentLocationId: string;
   name: string;
   address: string;
   cityName: string;
   isActive: boolean;
+  supervisor: {
+    id: string;
+    fullName: string;
+    academicTitle: string | null;
+    isActive: boolean;
+  };
 };
 
 export type StudentTreatmentCardData = {
@@ -101,7 +109,7 @@ export function StudentTreatmentCard({
           <div className="space-y-2">
             <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <MapPin className="size-3.5" aria-hidden="true" />
-              Locații asociate
+              Locații și supervizare
             </dt>
 
             <dd>
@@ -118,6 +126,23 @@ export function StudentTreatmentCard({
                       <span className="block text-xs text-muted-foreground">
                         {location.cityName} ·{" "}
                         {location.isActive ? "Activă" : "Inactivă"}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {location.address}
+                      </span>
+                      <span
+                        className="mt-2 flex items-center gap-1.5 text-sm"
+                      >
+                        <GraduationCap
+                          className="size-3.5 shrink-0"
+                          aria-hidden="true"
+                        />
+                        {[
+                          location.supervisor.academicTitle,
+                          location.supervisor.fullName,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                       </span>
                     </li>
                   ))}

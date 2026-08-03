@@ -50,6 +50,22 @@ export default async function NewStudentTreatmentPage() {
               },
             },
           },
+          supervisors: {
+            where: {
+              deletedAt: null,
+            },
+            orderBy: [
+              { isActive: "desc" },
+              { fullName: "asc" },
+            ],
+            select: {
+              id: true,
+              fullName: true,
+              academicTitle: true,
+              isActive: true,
+              deletedAt: true,
+            },
+          },
         },
       }),
       prisma.treatment.findMany({
@@ -86,10 +102,15 @@ export default async function NewStudentTreatmentPage() {
     })) ?? [];
   const isFormDisabled =
     !studentProfile || availableCatalogTreatments.length === 0;
+  const supervisors =
+    studentProfile?.supervisors.map((supervisor) => ({
+      ...supervisor,
+      deletedAt: supervisor.deletedAt?.toISOString() ?? null,
+    })) ?? [];
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-3xl space-y-6">
+      <div className="w-full max-w-6xl space-y-6">
         <Link
           href="/cont/tratamente"
           className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground"
@@ -140,6 +161,7 @@ export default async function NewStudentTreatmentPage() {
           mode="create"
           catalogTreatments={availableCatalogTreatments}
           locations={locations}
+          supervisors={supervisors}
           isDisabled={isFormDisabled}
         />
       </div>

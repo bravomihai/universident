@@ -133,3 +133,50 @@ export function ArchivedTreatmentRestoreDialog({
     </AlertDialog>
   );
 }
+
+type ArchivedSupervisorRestoreDialogProps = {
+  supervisorName: string | null;
+  isPending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+export function ArchivedSupervisorRestoreDialog({
+  supervisorName,
+  isPending,
+  onCancel,
+  onConfirm,
+}: ArchivedSupervisorRestoreDialogProps) {
+  return (
+    <AlertDialog
+      open={supervisorName !== null}
+      onOpenChange={(open) => {
+        if (!open && !isPending) onCancel();
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogMedia>
+            <RotateCcw aria-hidden="true" />
+          </AlertDialogMedia>
+          <AlertDialogTitle>
+            Restaurezi profesorul „{supervisorName}”?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Profesorul supervizor va reveni activ în lista Supervizori și
+            va putea fi selectat în asocierile tratament–locație.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>
+            Anulează
+          </AlertDialogCancel>
+          <AlertDialogAction disabled={isPending} onClick={onConfirm}>
+            Restaurează supervizorul
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}

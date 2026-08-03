@@ -6,6 +6,7 @@ import {
   Clock3,
   MapPin,
   RotateCcw,
+  UserRound,
 } from "lucide-react";
 
 import {
@@ -46,6 +47,13 @@ export type ArchivedStudentTreatmentCardData = {
     slug: string;
     description: string;
   };
+};
+
+export type ArchivedStudentSupervisorCardData = {
+  id: string;
+  fullName: string;
+  academicTitle: string | null;
+  deletedAt: string;
 };
 
 const archivedDateFormatter = new Intl.DateTimeFormat("ro-RO", {
@@ -207,6 +215,70 @@ export function ArchivedStudentTreatmentCard({
           >
             <RotateCcw aria-hidden="true" />
             Restaurează tratamentul
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+type ArchivedStudentSupervisorCardProps = {
+  supervisor: ArchivedStudentSupervisorCardData;
+  isPending: boolean;
+  isDisabled: boolean;
+  feedback: StudentCardFeedback | null;
+  onRestore: (supervisor: ArchivedStudentSupervisorCardData) => void;
+};
+
+export function ArchivedStudentSupervisorCard({
+  supervisor,
+  isPending,
+  isDisabled,
+  feedback,
+  onRestore,
+}: ArchivedStudentSupervisorCardProps) {
+  return (
+    <Card aria-busy={isPending}>
+      <CardHeader>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle>{supervisor.fullName}</CardTitle>
+            <CardDescription className="flex items-center gap-1.5">
+              <UserRound className="size-4" aria-hidden="true" />
+              {supervisor.academicTitle ?? "Fără titlu academic"}
+            </CardDescription>
+          </div>
+
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium">
+            <Archive className="size-3.5" aria-hidden="true" />
+            Arhivat
+          </span>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-5">
+        <dl>
+          <div className="space-y-1">
+            <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <CalendarDays className="size-3.5" aria-hidden="true" />
+              Arhivat la
+            </dt>
+            <dd>{formatArchivedDate(supervisor.deletedAt)}</dd>
+          </div>
+        </dl>
+
+        <StudentCardFeedbackMessage feedback={feedback} />
+
+        <div className="border-t pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isDisabled}
+            onClick={() => onRestore(supervisor)}
+          >
+            <RotateCcw aria-hidden="true" />
+            Restaurează supervizorul
           </Button>
         </div>
       </CardContent>

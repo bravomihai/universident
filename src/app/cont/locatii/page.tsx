@@ -66,7 +66,7 @@ export default async function StudentLocationsPage() {
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-5xl space-y-6">
+      <div className="w-full max-w-6xl space-y-6">
         <StudentLocationsManager
           initialLocations={locations}
           hasStudentProfile={Boolean(studentProfile)}

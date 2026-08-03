@@ -10,6 +10,7 @@ import {
   type StudentTreatmentCardData,
 } from "@/components/student/student-treatment-card";
 import { StudentTreatmentArchiveDialog } from "@/components/student/student-treatment-dialogs";
+import { StudentProfessionalNavigation } from "@/components/student/student-professional-navigation";
 import { useCardFeedback } from "@/components/student/use-card-feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +39,9 @@ type ApiTreatment = {
     description: string;
   };
   treatmentLocations: {
+    id: string;
+    studentLocationId: string;
+    supervisorId: string;
     isActive: boolean;
     studentLocation: {
       id: string;
@@ -47,6 +51,12 @@ type ApiTreatment = {
       city: {
         name: string;
       };
+    };
+    supervisor: {
+      id: string;
+      fullName: string;
+      academicTitle: string | null;
+      isActive: boolean;
     };
   }[];
 };
@@ -71,11 +81,13 @@ function toTreatmentCardData(
     locations: treatment.treatmentLocations
       .filter((association) => association.isActive)
       .map((association) => ({
-        id: association.studentLocation.id,
+        id: association.id,
+        studentLocationId: association.studentLocation.id,
         name: association.studentLocation.name,
         address: association.studentLocation.address,
         cityName: association.studentLocation.city.name,
         isActive: association.studentLocation.isActive,
+        supervisor: association.supervisor,
       })),
     createdAt: treatment.createdAt,
     updatedAt: treatment.updatedAt,
@@ -249,6 +261,8 @@ export function StudentTreatmentsManager({
       >
         ← Înapoi la cont
       </Link>
+
+      <StudentProfessionalNavigation current="treatments" />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl space-y-2">
