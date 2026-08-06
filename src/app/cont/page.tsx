@@ -1,6 +1,5 @@
 import {
   Archive,
-  ChevronRight,
   GraduationCap,
   MapPin,
   ShieldCheck,
@@ -13,10 +12,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { StudentPublicationControl } from "@/components/student/student-publication-control";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  clickableCardClassName,
+  clickableCardIndicatorClassName,
+  clickableCardLinkClassName,
+} from "@/components/ui/clickable-card-styles";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { prisma } from "@/lib/prisma";
+import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
 
 export const metadata: Metadata = {
   title: "Contul meu",
@@ -28,9 +35,6 @@ const roleLabels: Record<UserRole, string> = {
   [UserRole.STUDENT]: "Student",
   [UserRole.ADMIN]: "Administrator",
 };
-
-const dashboardLinkClassName =
-  "group block h-full rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 type DashboardLinkCardProps = {
   href: string;
@@ -50,8 +54,8 @@ function DashboardLinkCard({
   children,
 }: DashboardLinkCardProps) {
   return (
-    <Link href={href} className={dashboardLinkClassName}>
-      <Card className="h-full transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
+    <Link href={href} className={clickableCardLinkClassName}>
+      <Card className={clickableCardClassName}>
         <CardContent className="flex h-full flex-col gap-4 p-5">
           <div className="flex items-start gap-3">
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
@@ -63,11 +67,16 @@ function DashboardLinkCard({
             </div>
           </div>
 
-          <div className="mt-auto text-sm">{children}</div>
+          <div className="text-sm">{children}</div>
 
-          <span className="inline-flex items-center gap-1 text-sm font-medium">
+          <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium">
             {action}
-            <ChevronRight className="size-4" aria-hidden="true" />
+            <span
+              className={clickableCardIndicatorClassName}
+              aria-hidden="true"
+            >
+              {">"}
+            </span>
           </span>
         </CardContent>
       </Card>
@@ -184,6 +193,9 @@ export default async function AccountPage() {
     : studentData.profile.bio?.trim()
       ? "Profil complet"
       : "Profil parțial";
+  const publication = isStudent
+    ? await getStudentPublicationReadiness(session.user.id)
+    : null;
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -202,18 +214,15 @@ export default async function AccountPage() {
 
         {studentData ? (
           <section aria-labelledby="professional-profile-title">
-            <Link
-              href="/cont/profil-student"
-              className={dashboardLinkClassName}
-            >
-              <Card className="transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                <CardContent className="grid gap-5 p-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-center">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-3">
+            <Card>
+              <CardContent className="grid gap-5 p-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-start">
+                <div className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
                       <span className="inline-flex size-10 items-center justify-center rounded-full border bg-muted/30">
                         <GraduationCap className="size-5" aria-hidden="true" />
                       </span>
-                      <div>
+                      <div className="min-w-0">
                         <h2 id="professional-profile-title" className="font-semibold">
                           Profil profesional
                         </h2>
@@ -221,39 +230,59 @@ export default async function AccountPage() {
                           Datele profesionale afișate în profilul tău.
                         </p>
                       </div>
-                      <span className="ml-auto rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-medium">
-                        {profileCompletion}
-                      </span>
                     </div>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full shrink-0 sm:w-auto"
+                    >
+                      <Link href="/cont/profil-student">Editează profilul</Link>
+                    </Button>
+                  </div>
 
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-medium">
+                      {profileCompletion}
+                    </span>
+                    <p className="min-w-0 flex-1 text-sm text-muted-foreground">
                       {studentData.profile
                         ? compactBio(studentData.profile.bio)
                         : "Completează universitatea, anul de studiu și descrierea profesională."}
                     </p>
                   </div>
+                </div>
 
-                  <div className="space-y-3 md:border-l md:pl-5">
-                    {studentData.profile ? (
-                      <dl className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <dt className="text-xs text-muted-foreground">Universitate</dt>
-                          <dd className="font-medium">{studentData.profile.university}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs text-muted-foreground">An de studiu</dt>
-                          <dd className="font-medium">Anul {studentData.profile.studyYear}</dd>
-                        </div>
-                      </dl>
-                    ) : null}
-                    <span className="inline-flex items-center gap-1 text-sm font-medium">
-                      Editează profilul profesional
-                      <ChevronRight className="size-4" aria-hidden="true" />
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                <div className="space-y-3 md:border-l md:pl-5">
+                  {studentData.profile ? (
+                    <dl className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Universitate</dt>
+                        <dd className="font-medium">{studentData.profile.university}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">An de studiu</dt>
+                        <dd className="font-medium">Anul {studentData.profile.studyYear}</dd>
+                      </div>
+                    </dl>
+                  ) : null}
+                </div>
+
+                {publication ? (
+                  <StudentPublicationControl
+                    initialState={{
+                      isPublished: publication.isPublished,
+                      isPubliclyVisible: publication.isPubliclyVisible,
+                      canPublish: publication.canPublish,
+                      publicPath: publication.publicSlug
+                        ? `/studenti/${publication.publicSlug}`
+                        : null,
+                      missingRequirements: publication.missingRequirements,
+                    }}
+                  />
+                ) : null}
+              </CardContent>
+            </Card>
           </section>
         ) : null}
 
@@ -341,51 +370,38 @@ export default async function AccountPage() {
         </section>
 
         {studentData ? (
-          <section aria-labelledby="archived-resources-title">
-            <Link
+          <section aria-label="Resurse arhivate">
+            <DashboardLinkCard
               href="/cont/resurse-arhivate"
-              className={dashboardLinkClassName}
+              icon={Archive}
+              title="Resurse arhivate"
+              description="Tratamente, locații și supervizori păstrați pentru restaurare."
+              action="Vezi resursele arhivate"
             >
-              <Card className="transition group-hover:ring-primary/35 group-focus-visible:ring-primary/35">
-                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
-                    <Archive className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h2 id="archived-resources-title" className="font-semibold">
-                      Resurse arhivate
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      Tratamente, locații și supervizori păstrați pentru restaurare.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                    <span>
-                      {resourceCountLabel(
-                        studentData.archivedTreatments,
-                        "tratament",
-                        "tratamente",
-                      )}
-                    </span>
-                    <span>
-                      {resourceCountLabel(
-                        studentData.archivedLocations,
-                        "locație",
-                        "locații",
-                      )}
-                    </span>
-                    <span>
-                      {resourceCountLabel(
-                        studentData.archivedSupervisors,
-                        "supervizor",
-                        "supervizori",
-                      )}
-                    </span>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
-                </CardContent>
-              </Card>
-            </Link>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                <span>
+                  {resourceCountLabel(
+                    studentData.archivedTreatments,
+                    "tratament",
+                    "tratamente",
+                  )}
+                </span>
+                <span>
+                  {resourceCountLabel(
+                    studentData.archivedLocations,
+                    "locație",
+                    "locații",
+                  )}
+                </span>
+                <span>
+                  {resourceCountLabel(
+                    studentData.archivedSupervisors,
+                    "supervizor",
+                    "supervizori",
+                  )}
+                </span>
+              </div>
+            </DashboardLinkCard>
           </section>
         ) : null}
       </div>

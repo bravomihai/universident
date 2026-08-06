@@ -2,7 +2,10 @@ import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-import { createStudentPublicSlug } from "@/lib/student-public-slug";
+import {
+    createStudentPublicSlug,
+    isStudentPublicSlugCollision,
+} from "@/lib/student-public-slug";
 
 type StudentProfileBody = {
     university?: unknown;
@@ -69,37 +72,6 @@ export async function PUT(request: Request) {
     const userName = session.user.name;
 
     let body: StudentProfileBody;
-
-    function isPublicSlugCollision(error: unknown) {
-        if (
-            typeof error !== "object" ||
-            error === null ||
-            !("code" in error) ||
-            error.code !== "P2002"
-        ) {
-            return false;
-        }
-
-        if (!("meta" in error)) {
-            return false;
-        }
-
-        const meta = error.meta;
-
-        if (
-            typeof meta !== "object" ||
-            meta === null ||
-            !("target" in meta)
-        ) {
-            return false;
-        }
-
-        const target = meta.target;
-
-        return Array.isArray(target)
-            ? target.includes("publicSlug")
-            : String(target).includes("publicSlug");
-    }
 
     try {
         body = (await request.json()) as StudentProfileBody;
@@ -199,7 +171,7 @@ export async function PUT(request: Request) {
                 profile = await saveProfile(generatedSlug);
                 break;
             } catch (error) {
-                if (!isPublicSlugCollision(error)) {
+                if (!isStudentPublicSlugCollision(error)) {
                     throw error;
                 }
             }

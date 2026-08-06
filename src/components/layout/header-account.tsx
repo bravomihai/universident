@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { AccountMenu } from "@/components/account/account-menu";
+import { HeaderMobileNavigation } from "@/components/layout/header-mobile-navigation";
 import { UserRole } from "@/generated/prisma/enums";
 import { authClient } from "@/lib/auth-client";
 
@@ -53,34 +54,39 @@ export function HeaderAccount({ initialUser }: HeaderAccountProps) {
 
   if (user) {
     return (
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 items-center gap-1 sm:gap-2">
         <AccountMenu
           name={user.name}
           roleLabel={roleLabels[user.role]}
           showStudentNavigation={user.role === UserRole.STUDENT}
         />
+        <HeaderMobileNavigation isAuthenticated />
       </div>
     );
   }
 
   return (
-    <nav
-      aria-label="Navigare cont"
-      className="flex items-center gap-1 sm:gap-2"
-    >
-      <Link
-        href="/autentificare"
-        className="rounded-lg px-2 py-2 text-sm font-medium transition hover:bg-muted sm:px-3"
+    <>
+      <nav
+        aria-label="Navigare cont"
+        className="hidden items-center gap-2 md:flex"
       >
-        Autentificare
-      </Link>
+        <Link
+          href="/autentificare"
+          className="rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          Autentificare
+        </Link>
 
-      <Link
-        href="/inregistrare"
-        className="rounded-lg bg-primary px-2 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 sm:px-3"
-      >
-        Creează cont
-      </Link>
-    </nav>
+        <Link
+          href="/inregistrare"
+          className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          Creează cont
+        </Link>
+      </nav>
+
+      <HeaderMobileNavigation isAuthenticated={false} />
+    </>
   );
 }

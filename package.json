@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "demo:students": "tsx prisma/demo-public-students.ts seed",
+    "demo:students:cleanup": "tsx prisma/demo-public-students.ts cleanup",
     "postinstall": "prisma generate"
   },
   "dependencies": {

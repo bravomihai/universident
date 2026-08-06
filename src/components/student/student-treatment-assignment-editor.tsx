@@ -1,9 +1,8 @@
 "use client";
 
-import { Plus, Trash2, UserRoundPlus } from "lucide-react";
-import { useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 
-import { StudentSupervisorDialog } from "@/components/student/student-supervisor-dialog";
 import type { StudentSupervisorOption } from "@/components/student/student-supervisor-form";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -49,12 +48,6 @@ export function StudentTreatmentAssignmentEditor({
   disabled,
   onChange,
 }: Props) {
-  const [availableSupervisors, setAvailableSupervisors] =
-    useState(supervisors);
-  const [supervisorDialogTarget, setSupervisorDialogTarget] = useState<
-    number | "list" | null
-  >(null);
-
   function updateAssignment(
     index: number,
     patch: Partial<StudentTreatmentAssignmentDraft>,
@@ -93,7 +86,7 @@ export function StudentTreatmentAssignmentEditor({
         (assignment) => assignment.studentLocationId === location.id,
       ),
   );
-  const hasActiveSupervisors = availableSupervisors.some(
+  const hasActiveSupervisors = supervisors.some(
     (supervisor) =>
       supervisor.isActive && supervisor.deletedAt === null,
   );
@@ -107,19 +100,18 @@ export function StudentTreatmentAssignmentEditor({
               Nu ai supervizori activi.
             </p>
             <p className="text-sm text-muted-foreground">
-              Adaugă un profesor supervizor înainte de salvarea unei
-              asocieri.
+              Adaugă un profesor înainte de configurarea locațiilor
+              tratamentului.
             </p>
           </div>
           <Button
-            type="button"
+            asChild
             variant="outline"
             size="sm"
-            disabled={disabled}
-            onClick={() => setSupervisorDialogTarget("list")}
           >
-            <UserRoundPlus aria-hidden="true" />
-            Adaugă un supervizor
+            <Link href="/cont/supervizori">
+              Gestionează supervizorii
+            </Link>
           </Button>
         </div>
       ) : null}
@@ -140,7 +132,7 @@ export function StudentTreatmentAssignmentEditor({
             const location = locations.find(
               (option) => option.id === assignment.studentLocationId,
             );
-            const supervisor = availableSupervisors.find(
+            const supervisor = supervisors.find(
               (option) => option.id === assignment.supervisorId,
             );
             const supervisorUnavailable =
@@ -209,7 +201,7 @@ export function StudentTreatmentAssignmentEditor({
                         <SelectValue placeholder="Selectează profesorul" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableSupervisors.map((option) => (
+                        {supervisors.map((option) => (
                           <SelectItem
                             key={option.id}
                             value={option.id}
@@ -262,19 +254,6 @@ export function StudentTreatmentAssignmentEditor({
                     Profesorul asociat nu mai este disponibil. Alege altul.
                   </p>
                 ) : null}
-
-                <div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={disabled}
-                    onClick={() => setSupervisorDialogTarget(index)}
-                  >
-                    <UserRoundPlus aria-hidden="true" />
-                    Adaugă un supervizor
-                  </Button>
-                </div>
               </div>
             );
           })}
@@ -284,7 +263,11 @@ export function StudentTreatmentAssignmentEditor({
       <Button
         type="button"
         variant="outline"
-        disabled={disabled || activeUnselectedLocations.length === 0}
+        disabled={
+          disabled ||
+          !hasActiveSupervisors ||
+          activeUnselectedLocations.length === 0
+        }
         onClick={addAssignment}
       >
         <Plus aria-hidden="true" />
@@ -297,33 +280,6 @@ export function StudentTreatmentAssignmentEditor({
           locație înainte de a crea o asociere.
         </p>
       ) : null}
-
-      <StudentSupervisorDialog
-        open={supervisorDialogTarget !== null}
-        disabled={disabled}
-        onOpenChange={(open) => {
-          if (!open) setSupervisorDialogTarget(null);
-        }}
-        onSaved={(savedSupervisor) => {
-          setAvailableSupervisors((current) => {
-            const exists = current.some(
-              (option) => option.id === savedSupervisor.id,
-            );
-            return exists
-              ? current.map((option) =>
-                  option.id === savedSupervisor.id
-                    ? savedSupervisor
-                    : option,
-                )
-              : [...current, savedSupervisor];
-          });
-          if (typeof supervisorDialogTarget === "number") {
-            updateAssignment(supervisorDialogTarget, {
-              supervisorId: savedSupervisor.id,
-            });
-          }
-        }}
-      />
     </div>
   );
 }

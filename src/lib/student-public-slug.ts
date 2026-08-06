@@ -16,3 +16,27 @@ export function createStudentPublicSlug(name: string) {
 
   return `${normalizedName || "student"}-${suffix}`;
 }
+
+export function isStudentPublicSlugCollision(error: unknown) {
+  if (
+    typeof error !== "object" ||
+    error === null ||
+    !("code" in error) ||
+    error.code !== "P2002" ||
+    !("meta" in error)
+  ) {
+    return false;
+  }
+
+  const meta = error.meta;
+
+  if (typeof meta !== "object" || meta === null || !("target" in meta)) {
+    return false;
+  }
+
+  const target = meta.target;
+
+  return Array.isArray(target)
+    ? target.includes("publicSlug")
+    : String(target).includes("publicSlug");
+}
