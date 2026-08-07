@@ -1,5 +1,6 @@
 import {
   Archive,
+  CalendarDays,
   GraduationCap,
   MapPin,
   ShieldCheck,
@@ -336,6 +337,43 @@ export default async function AccountPage() {
                 )}
               </p>
             </DashboardLinkCard>
+          </section>
+        ) : null}
+
+        {studentData ? (
+          <section aria-label="Calendar și disponibilitate">
+            <Link href="/cont/calendar" className={clickableCardLinkClassName}>
+              <Card className={clickableCardClassName}>
+                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 items-start gap-3 sm:items-center">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
+                      <CalendarDays className="size-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 space-y-1">
+                      <h2 className="font-semibold">Calendar și disponibilitate</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Organizează sloturile în care poți primi pacienți.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 sm:ml-auto sm:shrink-0 sm:justify-end">
+                    <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs text-muted-foreground">
+                      Date demonstrative
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-sm font-medium">
+                      Deschide calendarul
+                      <span
+                        className={clickableCardIndicatorClassName}
+                        aria-hidden="true"
+                      >
+                        {">"}
+                      </span>
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </section>
         ) : null}
 
