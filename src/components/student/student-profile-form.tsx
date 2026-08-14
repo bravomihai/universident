@@ -4,19 +4,33 @@ import { useRouter } from "next/navigation";
 import { type SubmitEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type UniversityOption = {
+  slug: string;
+  shortName: string;
+  fullName: string;
+};
 
 type StudentProfileFormProps = {
   initialProfile?: {
-    university: string;
+    universitySlug: string | null;
     studyYear: number;
     bio: string | null;
   } | null;
+  universities: UniversityOption[];
 };
 
 export function StudentProfileForm({
   initialProfile,
+  universities,
 }: StudentProfileFormProps) {
   const router = useRouter();
 
@@ -33,7 +47,7 @@ export function StudentProfileForm({
 
     const formData = new FormData(event.currentTarget);
 
-    const university = String(formData.get("university") ?? "");
+    const universitySlug = String(formData.get("universitySlug") ?? "");
     const studyYear = Number(formData.get("studyYear"));
     const bio = String(formData.get("bio") ?? "");
 
@@ -44,7 +58,7 @@ export function StudentProfileForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          university,
+          universitySlug,
           studyYear,
           bio,
         }),
@@ -76,26 +90,54 @@ export function StudentProfileForm({
     <form className="space-y-6" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor="university">Universitate</Label>
-        <Input
-          id="university"
-          name="university"
-          defaultValue={initialProfile?.university}
-          maxLength={120}
+        <Select
+          name="universitySlug"
+          defaultValue={initialProfile?.universitySlug ?? undefined}
           required
-        />
+        >
+          <SelectTrigger id="university" className="w-full">
+            <SelectValue placeholder="Alege universitatea" />
+          </SelectTrigger>
+          <SelectContent>
+            {universities.map((university) => (
+              <SelectItem
+                key={university.slug}
+                value={university.slug}
+                title={university.fullName}
+              >
+                {university.shortName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Sunt afișate universitățile din România care au program de Medicină
+          Dentară în nomenclatorul curent.
+        </p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="studyYear">An de studiu</Label>
-        <Input
-          id="studyYear"
+        <Select
           name="studyYear"
-          type="number"
-          min={1}
-          max={6}
-          defaultValue={initialProfile?.studyYear}
+          defaultValue={
+            initialProfile?.studyYear
+              ? String(initialProfile.studyYear)
+              : undefined
+          }
           required
-        />
+        >
+          <SelectTrigger id="studyYear" className="w-full">
+            <SelectValue placeholder="Alege anul de studiu" />
+          </SelectTrigger>
+          <SelectContent>
+            {Array.from({ length: 6 }, (_, index) => index + 1).map((year) => (
+              <SelectItem key={year} value={String(year)}>
+                Anul {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

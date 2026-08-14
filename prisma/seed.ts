@@ -106,6 +106,93 @@ const cities = [
   },
 ] as const;
 
+const universities = [
+  {
+    slug: "umf-carol-davila-bucuresti",
+    shortName: "UMF Carol Davila București",
+    fullName: "Universitatea de Medicină și Farmacie „Carol Davila” din București",
+    city: "București",
+  },
+  {
+    slug: "umf-iuliu-hatieganu-cluj-napoca",
+    shortName: "UMF Cluj-Napoca",
+    fullName: "Universitatea de Medicină și Farmacie „Iuliu Hațieganu” din Cluj-Napoca",
+    city: "Cluj-Napoca",
+  },
+  {
+    slug: "universitatea-ovidius-constanta",
+    shortName: "Universitatea Ovidius Constanța",
+    fullName: "Universitatea „Ovidius” din Constanța",
+    city: "Constanța",
+  },
+  {
+    slug: "umf-craiova",
+    shortName: "UMF Craiova",
+    fullName: "Universitatea de Medicină și Farmacie din Craiova",
+    city: "Craiova",
+  },
+  {
+    slug: "universitatea-dunarea-de-jos-galati",
+    shortName: "Universitatea Dunărea de Jos Galați",
+    fullName: "Universitatea „Dunărea de Jos” din Galați",
+    city: "Galați",
+  },
+  {
+    slug: "umf-grigore-t-popa-iasi",
+    shortName: "UMF Grigore T. Popa Iași",
+    fullName: "Universitatea de Medicină și Farmacie „Grigore T. Popa” din Iași",
+    city: "Iași",
+  },
+  {
+    slug: "universitatea-din-oradea",
+    shortName: "Universitatea din Oradea",
+    fullName: "Universitatea din Oradea",
+    city: "Oradea",
+  },
+  {
+    slug: "universitatea-lucian-blaga-sibiu",
+    shortName: "Universitatea Lucian Blaga Sibiu",
+    fullName: "Universitatea „Lucian Blaga” din Sibiu",
+    city: "Sibiu",
+  },
+  {
+    slug: "umfst-george-emil-palade-targu-mures",
+    shortName: "UMFST George Emil Palade Târgu Mureș",
+    fullName: "Universitatea de Medicină, Farmacie, Științe și Tehnologie „George Emil Palade” din Târgu Mureș",
+    city: "Târgu Mureș",
+  },
+  {
+    slug: "umf-victor-babes-timisoara",
+    shortName: "UMF Victor Babeș Timișoara",
+    fullName: "Universitatea de Medicină și Farmacie „Victor Babeș” din Timișoara",
+    city: "Timișoara",
+  },
+  {
+    slug: "universitatea-titu-maiorescu-bucuresti",
+    shortName: "Universitatea Titu Maiorescu București",
+    fullName: "Universitatea „Titu Maiorescu” din București",
+    city: "București",
+  },
+  {
+    slug: "universitatea-de-vest-vasile-goldis-arad",
+    shortName: "Universitatea de Vest Vasile Goldiș Arad",
+    fullName: "Universitatea de Vest „Vasile Goldiș” din Arad",
+    city: "Arad",
+  },
+  {
+    slug: "universitatea-apollonia-iasi",
+    shortName: "Universitatea Apollonia Iași",
+    fullName: "Universitatea „Apollonia” din Iași",
+    city: "Iași",
+  },
+  {
+    slug: "universitatea-dimitrie-cantemir-targu-mures",
+    shortName: "Universitatea Dimitrie Cantemir Târgu Mureș",
+    fullName: "Universitatea „Dimitrie Cantemir” din Târgu Mureș",
+    city: "Târgu Mureș",
+  },
+] as const;
+
 async function main() {
     for (const treatment of treatments) {
         await prisma.treatment.upsert({
@@ -143,8 +230,28 @@ async function main() {
         });
     }
 
+    for (const [sortOrder, university] of universities.entries()) {
+        await prisma.university.upsert({
+            where: {
+                slug: university.slug,
+            },
+            update: {
+                shortName: university.shortName,
+                fullName: university.fullName,
+                city: university.city,
+                isActive: true,
+                sortOrder,
+            },
+            create: {
+                ...university,
+                isActive: true,
+                sortOrder,
+            },
+        });
+    }
+
     console.log(
-        `Au fost configurate ${treatments.length} tratamente și ${cities.length} orașe.`,
+        `Au fost configurate ${treatments.length} tratamente, ${cities.length} orașe și ${universities.length} universități.`,
     );
 }
 

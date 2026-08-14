@@ -28,12 +28,21 @@ export function StudentTreatmentCard({ treatment, isPending, isDisabled, feedbac
 }) {
   return (
     <Card aria-busy={isPending}>
-      <CardHeader><CardTitle>{treatment.name}</CardTitle><CardDescription>{treatment.description || treatment.catalogDescription}</CardDescription></CardHeader>
-      <CardContent className="space-y-4">
-        <p className="flex items-center gap-2 text-sm"><Clock3 className="size-4" />{treatment.durationMinutes} minute</p>
-        <p className="text-sm text-muted-foreground">Locația și supervizorul se aleg pentru fiecare interval direct în calendar.</p>
+      <CardHeader className="gap-2 p-5 pb-3">
+        <div className="flex items-start justify-between gap-4">
+          <CardTitle className="text-lg leading-snug">{treatment.name}</CardTitle>
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-foreground">
+            <Clock3 className="size-4 stroke-[2.5]" aria-hidden="true" />
+            {treatment.durationMinutes} min
+          </span>
+        </div>
+        <CardDescription className="text-sm leading-relaxed">
+          {treatment.description || treatment.catalogDescription}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 px-5 pt-0 pb-5">
         <StudentCardFeedbackMessage feedback={feedback} />
-        <div className="flex gap-2 border-t pt-4">
+        <div className="flex flex-wrap gap-2 border-t pt-3">
           <Button asChild variant="outline" size="sm"><Link href={`/cont/tratamente/${treatment.treatmentSlug}/editare`}><Pencil />Editare</Link></Button>
           <Button type="button" variant="destructive" size="sm" disabled={isDisabled} onClick={() => onArchive(treatment)}><Archive />Arhivare</Button>
         </div>

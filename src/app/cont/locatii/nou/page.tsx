@@ -1,3 +1,4 @@
+import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -49,12 +50,14 @@ export default async function NewStudentLocationPage() {
         </Link>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            Profil profesional
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Locație nouă
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+              <MapPin className="size-5" aria-hidden="true" />
+            </span>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Locație nouă
+            </h1>
+          </div>
           <p className="text-muted-foreground">
             Adaugă locul concret în care primești pacienți și alege
             orașul din catalogul platformei.

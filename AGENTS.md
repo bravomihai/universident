@@ -22,7 +22,7 @@ npx prisma migrate status
 npx prisma db seed
 ```
 
-- The seed upserts the shared treatment and city catalogs. It must not create demo users or appointments.
+- The seed upserts the shared treatment, city, and Romanian dental-university catalogs. It must not create demo users or appointments.
 - Never reset or migrate a database before verifying that `DATABASE_URL` points to the intended local/non-production instance.
 - Every Prisma schema change requires a checked-in migration. Do not use `db push` as a substitute for migrations.
 
@@ -32,6 +32,7 @@ npx prisma db seed
 - Mutating account APIs must verify the request origin and require a verified email.
 - Roles are `PATIENT`, `STUDENT`, and `ADMIN`. Do not trust a role, user ID, profile ID, or ownership field supplied by the client.
 - A signed-in student must not see their own listing among `/studenti` search results, although their direct public profile remains accessible.
+- A student profile university must use the `shortName` of an active entry from the seeded university catalog; never accept free-form university names from the profile API.
 
 ## Scheduling invariants
 

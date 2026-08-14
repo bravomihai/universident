@@ -8,13 +8,13 @@ import {
 } from "@/lib/student-public-slug";
 
 type StudentProfileBody = {
-    university?: unknown;
+    universitySlug?: unknown;
     studyYear?: unknown;
     bio?: unknown;
 };
 
 const allowedBodyFields = new Set([
-    "university",
+    "universitySlug",
     "studyYear",
     "bio",
 ]);
@@ -96,20 +96,40 @@ export async function PUT(request: Request) {
         );
     }
 
-    const university =
-        typeof body.university === "string" ? body.university.trim() : "";
+    const universitySlug =
+        typeof body.universitySlug === "string"
+            ? body.universitySlug.trim()
+            : "";
 
     const bio = typeof body.bio === "string" ? body.bio.trim() : "";
 
     const studyYear =
         typeof body.studyYear === "number" ? body.studyYear : Number.NaN;
 
-    if (university.length < 2 || university.length > 120) {
+    if (!universitySlug) {
         return Response.json(
-            { error: "Universitatea trebuie să conțină între 2 și 120 de caractere." },
+            { error: "Alege o universitate din listă." },
             { status: 400 },
         );
     }
+
+    const university = await prisma.university.findFirst({
+        where: {
+            slug: universitySlug,
+            isActive: true,
+        },
+        select: {
+            shortName: true,
+        },
+    });
+
+    if (!university) {
+        return Response.json(
+            { error: "Universitatea aleasă nu mai este disponibilă. Alege alta din listă." },
+            { status: 400 },
+        );
+    }
+    const universityShortName = university.shortName;
 
     if (!Number.isInteger(studyYear) || studyYear < 1 || studyYear > 6) {
         return Response.json(
@@ -141,14 +161,14 @@ export async function PUT(request: Request) {
             },
             update: {
                 publicSlug,
-                university,
+                university: universityShortName,
                 studyYear,
                 bio: bio || null,
             },
             create: {
                 userId: userId,
                 publicSlug,
-                university,
+                university: universityShortName,
                 studyYear,
                 bio: bio || null,
             },

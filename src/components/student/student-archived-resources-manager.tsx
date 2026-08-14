@@ -192,10 +192,14 @@ export function StudentArchivedResourcesManager({
       </Link>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium text-muted-foreground">Contul meu</p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Resurse arhivate
-        </h1>
+        <div className="flex items-center gap-3">
+          <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+            <Archive className="size-5" aria-hidden="true" />
+          </span>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Resurse arhivate
+          </h1>
+        </div>
         <p className="max-w-2xl text-muted-foreground">
           Consultă tratamentele, locațiile și profesorii supervizori arhivați.
           Resursele pot fi restaurate folosind regulile fiecărei categorii.

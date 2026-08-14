@@ -1,3 +1,4 @@
+import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -86,12 +87,14 @@ export default async function EditStudentLocationPage({
         </Link>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            Profil profesional
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Editează locația
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+              <MapPin className="size-5" aria-hidden="true" />
+            </span>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Editează locația
+            </h1>
+          </div>
           <p className="text-muted-foreground">
             Modifică datele locației fără a schimba adresa sa stabilă
             din navigarea contului.

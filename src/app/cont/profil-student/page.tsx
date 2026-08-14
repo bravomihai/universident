@@ -1,3 +1,4 @@
+import { GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -20,19 +21,49 @@ export const metadata: Metadata = {
     description: "Configurează profilul tău profesional pe Universident.",
 };
 
+const legacyUniversitySlugs: Record<string, string> = {
+    "umf cluj": "umf-iuliu-hatieganu-cluj-napoca",
+};
+
+function normalizeUniversityName(value: string) {
+    return value.trim().toLocaleLowerCase("ro-RO").replace(/\s+/g, " ");
+}
+
 export default async function StudentProfilePage() {
     const session = await requireStudentPageSession();
 
-    const [profile, reviewData] = await Promise.all([prisma.studentProfile.findUnique({
-        where: {
-            userId: session.user.id,
-        },
-        select: {
-            university: true,
-            studyYear: true,
-            bio: true,
-        },
-    }), getPublishedProfileReviews(session.user.id, "STUDENT")]);
+    const [profile, reviewData, universities] = await Promise.all([
+        prisma.studentProfile.findUnique({
+            where: {
+                userId: session.user.id,
+            },
+            select: {
+                university: true,
+                studyYear: true,
+                bio: true,
+            },
+        }),
+        getPublishedProfileReviews(session.user.id, "STUDENT"),
+        prisma.university.findMany({
+            where: { isActive: true },
+            orderBy: [{ sortOrder: "asc" }, { shortName: "asc" }],
+            select: {
+                slug: true,
+                shortName: true,
+                fullName: true,
+            },
+        }),
+    ]);
+    const normalizedProfileUniversity = profile?.university
+        ? normalizeUniversityName(profile.university)
+        : null;
+    const initialUniversitySlug = normalizedProfileUniversity
+        ? universities.find(
+            (university) =>
+                normalizeUniversityName(university.shortName) ===
+                normalizedProfileUniversity,
+        )?.slug ?? legacyUniversitySlugs[normalizedProfileUniversity] ?? null
+        : null;
 
     return (
         <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -45,13 +76,14 @@ export default async function StudentProfilePage() {
                 </Link>
 
                 <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                        Profil profesional
-                    </p>
-
-                    <h1 className="text-3xl font-semibold tracking-tight">
-                        Date generale
-                    </h1>
+                    <div className="flex items-center gap-3">
+                        <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+                            <GraduationCap className="size-5" aria-hidden="true" />
+                        </span>
+                        <h1 className="text-3xl font-semibold tracking-tight">
+                            Date generale
+                        </h1>
+                    </div>
 
                     <p className="text-muted-foreground">
                         Gestionează informațiile profesionale valabile pentru
@@ -71,7 +103,18 @@ export default async function StudentProfilePage() {
                     </CardHeader>
 
                     <CardContent>
-                        <StudentProfileForm initialProfile={profile} />
+                        <StudentProfileForm
+                            initialProfile={
+                                profile
+                                    ? {
+                                        universitySlug: initialUniversitySlug,
+                                        studyYear: profile.studyYear,
+                                        bio: profile.bio,
+                                    }
+                                    : null
+                            }
+                            universities={universities}
+                        />
                     </CardContent>
                 </Card>
 

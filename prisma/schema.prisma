@@ -72,6 +72,21 @@ model PatientProfile {
   @@map("patient_profile")
 }
 
+model University {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  shortName String   @unique
+  fullName  String
+  city      String
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder, shortName])
+  @@map("university")
+}
+
 model StudentLocation {
   id               String    @id @default(cuid())
   studentProfileId String

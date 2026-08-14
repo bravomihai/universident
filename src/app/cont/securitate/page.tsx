@@ -60,12 +60,14 @@ export default async function AccountSecurityPage() {
         </Link>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            Contul meu
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Confidențialitate și securitate
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+              <ShieldCheck className="size-5" aria-hidden="true" />
+            </span>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Confidențialitate și securitate
+            </h1>
+          </div>
           <p className="max-w-3xl text-muted-foreground">
             Această pagină prezintă structura viitoarelor setări.
             Nicio metodă de autentificare, recuperare sau administrare

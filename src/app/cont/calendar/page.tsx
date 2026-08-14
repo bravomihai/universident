@@ -32,7 +32,7 @@ export default async function StudentCalendarPage() {
             href="/cont"
             className="inline-flex rounded-md text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
-            Contul meu
+            ← Înapoi la cont
           </Link>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">

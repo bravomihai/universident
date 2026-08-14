@@ -153,12 +153,14 @@ export function StudentSupervisorsManager({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            Profil profesional
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Supervizori
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+              <UsersRound className="size-5" aria-hidden="true" />
+            </span>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Supervizori
+            </h1>
+          </div>
           <p className="text-muted-foreground">
             Administrează profesorii pe care îi poți selecta pentru
             tratamentele fiecărui interval din calendar.
@@ -202,27 +204,20 @@ export function StudentSupervisorsManager({
         <div className="grid gap-4 lg:grid-cols-2">
           {supervisors.map((supervisor) => (
             <Card key={supervisor.id} aria-busy={pendingSupervisorId === supervisor.id}>
-              <CardContent className="flex h-full flex-col gap-4 p-5">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border bg-muted/30">
-                    <UserRound className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <h2 className="font-semibold">{supervisor.fullName}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {supervisor.academicTitle ?? "Fără titlu academic"}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Profesor supervizor
-                    </p>
-                  </div>
+              <CardContent className="flex h-full flex-col gap-3 p-5">
+                <div className="flex items-start gap-2">
+                  <UserRound className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <h2 className="text-lg font-semibold leading-snug">
+                    {supervisor.academicTitle ? `${supervisor.academicTitle} ` : null}
+                    {supervisor.fullName}
+                  </h2>
                 </div>
 
                 <StudentCardFeedbackMessage
                   feedback={feedbackById[supervisor.id] ?? null}
                 />
 
-                <div className="mt-auto flex flex-wrap gap-2 border-t pt-4">
+                <div className="mt-auto flex flex-wrap gap-2 border-t pt-3">
                   <Button
                     type="button"
                     variant="outline"

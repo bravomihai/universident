@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { StudentPublicationRequirement } from "@/lib/student-publication/student-publication-readiness";
+import { cn } from "@/lib/utils";
 
 type StudentPublicationControlState = {
   isPublished: boolean;
@@ -18,6 +19,7 @@ type StudentPublicationControlState = {
 
 type StudentPublicationControlProps = {
   initialState: StudentPublicationControlState;
+  className?: string;
 };
 
 type PublicationResponse = {
@@ -36,6 +38,7 @@ function publicationLabel(state: StudentPublicationControlState) {
 
 export function StudentPublicationControl({
   initialState,
+  className,
 }: StudentPublicationControlProps) {
   const router = useRouter();
   const [state, setState] = useState(initialState);
@@ -94,12 +97,17 @@ export function StudentPublicationControl({
   }
 
   return (
-    <div className="space-y-3 border-t pt-4 md:col-span-2">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+    <div className={cn("space-y-3 border-t pt-4", className)}>
+      <div className="flex flex-wrap items-start gap-3">
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
           <Globe2 className="size-4" aria-hidden="true" />
-          Vizibilitate publică
         </span>
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className="font-semibold">Vizibilitate publică</h2>
+          <p className="text-sm text-muted-foreground">
+            Controlează dacă profilul tău poate fi găsit de pacienți.
+          </p>
+        </div>
         <span
           className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
             label === "Publicat"

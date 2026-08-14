@@ -14,7 +14,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   clickableCardClassName,
@@ -207,13 +206,112 @@ export default async function AccountPage() {
           <p className="text-sm font-medium text-muted-foreground">
             Contul meu
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Bun venit, {session.user.name}
-          </h1>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+              <UserRound className="size-5" aria-hidden="true" />
+            </span>
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Bun venit, {session.user.name}
+            </h1>
+          </div>
           <p className="text-muted-foreground">
             Aici poți gestiona informațiile și activitatea contului.
           </p>
         </header>
+
+        {studentData ? (
+          <section aria-label="Profil profesional" className="space-y-8">
+            <DashboardLinkCard
+              href="/cont/profil-student"
+              icon={GraduationCap}
+              title="Profil profesional"
+              description="Datele profesionale afișate în profilul tău."
+              action="Editează profilul"
+            >
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                <div className="flex min-w-0 flex-wrap items-center gap-3">
+                    <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-medium">
+                      {profileCompletion}
+                    </span>
+                    <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+                      {studentData.profile
+                        ? compactBio(studentData.profile.bio)
+                        : "Completează universitatea, anul de studiu și descrierea profesională."}
+                    </p>
+                </div>
+                {studentData.profile ? (
+                  <dl className="grid grid-cols-2 gap-4 text-sm sm:border-l sm:pl-5">
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Universitate</dt>
+                      <dd className="font-medium">{studentData.profile.university}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">An de studiu</dt>
+                      <dd className="font-medium">Anul {studentData.profile.studyYear}</dd>
+                    </div>
+                  </dl>
+                ) : null}
+              </div>
+            </DashboardLinkCard>
+
+            <div className="grid gap-8 md:grid-cols-2 md:gap-4">
+              <Card>
+                <CardContent className="h-full p-5">
+                {publication ? (
+                  <StudentPublicationControl
+                    className="h-full border-t-0 pt-0"
+                    initialState={{
+                      isPublished: publication.isPublished,
+                      isPubliclyVisible: publication.isPubliclyVisible,
+                      canPublish: publication.canPublish,
+                      publicPath: publication.publicSlug
+                        ? `/studenti/${publication.publicSlug}`
+                        : null,
+                      missingRequirements: publication.missingRequirements,
+                    }}
+                  />
+                ) : null}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="flex h-full flex-col gap-4 p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
+                      <UserRound className="size-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 space-y-1">
+                      <h2 id="account-details-title" className="font-semibold">
+                        Detalii cont
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Datele contului sunt disponibile doar pentru consultare.
+                      </p>
+                    </div>
+                  </div>
+                  <dl className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                    <div className="min-w-0">
+                      <dt className="text-xs text-muted-foreground">Nume</dt>
+                      <dd className="truncate font-medium" title={session.user.name}>
+                        {session.user.name}
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-xs text-muted-foreground">Email</dt>
+                      <dd className="truncate font-medium" title={session.user.email}>
+                        {session.user.email}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Rol</dt>
+                      <dd className="font-medium">{roleLabels[session.user.role]}</dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+        ) : null}
 
         {appointmentData ? (
           <section aria-label="Programările contului" className="grid gap-4">
@@ -244,83 +342,46 @@ export default async function AccountPage() {
         ) : null}
 
         {studentData ? (
-          <section aria-labelledby="professional-profile-title">
-            <Card>
-              <CardContent className="grid gap-5 p-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-start">
-                <div className="space-y-3">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="inline-flex size-10 items-center justify-center rounded-full border bg-muted/30">
-                        <GraduationCap className="size-5" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <h2 id="professional-profile-title" className="font-semibold">
-                          Profil profesional
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          Datele profesionale afișate în profilul tău.
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="w-full shrink-0 sm:w-auto"
-                    >
-                      <Link href="/cont/profil-student">Editează profilul</Link>
-                    </Button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-medium">
-                      {profileCompletion}
+          <section aria-label="Calendar și disponibilitate">
+            <Link href="/cont/calendar" className={clickableCardLinkClassName}>
+              <Card className={clickableCardClassName}>
+                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 items-start gap-3 sm:items-center">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
+                      <CalendarDays className="size-4" aria-hidden="true" />
                     </span>
-                    <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-                      {studentData.profile
-                        ? compactBio(studentData.profile.bio)
-                        : "Completează universitatea, anul de studiu și descrierea profesională."}
-                    </p>
+                    <div className="min-w-0 space-y-1">
+                      <h2 className="font-semibold">Calendar și disponibilitate</h2>
+                      <p className="text-sm text-muted-foreground">
+                        Organizează sloturile în care poți primi pacienți.
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-3 md:border-l md:pl-5">
-                  {studentData.profile ? (
-                    <dl className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <dt className="text-xs text-muted-foreground">Universitate</dt>
-                        <dd className="font-medium">{studentData.profile.university}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-muted-foreground">An de studiu</dt>
-                        <dd className="font-medium">Anul {studentData.profile.studyYear}</dd>
-                      </div>
-                    </dl>
-                  ) : null}
-                </div>
-
-                {publication ? (
-                  <StudentPublicationControl
-                    initialState={{
-                      isPublished: publication.isPublished,
-                      isPubliclyVisible: publication.isPubliclyVisible,
-                      canPublish: publication.canPublish,
-                      publicPath: publication.publicSlug
-                        ? `/studenti/${publication.publicSlug}`
-                        : null,
-                      missingRequirements: publication.missingRequirements,
-                    }}
-                  />
-                ) : null}
-              </CardContent>
-            </Card>
+                  <div className="flex flex-wrap items-center gap-3 sm:ml-auto sm:shrink-0 sm:justify-end">
+                    <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs text-muted-foreground">
+                      Date reale
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-sm font-medium">
+                      Deschide calendarul
+                      <span
+                        className={clickableCardIndicatorClassName}
+                        aria-hidden="true"
+                      >
+                        {">"}
+                      </span>
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           </section>
         ) : null}
 
         {studentData ? (
           <section
             aria-label="Administrare profesională"
-            className="grid gap-4 md:grid-cols-3"
+            className="grid gap-8 md:grid-cols-3 md:gap-4"
           >
             <DashboardLinkCard
               href="/cont/tratamente"
@@ -370,47 +431,11 @@ export default async function AccountPage() {
           </section>
         ) : null}
 
-        {studentData ? (
-          <section aria-label="Calendar și disponibilitate">
-            <Link href="/cont/calendar" className={clickableCardLinkClassName}>
-              <Card className={clickableCardClassName}>
-                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                  <div className="flex min-w-0 items-start gap-3 sm:items-center">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
-                      <CalendarDays className="size-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 space-y-1">
-                      <h2 className="font-semibold">Calendar și disponibilitate</h2>
-                      <p className="text-sm text-muted-foreground">
-                        Organizează sloturile în care poți primi pacienți.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3 sm:ml-auto sm:shrink-0 sm:justify-end">
-                    <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs text-muted-foreground">
-                      Date reale
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-sm font-medium">
-                      Deschide calendarul
-                      <span
-                        className={clickableCardIndicatorClassName}
-                        aria-hidden="true"
-                      >
-                        {">"}
-                      </span>
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </section>
-        ) : null}
-
-        <section
-          aria-label="Administrarea contului"
-          className="grid gap-4 md:grid-cols-2"
-        >
+        {!isStudent ? (
+          <section
+            aria-label="Administrarea contului"
+            className="grid gap-4 md:grid-cols-2"
+          >
           <DashboardLinkCard
             href="/cont/informatii-cont"
             icon={UserRound}
@@ -435,7 +460,8 @@ export default async function AccountPage() {
           >
             <p className="font-medium">Protecția contului</p>
           </DashboardLinkCard>
-        </section>
+          </section>
+        ) : null}
 
         {studentData ? (
           <section aria-label="Resurse arhivate">
