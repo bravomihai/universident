@@ -2,7 +2,7 @@ import {
   StudentAvailabilityEndMode,
   StudentAvailabilityWeekday,
 } from "@/generated/prisma/enums";
-import { parseLocalDate } from "@/lib/availability/bucharest-time";
+import { localDateForInstant, parseLocalDate } from "@/lib/availability/bucharest-time";
 import type { AvailabilityRule } from "@/lib/availability/recurrence";
 import {
   isRecord,
@@ -22,6 +22,13 @@ function parseIsoInstant(value: unknown) {
     return { ok: false, error: "Data și ora nu sunt valide." } as const;
   }
   return { ok: true, data: date } as const;
+}
+
+function requireSameBucharestDay(startsAt: Date, endsAt: Date) {
+  if (localDateForInstant(startsAt) !== localDateForInstant(endsAt)) {
+    return { ok: false, error: "Intervalul trebuie să se încheie în aceeași zi." } as const;
+  }
+  return { ok: true } as const;
 }
 
 function parseDuration(value: unknown) {
@@ -155,6 +162,8 @@ export function parseCreateAvailabilityInput(value: unknown) {
     if (!startsAt.ok) return startsAt;
     const endsAt = parseIsoInstant(value.endsAt);
     if (!endsAt.ok) return endsAt;
+    const sameDay = requireSameBucharestDay(startsAt.data, endsAt.data);
+    if (!sameDay.ok) return sameDay;
     const duration = parseDuration(Math.round((endsAt.data.getTime() - startsAt.data.getTime()) / 60_000));
     if (!duration.ok) return duration;
     return {
@@ -183,6 +192,8 @@ export function parseUpdateAvailabilityInput(value: unknown) {
   if (!startsAt.ok) return startsAt;
   const endsAt = parseIsoInstant(value.endsAt);
   if (!endsAt.ok) return endsAt;
+  const sameDay = requireSameBucharestDay(startsAt.data, endsAt.data);
+  if (!sameDay.ok) return sameDay;
   const duration = parseDuration(Math.round((endsAt.data.getTime() - startsAt.data.getTime()) / 60_000));
   if (!duration.ok) return duration;
   const version = parseExpectedVersion(value.expectedVersion);

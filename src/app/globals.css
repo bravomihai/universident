@@ -221,6 +221,12 @@
       0 0 0 4px var(--primary) !important;
   }
 
+  .availability-calendar .fc-event-mirror,
+  .availability-calendar .fc-highlight {
+    opacity: 0 !important;
+    pointer-events: none;
+  }
+
   .booking-calendar .fc-timegrid-event {
     cursor: pointer;
   }

@@ -67,6 +67,7 @@ npm run db:seed
 - A patient can request a slot until its start time. At the start time an unconfirmed request becomes `EXPIRED`.
 - Confirming one request atomically marks the patient's other overlapping pending requests as `SUPERSEDED`.
 - A student availability occurrence is a multi-hour block at exactly one location. It exposes one or more offerings, each pairing one student treatment with one supervisor.
+- A one-off availability and every recurring occurrence must start and end on the same Europe/Bucharest calendar day. When a calendar drag crosses into another day, preserve the start day and clamp the end to the dragged local time; reject cross-day API creation and edits server-side.
 - A treatment can be attached to an occurrence only when its configured duration fits completely inside the occurrence. Disable and explain treatments that are too long in the editor, and enforce the same rule server-side.
 - `PENDING` and `CONFIRMED` appointments consume only their selected subinterval inside the block. Active appointment subintervals for the same student must never overlap.
 - The selected subinterval length comes from `StudentTreatment.durationMinutes`; the client never supplies a duration or end time.

@@ -39,6 +39,35 @@ test("accepts a recurring availability with an explicit occurrence count", () =>
   assert.equal(parsed.data.rule.endsOn, null);
 });
 
+test("rejects a one-off availability that crosses a Bucharest calendar day", () => {
+  const parsed = parseCreateAvailabilityInput({
+    kind: "SINGLE",
+    ...configuration,
+    startsAt: "2026-08-17T20:30:00.000Z",
+    endsAt: "2026-08-17T22:00:00.000Z",
+  });
+
+  assert.equal(parsed.ok, false);
+  if (!parsed.ok) {
+    assert.equal(parsed.error, "Intervalul trebuie să se încheie în aceeași zi.");
+  }
+});
+
+test("rejects an availability edit that crosses a Bucharest calendar day", () => {
+  const parsed = parseUpdateAvailabilityInput({
+    scope: "OCCURRENCE",
+    ...configuration,
+    startsAt: "2026-08-17T20:30:00.000Z",
+    endsAt: "2026-08-17T22:00:00.000Z",
+    expectedVersion: 1,
+  });
+
+  assert.equal(parsed.ok, false);
+  if (!parsed.ok) {
+    assert.equal(parsed.error, "Intervalul trebuie să se încheie în aceeași zi.");
+  }
+});
+
 test("requires a series revision and recurrence rule for a series edit", () => {
   const parsed = parseUpdateAvailabilityInput({
     scope: "SERIES",
