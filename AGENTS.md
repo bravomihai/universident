@@ -46,7 +46,7 @@ npx prisma db seed
 - Moving or cancelling an occupied availability occurrence must atomically reject its pending request or cancel its confirmed appointment with a required reason. Never move the patient's appointment to the new time.
 - Appointments retain their scheduled time, names, treatment, location, address, supervisor, age, and note snapshots even when the underlying availability or professional resources later change.
 - Use serializable transactions and optimistic `version`/`revision` checks for scheduling writes. Database constraints are the final defense against slot and time overlaps.
-- After the scheduled end, a confirmed appointment remains active and highlighted until the student records `COMPLETED` or `NO_SHOW` together with a required 1–5 rating; the review comment is optional.
+- After the scheduled end, a confirmed appointment remains active and highlighted until the student records `COMPLETED` or `NO_SHOW` together with a required 1–5 rating; the review comment is optional, but must contain 10–1,000 trimmed characters when present.
 - A completed or no-show appointment remains active and highlighted separately for each participant until that participant submits a 1–5 rating. Archive state is therefore derived per role.
 - A patient with an outstanding review cannot create a new appointment request. A student with an overdue confirmed appointment or missing review cannot confirm a new request. Never block one participant on the other participant's unfinished review.
 - Reviews are blind: keep both unpublished until patient and student have submitted, then publish both atomically.

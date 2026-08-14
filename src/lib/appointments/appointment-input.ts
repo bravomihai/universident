@@ -67,8 +67,11 @@ function parseReviewComment(value: unknown): ParseResult<string | null> {
     return { ok: false, error: "Comentariul recenziei trebuie să fie text." };
   }
   const comment = value.trim();
-  if (comment.length > 1000) {
-    return { ok: false, error: "Comentariul poate avea cel mult 1.000 de caractere." };
+  if (comment.length > 0 && (comment.length < 10 || comment.length > 1000)) {
+    return {
+      ok: false,
+      error: "Comentariul trebuie să aibă între 10 și 1.000 de caractere sau să rămână gol.",
+    };
   }
   return { ok: true, data: comment || null };
 }

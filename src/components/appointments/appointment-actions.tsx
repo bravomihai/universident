@@ -33,6 +33,7 @@ export function AppointmentActions({
   const [error, setError] = useState<string | null>(null);
   const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
+  const commentLength = comment.trim().length;
   const now = new Date();
   const started = new Date(startsAt) <= now;
   const ended = new Date(endsAt) <= now;
@@ -56,6 +57,15 @@ export function AppointmentActions({
       setError("Alege un rating între 1 și 5 stele.");
       return;
     }
+    const trimmedComment = comment.trim();
+    if (
+      (action === "COMPLETE" || action === "NO_SHOW" || action === "REVIEW") &&
+      trimmedComment.length > 0 &&
+      trimmedComment.length < 10
+    ) {
+      setError("Comentariul trebuie să aibă minimum 10 caractere sau să rămână gol.");
+      return;
+    }
 
     setPending(action);
     setError(null);
@@ -70,13 +80,13 @@ export function AppointmentActions({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
             reviewOnly
-              ? { rating, comment }
+              ? { rating, comment: trimmedComment }
               : {
                   action,
                   expectedVersion: version,
                   reason,
                   ...(action === "COMPLETE" || action === "NO_SHOW"
-                    ? { rating, comment }
+                    ? { rating, comment: trimmedComment }
                     : {}),
                 },
           ),
@@ -102,7 +112,7 @@ export function AppointmentActions({
           {studentCanFinish ? "Închide programarea și evaluează pacientul" : `Evaluează ${role === "PATIENT" ? "studentul" : "pacientul"}`}
         </p>
         <p className="text-xs text-muted-foreground">
-          Ratingul este obligatoriu. Comentariul este opțional, iar recenziile devin vizibile după ce răspund amândoi.
+          Ratingul este obligatoriu. Comentariul este opțional; dacă îl adaugi, scrie minimum 10 caractere. Recenziile devin vizibile după ce răspund amândoi.
         </p>
       </div>
       <fieldset>
@@ -126,12 +136,28 @@ export function AppointmentActions({
         <span className="font-medium">Comentariu opțional</span>
         <textarea
           value={comment}
+          minLength={10}
           maxLength={1000}
           rows={3}
           onChange={(event) => setComment(event.target.value)}
           className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
           placeholder="Scrie pe scurt cum a decurs experiența."
         />
+        <span
+          className={cn(
+            "block text-xs",
+            commentLength > 0 && commentLength < 10
+              ? "text-destructive"
+              : "text-muted-foreground",
+          )}
+          aria-live="polite"
+        >
+          {commentLength === 0
+            ? "Comentariul poate rămâne gol."
+            : commentLength < 10
+              ? `Mai scrie ${10 - commentLength} caractere.`
+              : `${commentLength}/1.000 caractere`}
+        </span>
       </label>
     </div>
   ) : null;
