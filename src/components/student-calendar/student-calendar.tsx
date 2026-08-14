@@ -20,6 +20,7 @@ import {
   Clock3,
   RotateCcw,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
@@ -27,6 +28,7 @@ import {
   appointmentStatusLabels,
   formatAppointmentInterval,
 } from "@/components/appointments/appointment-status";
+import { RatingStars } from "@/components/reviews/rating-summary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -73,6 +75,10 @@ type CalendarSlot = {
     patientNameSnapshot: string;
     patientAgeAtAppointment: number;
     patientNote: string | null;
+    patientProfile: {
+      profileSlug: string;
+      user: { reviewsReceived: Array<{ rating: number }> };
+    };
   }>;
 };
 
@@ -513,6 +519,15 @@ export function StudentCalendar() {
             {selectedSlot.appointments[0] ? (
               <div className="rounded-xl border bg-muted/20 p-3 text-sm">
                 <p className="font-medium">{selectedSlot.appointments[0].patientNameSnapshot}, {selectedSlot.appointments[0].patientAgeAtAppointment} ani</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <RatingStars
+                    averageRating={selectedSlot.appointments[0].patientProfile.user.reviewsReceived.length
+                      ? selectedSlot.appointments[0].patientProfile.user.reviewsReceived.reduce((total, review) => total + review.rating, 0) / selectedSlot.appointments[0].patientProfile.user.reviewsReceived.length
+                      : null}
+                    reviewCount={selectedSlot.appointments[0].patientProfile.user.reviewsReceived.length}
+                  />
+                  <Button asChild variant="outline" size="sm"><Link href={`/pacienti/${selectedSlot.appointments[0].patientProfile.profileSlug}#recenzii`}>Vezi recenziile</Link></Button>
+                </div>
                 {selectedSlot.appointments[0].patientNote ? (
                   <div className="mt-2 rounded-lg border bg-background/70 px-3 py-2.5">
                     <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mesajul pacientului</p>

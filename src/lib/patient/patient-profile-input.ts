@@ -20,5 +20,17 @@ export function parsePatientProfileInput(value: unknown) {
     } as const;
   }
 
-  return { ok: true, data: { dateOfBirth } } as const;
+  let bio: string | null | undefined;
+  if ("bio" in value) {
+    if (value.bio !== null && typeof value.bio !== "string") {
+      return { ok: false, error: "Descrierea trebuie să fie text." } as const;
+    }
+    const normalizedBio = typeof value.bio === "string" ? value.bio.trim() : "";
+    if (normalizedBio.length > 1000) {
+      return { ok: false, error: "Descrierea poate avea cel mult 1.000 de caractere." } as const;
+    }
+    bio = normalizedBio || null;
+  }
+
+  return { ok: true, data: { dateOfBirth, bio } } as const;
 }

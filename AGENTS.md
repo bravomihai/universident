@@ -50,13 +50,18 @@ npx prisma db seed
 - A completed or no-show appointment remains active and highlighted separately for each participant until that participant submits a 1–5 rating. Archive state is therefore derived per role.
 - A patient with an outstanding review cannot create a new appointment request. A student with an overdue confirmed appointment or missing review cannot confirm a new request. Never block one participant on the other participant's unfinished review.
 - Reviews are blind: keep both unpublished until patient and student have submitted, then publish both atomically.
+- Published patient-to-student reviews appear on the student's public professional profile. Published student-to-patient reviews appear on the protected patient profile; public student reviews must anonymize the patient author.
+- Keep Romanian count labels grammatically correct, including singular forms such as `o anulare târzie` and `o recenzie`.
 
 ## Patient data and privacy
 
 - Patient accounts may be created without a date of birth.
 - Before the first booking, require and store the date of birth once. Patients must be at least 18 and can correct the date later from their private profile.
-- Students receive only the patient's name, age at appointment, current note, aggregate late-cancellation reputation, and appointment history shared with that student.
-- Never expose the patient's email, exact date of birth, private profile slug, other providers' appointment details, or unrelated account data to a student.
+- Calculate `patientAgeAtAppointment` from the date of birth stored on `PatientProfile` and the selected slot date, then retain it as an appointment snapshot. Never trust a client-supplied age.
+- Patient and student bios are optional. Normalize blank bios to `null` and omit the entire bio section when no text exists; never render a placeholder such as "no bio" on profile or review cards.
+- Students receive only the patient's name, calculated age, optional bio, current note, published aggregate rating/reviews, aggregate late-cancellation reputation, and appointment history shared with that student.
+- A patient review profile is private. Expose its slug and contents only to the owning patient or to a signed-in student who has at least one appointment/request with that patient.
+- Never expose the patient's email, exact date of birth, other providers' appointment details, or unrelated account data to a student.
 - Keep public, patient-private, and student-private response DTOs intentionally separate; do not return broad Prisma `include` graphs from APIs.
 
 ## Calendar and appointment UX
@@ -69,7 +74,7 @@ npx prisma db seed
 
 ## Future features
 
-- Public review summaries and moderation are not implemented yet. Private appointment review submission and blind publication are part of the current workflow.
+- Review moderation is not implemented yet. Appointment review submission, blind publication, profile summaries, and published profile review lists are part of the current workflow.
 - Chat is not part of the current MVP. If added, scope it to an appointment and do not expose private account data.
 
 ## Change quality

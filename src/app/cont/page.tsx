@@ -14,7 +14,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
-import { AppointmentList } from "@/components/appointments/appointment-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -25,7 +24,8 @@ import {
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
-import { orderAppointmentsForRole } from "@/lib/appointments/appointment-presentation";
+import { appointmentNeedsAttention } from "@/lib/appointments/appointment-presentation";
+import { formatLateCancellationReputation } from "@/lib/appointments/patient-reputation-label";
 import { prisma } from "@/lib/prisma";
 import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
 
@@ -120,9 +120,11 @@ export default async function AccountPage() {
       ? await listAppointmentsForUser(session.user.id, session.user.role)
       : null;
   const appointmentRole = isStudent ? "STUDENT" : "PATIENT";
-  const appointmentPreview = appointmentData
-    ? orderAppointmentsForRole(appointmentData.appointments, appointmentRole).slice(0, 3)
-    : [];
+  const appointmentsNeedingAttention = appointmentData
+    ? appointmentData.appointments.filter((appointment) =>
+        appointmentNeedsAttention(appointment, appointmentRole),
+      ).length
+    : 0;
 
   const studentData = isStudent
     ? await (async () => {
@@ -223,6 +225,34 @@ export default async function AccountPage() {
             Aici poți gestiona informațiile și activitatea contului.
           </p>
         </header>
+
+        {appointmentData ? (
+          <section aria-label="Programările contului" className="grid gap-4">
+            <DashboardLinkCard
+              href="/cont/programari"
+              icon={CalendarDays}
+              title="Programările mele"
+              description={isStudent ? "Cererile și întâlnirile pacienților tăi." : "Cererile trimise și întâlnirile tale."}
+              action="Vezi programările"
+            >
+              <div className="space-y-1">
+                <p className="font-medium">
+                  {appointmentData.appointments.length === 1
+                    ? "O cerere sau programare în istoric"
+                    : `${appointmentData.appointments.length} cereri și programări în istoric`}
+                </p>
+                {appointmentsNeedingAttention ? (
+                  <p className="text-orange-700 dark:text-orange-300">Necesită atenția ta: {appointmentsNeedingAttention}</p>
+                ) : null}
+                {!isStudent && appointmentData.reputation ? (
+                  <p className="text-muted-foreground">
+                    {formatLateCancellationReputation(appointmentData.reputation.lateCancellationsLast10)}
+                  </p>
+                ) : null}
+              </div>
+            </DashboardLinkCard>
+          </section>
+        ) : null}
 
         {studentData ? (
           <section aria-labelledby="professional-profile-title">
@@ -385,30 +415,6 @@ export default async function AccountPage() {
                 </CardContent>
               </Card>
             </Link>
-          </section>
-        ) : null}
-
-        {appointmentData ? (
-          <section aria-labelledby="account-appointments-title" className="space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 id="account-appointments-title" className="text-xl font-semibold">Programări</h2>
-                <p className="text-sm text-muted-foreground">
-                  {isStudent ? "Cererile și întâlnirile pacienților tăi." : "Cererile trimise și întâlnirile tale."}
-                </p>
-              </div>
-              <Button asChild variant="outline" size="sm"><Link href="/cont/programari">Vezi toate programările</Link></Button>
-            </div>
-            <AppointmentList
-              appointments={appointmentPreview}
-              role={appointmentRole}
-              compact
-            />
-            {!isStudent && appointmentData.reputation ? (
-              <p className="text-xs text-muted-foreground">
-                Reputație: {appointmentData.reputation.lateCancellationsLast10} anulări târzii în ultimele 10 programări.
-              </p>
-            ) : null}
           </section>
         ) : null}
 

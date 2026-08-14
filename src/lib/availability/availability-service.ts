@@ -62,7 +62,20 @@ const slotInclude = {
     where: { status: { in: activeAppointmentStatuses } },
     include: {
       patientProfile: {
-        select: { id: true, user: { select: { id: true, name: true } } },
+        select: {
+          id: true,
+          profileSlug: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              reviewsReceived: {
+                where: { publishedAt: { not: null } },
+                select: { rating: true },
+              },
+            },
+          },
+        },
       },
     },
     take: 1,

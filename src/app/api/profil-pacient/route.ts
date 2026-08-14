@@ -24,8 +24,12 @@ export async function PUT(request: Request) {
       userId: authorization.user.id,
       profileSlug: createPatientProfileSlug(authorization.user.name),
       dateOfBirth: parsed.data.dateOfBirth,
+      bio: parsed.data.bio ?? null,
     },
-    update: { dateOfBirth: parsed.data.dateOfBirth },
+    update: {
+      dateOfBirth: parsed.data.dateOfBirth,
+      ...(parsed.data.bio !== undefined ? { bio: parsed.data.bio } : {}),
+    },
   });
   return Response.json({ profile });
 }

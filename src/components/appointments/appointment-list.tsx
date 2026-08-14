@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
 import { appointmentStatusLabels, formatAppointmentInterval } from "@/components/appointments/appointment-status";
+import { RatingStars } from "@/components/reviews/rating-summary";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   appointmentNeedsAttention,
@@ -23,6 +25,14 @@ export type AppointmentListItem = {
   isLateCancellation: boolean;
   statusReason: string | null;
   patientNote: string | null;
+  patientProfile: {
+    profileSlug: string;
+    user: { reviewsReceived: Array<{ rating: number }> };
+  };
+  studentProfile: {
+    publicSlug: string | null;
+    user: { reviewsReceived: Array<{ rating: number }> };
+  };
   reviews: Array<{
     authorRole: string;
     rating?: number;
@@ -53,6 +63,20 @@ export function AppointmentList({
         const needsAttention = appointmentNeedsAttention(appointment, role, now);
         const reviewedByActor = hasAppointmentReview(appointment, role);
         const ownReview = appointment.reviews.find((review) => review.authorRole === role);
+        const counterpartRatings = role === "PATIENT"
+          ? appointment.studentProfile.user.reviewsReceived
+          : appointment.patientProfile.user.reviewsReceived;
+        const counterpartSummary = {
+          averageRating: counterpartRatings.length
+            ? counterpartRatings.reduce((total, review) => total + review.rating, 0) / counterpartRatings.length
+            : null,
+          reviewCount: counterpartRatings.length,
+        };
+        const counterpartProfileHref = role === "PATIENT"
+          ? appointment.studentProfile.publicSlug
+            ? `/studenti/${appointment.studentProfile.publicSlug}#recenzii`
+            : null
+          : `/pacienti/${appointment.patientProfile.profileSlug}#recenzii`;
         const attentionLabel = role === "STUDENT" && appointment.status === "CONFIRMED"
           ? "Necesită închidere"
           : "Recenzie necesară";
@@ -80,6 +104,10 @@ export function AppointmentList({
                 <p className="text-sm text-muted-foreground">
                   {role === "PATIENT" ? appointment.studentNameSnapshot : appointment.patientNameSnapshot} · {appointment.locationNameSnapshot}
                 </p>
+                <div className="pointer-events-auto relative z-20 mt-2 flex flex-wrap items-center gap-2">
+                  <RatingStars {...counterpartSummary} className="gap-1.5" />
+                  {counterpartProfileHref ? <Button asChild variant="outline" size="sm"><Link href={counterpartProfileHref}>Vezi recenziile</Link></Button> : null}
+                </div>
               </div>
               <span className="w-fit rounded-full border px-2.5 py-1 text-xs font-medium">
                 {needsAttention ? attentionLabel : appointmentStatusLabels[appointment.status] ?? appointment.status}

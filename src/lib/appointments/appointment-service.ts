@@ -45,7 +45,20 @@ export class AppointmentDomainError extends Error {
 
 const appointmentInclude = {
   patientProfile: {
-    select: { id: true, user: { select: { id: true, name: true } } },
+    select: {
+      id: true,
+      profileSlug: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          reviewsReceived: {
+            where: { publishedAt: { not: null } },
+            select: { rating: true },
+          },
+        },
+      },
+    },
   },
   studentProfile: {
     select: {
@@ -53,7 +66,16 @@ const appointmentInclude = {
       publicSlug: true,
       university: true,
       studyYear: true,
-      user: { select: { id: true, name: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          reviewsReceived: {
+            where: { publishedAt: { not: null } },
+            select: { rating: true },
+          },
+        },
+      },
     },
   },
   availabilitySlot: {
@@ -134,7 +156,7 @@ async function getOrCreatePatientProfile(
   let profile = await transaction.patientProfile.findUnique({
     where: { userId: user.id },
   });
-  if (dateOfBirthInput) {
+  if (dateOfBirthInput && !profile?.dateOfBirth) {
     const parsed = parsePatientProfileInput({ dateOfBirth: dateOfBirthInput });
     if (!parsed.ok) throw new AppointmentDomainError("PROFILE_REQUIRED", parsed.error);
     profile = profile
@@ -286,7 +308,7 @@ export async function listAppointmentsForUser(userId: string, role: UserRole) {
     if (role === UserRole.PATIENT) {
       const patient = await transaction.patientProfile.findUnique({
         where: { userId },
-        select: { id: true, profileSlug: true, dateOfBirth: true },
+        select: { id: true, profileSlug: true, dateOfBirth: true, bio: true },
       });
       if (!patient) return { appointments: [], patientProfile: null, reputation: { lateCancellationsLast10: 0 } };
       const [appointments, recentConfirmedAppointments] = await Promise.all([

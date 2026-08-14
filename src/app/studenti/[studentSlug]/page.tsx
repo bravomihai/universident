@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
 import { PublicBookingPanel } from "@/components/public-students/public-booking-panel";
+import { ProfileReviewList } from "@/components/reviews/profile-review-list";
+import { RatingSummaryLink } from "@/components/reviews/rating-summary";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getPublicStudentProfile } from "@/lib/public-students/public-student-service";
 
@@ -113,6 +115,7 @@ export default async function PublicStudentProfilePage({
                 {profile.university} · Anul {profile.studyYear}
               </span>
             </p>
+            <RatingSummaryLink summary={profile.reviewData.summary} href="#recenzii" />
           </div>
         </header>
 
@@ -126,6 +129,8 @@ export default async function PublicStudentProfilePage({
             </p>
           </section>
         ) : null}
+
+        <ProfileReviewList data={profile.reviewData} title="Recenziile studentului" />
 
         <section aria-labelledby="public-profile-treatments" className="space-y-5">
           <div>

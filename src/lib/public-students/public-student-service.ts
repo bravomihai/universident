@@ -4,6 +4,10 @@ import { cache } from "react";
 
 import { prisma } from "@/lib/prisma";
 import {
+  getPublishedProfileReviews,
+  type ProfileReviewData,
+} from "@/lib/reviews/profile-review-service";
+import {
   completeStudentTreatmentLocationWhere,
   completeStudentTreatmentWhere,
   publiclyEligibleStudentProfileWhere,
@@ -53,6 +57,7 @@ export type PublicStudentProfileDto = {
   studyYear: number;
   bio: string | null;
   treatments: PublicStudentTreatmentDto[];
+  reviewData: ProfileReviewData;
 };
 
 export const getPublicStudentCatalog = cache(async () => {
@@ -223,7 +228,7 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
       university: true,
       studyYear: true,
       bio: true,
-      user: { select: { name: true, image: true } },
+      user: { select: { id: true, name: true, image: true } },
       studentTreatments: {
         where: completeStudentTreatmentWhere(),
         orderBy: { treatment: { name: "asc" } },
@@ -236,6 +241,8 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
     return null;
   }
 
+  const reviewData = await getPublishedProfileReviews(profile.user.id, "STUDENT");
+
   return {
     name: profile.user.name,
     image: profile.user.image,
@@ -244,5 +251,6 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
     studyYear: profile.studyYear,
     bio: profile.bio,
     treatments: profile.studentTreatments.map(mapPublicTreatment),
+    reviewData,
   } satisfies PublicStudentProfileDto;
 });
