@@ -63,7 +63,7 @@ function EventContent({ event, timeText }: EventContentArg) {
     ? Clock3
     : confirmedAppointment
       ? CalendarCheck2
-      : slot.seriesId && slot.isException
+      : slot.isException
         ? Pencil
         : slot.seriesId
           ? Repeat2
@@ -72,7 +72,7 @@ function EventContent({ event, timeText }: EventContentArg) {
     ? "Cerere în așteptare"
     : confirmedAppointment
       ? "Programare confirmată"
-      : slot.seriesId && slot.isException
+      : slot.isException
         ? "Apariție recurentă modificată separat"
         : slot.seriesId
           ? "Apariție recurentă"
