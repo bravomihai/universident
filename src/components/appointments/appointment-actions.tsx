@@ -4,6 +4,10 @@ import { Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import {
+  AppointmentReasonDialog,
+  type AppointmentReasonAction,
+} from "@/components/appointments/appointment-reason-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +37,9 @@ export function AppointmentActions({
   const [error, setError] = useState<string | null>(null);
   const [rating, setRating] = useState<number | null>(null);
   const [comment, setComment] = useState("");
+  const [reasonAction, setReasonAction] = useState<AppointmentReasonAction | null>(null);
+  const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const commentLength = comment.trim().length;
   const now = new Date();
   const started = new Date(startsAt) <= now;
@@ -44,12 +51,26 @@ export function AppointmentActions({
   const studentCanFinish = role === "STUDENT" && ended && status === "CONFIRMED";
   const reviewNeeded = (status === "COMPLETED" || status === "NO_SHOW") && !reviewedByActor;
 
-  async function act(action: Action) {
-    let reason: string | null = null;
+  function openReasonDialog(action: AppointmentReasonAction) {
+    setError(null);
+    setReasonError(null);
+    setReason("");
+    setReasonAction(action);
+  }
+
+  function closeReasonDialog() {
+    if (pending !== null) return;
+    setReasonAction(null);
+    setReason("");
+    setReasonError(null);
+  }
+
+  async function act(action: Action, reasonInput: string | null = null) {
+    let actionReason: string | null = null;
     if (action === "REJECT" || action === "CANCEL") {
-      reason = window.prompt("Scrie motivul (minimum 20 de caractere):")?.trim() ?? "";
-      if (reason.length < 20) {
-        setError("Motivul trebuie să aibă minimum 20 de caractere.");
+      actionReason = reasonInput?.trim() ?? "";
+      if (actionReason.length < 20) {
+        setReasonError("Motivul trebuie să aibă minimum 20 de caractere.");
         return;
       }
     }
@@ -69,6 +90,7 @@ export function AppointmentActions({
 
     setPending(action);
     setError(null);
+    setReasonError(null);
     try {
       const reviewOnly = action === "REVIEW";
       const response = await fetch(
@@ -84,7 +106,7 @@ export function AppointmentActions({
               : {
                   action,
                   expectedVersion: version,
-                  reason,
+                  reason: actionReason,
                   ...(action === "COMPLETE" || action === "NO_SHOW"
                     ? { rating, comment: trimmedComment }
                     : {}),
@@ -96,10 +118,14 @@ export function AppointmentActions({
       if (!response.ok) throw new Error(payload.error ?? "Programarea nu a putut fi actualizată.");
       setRating(null);
       setComment("");
+      setReasonAction(null);
+      setReason("");
       onSuccess?.();
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Programarea nu a putut fi actualizată.");
+      const message = caught instanceof Error ? caught.message : "Programarea nu a putut fi actualizată.";
+      if (action === "REJECT" || action === "CANCEL") setReasonError(message);
+      else setError(message);
     } finally {
       setPending(null);
     }
@@ -168,13 +194,24 @@ export function AppointmentActions({
       {reviewFields}
       <div className="flex flex-wrap gap-2">
         {studentPending ? <Button disabled={pending !== null} onClick={() => void act("CONFIRM")}>Confirmă</Button> : null}
-        {studentPending ? <Button variant="destructive" disabled={pending !== null} onClick={() => void act("REJECT")}>Respinge</Button> : null}
-        {patientCanCancel || studentCanCancel ? <Button variant="destructive" disabled={pending !== null} onClick={() => void act("CANCEL")}>Anulează</Button> : null}
+        {studentPending ? <Button variant="destructive" disabled={pending !== null} onClick={() => openReasonDialog("REJECT")}>Respinge</Button> : null}
+        {patientCanCancel || studentCanCancel ? <Button variant="destructive" disabled={pending !== null} onClick={() => openReasonDialog("CANCEL")}>Anulează</Button> : null}
         {studentCanFinish ? <Button disabled={pending !== null} onClick={() => void act("COMPLETE")}>Pacientul a venit</Button> : null}
         {studentCanFinish ? <Button variant="outline" disabled={pending !== null} onClick={() => void act("NO_SHOW")}>Nu s-a prezentat</Button> : null}
         {reviewNeeded ? <Button disabled={pending !== null} onClick={() => void act("REVIEW")}>Trimite recenzia</Button> : null}
       </div>
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+      <AppointmentReasonDialog
+        action={reasonAction}
+        role={role}
+        status={status}
+        value={reason}
+        error={reasonError}
+        pending={reasonAction !== null && pending === reasonAction}
+        onValueChange={(value) => { setReason(value); if (reasonError) setReasonError(null); }}
+        onCancel={closeReasonDialog}
+        onConfirm={() => { if (reasonAction) void act(reasonAction, reason); }}
+      />
     </div>
   );
 }
