@@ -11,7 +11,6 @@ export type StudentSupervisorOption = {
   id: string;
   fullName: string;
   academicTitle: string | null;
-  isActive: boolean;
   deletedAt: string | null;
 };
 

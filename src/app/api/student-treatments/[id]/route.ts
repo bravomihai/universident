@@ -14,19 +14,6 @@ type StudentTreatmentRouteContext = {
 
 function treatmentMutationErrorResponse(error: unknown) {
   if (error instanceof StudentTreatmentDomainError) {
-    if (
-      error.code === "DEACTIVATION_CONFIRMATION_REQUIRED"
-    ) {
-      return Response.json(
-        {
-          error: error.message,
-          requiresConfirmation: true,
-          consequence: "DEACTIVATE_TREATMENT",
-        },
-        { status: 409 },
-      );
-    }
-
     if (error.code === "TREATMENT_NOT_FOUND") {
       return Response.json(
         { error: error.message },
@@ -34,8 +21,7 @@ function treatmentMutationErrorResponse(error: unknown) {
       );
     }
 
-    const status =
-      error.code === "TREATMENT_ARCHIVED" ? 409 : 400;
+    const status = error.code === "TREATMENT_ARCHIVED" || error.code === "RESOURCE_IN_CALENDAR" ? 409 : 400;
 
     return Response.json(
       { error: error.message },

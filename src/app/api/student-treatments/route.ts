@@ -59,16 +59,7 @@ export async function GET(request: Request) {
         studentProfileId: authorization.studentProfileId,
         deletedAt: null,
       },
-      orderBy: [
-        {
-          isActive: "desc",
-        },
-        {
-          treatment: {
-            name: "asc",
-          },
-        },
-      ],
+      orderBy: { treatment: { name: "asc" } },
       select: studentTreatmentSelect,
     });
 

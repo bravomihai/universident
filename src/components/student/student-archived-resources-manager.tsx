@@ -76,8 +76,8 @@ function genericRestoreError(kind: RestoreCandidate["kind"]) {
 }
 
 function genericRestoreSuccess(kind: RestoreCandidate["kind"]) {
-  if (kind === "location") return "Locația a fost restaurată ca inactivă.";
-  if (kind === "treatment") return "Tratamentul a fost restaurat ca inactiv.";
+  if (kind === "location") return "Locația a fost restaurată.";
+  if (kind === "treatment") return "Tratamentul a fost restaurat.";
   return "Profesorul supervizor a fost restaurat.";
 }
 

@@ -55,7 +55,6 @@ export default async function EditStudentLocationPage({
         name: true,
         address: true,
         details: true,
-        isActive: true,
       },
     }),
     prisma.city.findMany({
@@ -114,7 +113,6 @@ export default async function EditStudentLocationPage({
             name: location.name,
             address: location.address,
             details: location.details,
-            isActive: location.isActive,
           }}
           cities={cities}
           isDisabled={cities.length === 0}

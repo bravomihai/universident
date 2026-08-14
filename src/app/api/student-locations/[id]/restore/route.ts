@@ -88,13 +88,11 @@ export async function POST(
           },
           data: {
             deletedAt: null,
-            isActive: false,
           },
           select: {
             id: true,
             routeKey: true,
             name: true,
-            isActive: true,
           },
         });
       },
@@ -105,7 +103,7 @@ export async function POST(
 
     return Response.json({
       restoredLocation,
-      message: "Locația a fost restaurată ca inactivă.",
+      message: "Locația a fost restaurată.",
     });
   } catch (error) {
     return restoreErrorResponse(error);

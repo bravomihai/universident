@@ -3,9 +3,9 @@ import { authorizeAccountRequest } from "@/lib/api/account-request";
 import { domainErrorResponse } from "@/lib/api/domain-error-response";
 import {
   parseCancelAvailabilityInput,
-  parseMoveAvailabilityInput,
+  parseUpdateAvailabilityInput,
 } from "@/lib/availability/availability-input";
-import { cancelAvailability, moveAvailability } from "@/lib/availability/availability-service";
+import { cancelAvailability, updateAvailability } from "@/lib/availability/availability-service";
 import { prisma } from "@/lib/prisma";
 
 type Context = { params: Promise<{ slotId: string }> };
@@ -23,11 +23,11 @@ export async function PATCH(request: Request, context: Context) {
   if (!authorization.ok) return authorization.response;
   let body: unknown;
   try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
-  const parsed = parseMoveAvailabilityInput(body);
+  const parsed = parseUpdateAvailabilityInput(body);
   if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   try {
     const { slotId } = await context.params;
-    const availability = await moveAvailability(authorization.studentProfileId, authorization.user.id, slotId, parsed.data);
+    const availability = await updateAvailability(authorization.studentProfileId, authorization.user.id, slotId, parsed.data);
     return Response.json({ availability });
   } catch (error) {
     return domainErrorResponse(error, "Disponibilitatea nu a putut fi mutată.");

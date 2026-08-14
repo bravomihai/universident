@@ -5,7 +5,6 @@ export const studentLocationSelect = {
   name: true,
   address: true,
   details: true,
-  isActive: true,
   createdAt: true,
   updatedAt: true,
   city: {

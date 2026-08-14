@@ -1,35 +1,20 @@
 import "server-only";
 
 import { cache } from "react";
-
+import { AppointmentStatus, UserRole } from "@/generated/prisma/enums";
+import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { prisma } from "@/lib/prisma";
-import {
-  getPublishedProfileReviews,
-  type ProfileReviewData,
-} from "@/lib/reviews/profile-review-service";
-import {
-  completeStudentTreatmentLocationWhere,
-  completeStudentTreatmentWhere,
-  publiclyEligibleStudentProfileWhere,
-} from "@/lib/student-publication/student-publication-readiness";
+import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
 
 export const PUBLIC_STUDENTS_PAGE_SIZE = 12;
-
-export type PublicCatalogOption = {
-  name: string;
-  slug: string;
-};
-
+export type PublicCatalogOption = { name: string; slug: string };
 export type PublicStudentLocationDto = {
+  routeKey: string;
   name: string;
   address: string;
   city: PublicCatalogOption;
-  supervisor: {
-    fullName: string;
-    academicTitle: string | null;
-  };
+  supervisor: { fullName: string; academicTitle: string | null };
 };
-
 export type PublicStudentTreatmentDto = {
   name: string;
   slug: string;
@@ -38,7 +23,6 @@ export type PublicStudentTreatmentDto = {
   durationMinutes: number;
   locations: PublicStudentLocationDto[];
 };
-
 export type PublicStudentSummaryDto = {
   name: string;
   image: string | null;
@@ -46,9 +30,9 @@ export type PublicStudentSummaryDto = {
   university: string;
   studyYear: number;
   bio: string | null;
-  treatment: PublicStudentTreatmentDto;
+  treatment: Omit<PublicStudentTreatmentDto, "locations">;
+  location: PublicStudentLocationDto;
 };
-
 export type PublicStudentProfileDto = {
   name: string;
   image: string | null;
@@ -62,195 +46,109 @@ export type PublicStudentProfileDto = {
 
 export const getPublicStudentCatalog = cache(async () => {
   const [treatments, cities] = await Promise.all([
-    prisma.treatment.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { name: true, slug: true },
-    }),
-    prisma.city.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { name: true, slug: true },
-    }),
+    prisma.treatment.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { name: true, slug: true } }),
+    prisma.city.findMany({ where: { isActive: true }, orderBy: { name: "asc" }, select: { name: true, slug: true } }),
   ]);
-
   return { treatments, cities };
 });
 
-function mapPublicTreatment(
-  treatment: {
-    description: string | null;
-    durationMinutes: number;
-    treatment: {
-      name: string;
-      slug: string;
-      description: string;
-    };
-    treatmentLocations: Array<{
-      studentLocation: {
-        name: string;
-        address: string;
-        city: { name: string; slug: string };
-      };
-      supervisor: {
-        fullName: string;
-        academicTitle: string | null;
-      };
-    }>;
-  },
-): PublicStudentTreatmentDto {
-  return {
-    name: treatment.treatment.name,
-    slug: treatment.treatment.slug,
-    catalogDescription: treatment.treatment.description,
-    studentDescription: treatment.description,
-    durationMinutes: treatment.durationMinutes,
-    locations: treatment.treatmentLocations.map((association) => ({
-      name: association.studentLocation.name,
-      address: association.studentLocation.address,
-      city: association.studentLocation.city,
-      supervisor: association.supervisor,
-    })),
-  };
-}
+const publicProfileWhere = {
+  isPublished: true,
+  publicSlug: { not: null },
+  university: { not: "" },
+  studyYear: { gte: 1, lte: 6 },
+  user: { role: UserRole.STUDENT, emailVerified: true },
+} as const;
 
-const publicTreatmentSelect = (citySlug?: string) => ({
-  description: true,
-  durationMinutes: true,
-  treatment: {
-    select: {
-      name: true,
-      slug: true,
-      description: true,
-    },
-  },
-  treatmentLocations: {
-    where: completeStudentTreatmentLocationWhere(citySlug),
-    orderBy: [
-      { studentLocation: { city: { name: "asc" as const } } },
-      { studentLocation: { name: "asc" as const } },
-    ],
-    select: {
-      studentLocation: {
-        select: {
-          name: true,
-          address: true,
-          city: { select: { name: true, slug: true } },
-        },
-      },
-      supervisor: {
-        select: { fullName: true, academicTitle: true },
-      },
-    },
-  },
-});
-
-export const searchPublicStudents = cache(
-  async ({
-    treatmentSlug,
-    citySlug,
-    page,
-    excludedUserId,
-  }: {
-    treatmentSlug: string;
-    citySlug: string;
-    page: number;
-    excludedUserId?: string;
-  }) => {
-    const where = {
-      ...publiclyEligibleStudentProfileWhere({
-        treatmentSlug,
-        citySlug,
-      }),
-      ...(excludedUserId ? { userId: { not: excludedUserId } } : {}),
-    };
-    const skip = (page - 1) * PUBLIC_STUDENTS_PAGE_SIZE;
-
-    const [profiles, totalResults] = await Promise.all([
-      prisma.studentProfile.findMany({
-        where,
-        orderBy: [{ user: { name: "asc" } }, { publicSlug: "asc" }],
-        skip,
-        take: PUBLIC_STUDENTS_PAGE_SIZE,
-        select: {
-          publicSlug: true,
-          university: true,
-          studyYear: true,
-          bio: true,
-          user: { select: { name: true, image: true } },
-          studentTreatments: {
-            where: completeStudentTreatmentWhere({ treatmentSlug, citySlug }),
-            take: 1,
-            select: publicTreatmentSelect(citySlug),
-          },
-        },
-      }),
-      prisma.studentProfile.count({ where }),
-    ]);
-
-    const results: PublicStudentSummaryDto[] = profiles.flatMap((profile) => {
-      const treatment = profile.studentTreatments[0];
-      if (!profile.publicSlug || !treatment) return [];
-
-      return [
-        {
-          name: profile.user.name,
-          image: profile.user.image,
-          publicSlug: profile.publicSlug,
-          university: profile.university,
-          studyYear: profile.studyYear,
-          bio: profile.bio,
-          treatment: mapPublicTreatment(treatment),
-        },
-      ];
-    });
-
-    return {
-      results,
-      totalResults,
-      totalPages: Math.max(
-        1,
-        Math.ceil(totalResults / PUBLIC_STUDENTS_PAGE_SIZE),
-      ),
-      page,
-    };
-  },
-);
-
-export const getPublicStudentProfile = cache(async (publicSlug: string) => {
-  const profile = await prisma.studentProfile.findFirst({
+export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page, excludedUserId }: { treatmentSlug: string; citySlug: string; page: number; excludedUserId?: string }) => {
+  const blocks = await prisma.studentAvailabilitySlot.findMany({
     where: {
-      ...publiclyEligibleStudentProfileWhere(),
-      publicSlug,
+      status: "ACTIVE",
+      endsAt: { gt: new Date() },
+      studentProfile: { ...publicProfileWhere, ...(excludedUserId ? { userId: { not: excludedUserId } } : {}) },
+      studentLocation: { deletedAt: null, city: { slug: citySlug, isActive: true } },
+      offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { slug: treatmentSlug, isActive: true } }, supervisor: { deletedAt: null } } },
     },
-    select: {
-      publicSlug: true,
-      university: true,
-      studyYear: true,
-      bio: true,
-      user: { select: { id: true, name: true, image: true } },
-      studentTreatments: {
-        where: completeStudentTreatmentWhere(),
-        orderBy: { treatment: { name: "asc" } },
-        select: publicTreatmentSelect(),
-      },
+    include: {
+      studentProfile: { include: { user: true } },
+      studentLocation: { include: { city: true } },
+      offerings: { where: { removedAt: null }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
+      appointments: { where: { status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } }, select: { scheduledStartsAt: true, scheduledEndsAt: true } },
     },
   });
 
-  if (!profile?.publicSlug || profile.studentTreatments.length === 0) {
-    return null;
+  const summaries = new Map<string, PublicStudentSummaryDto>();
+  for (const block of blocks) {
+    const offering = block.offerings.find((item) => item.studentTreatment.treatment.slug === treatmentSlug && !item.studentTreatment.deletedAt && !item.supervisor.deletedAt);
+    if (!offering || !block.studentProfile.publicSlug) continue;
+    const choices = generateSmartBookingSlots([{
+      id: block.id,
+      offeringId: offering.id,
+      startsAt: block.startsAt,
+      endsAt: block.endsAt,
+      treatmentDurationMinutes: offering.studentTreatment.durationMinutes,
+      offeredDurationsMinutes: block.offerings.filter((item) => !item.studentTreatment.deletedAt && !item.supervisor.deletedAt).map((item) => item.studentTreatment.durationMinutes),
+      occupied: block.appointments.map((item) => ({ startsAt: item.scheduledStartsAt, endsAt: item.scheduledEndsAt })),
+    }]);
+    if (choices.length === 0) continue;
+    const key = `${block.studentProfile.id}:${offering.studentTreatmentId}:${block.studentLocationId}`;
+    if (summaries.has(key)) continue;
+    summaries.set(key, {
+      name: block.studentProfile.user.name,
+      image: block.studentProfile.user.image,
+      publicSlug: block.studentProfile.publicSlug,
+      university: block.studentProfile.university,
+      studyYear: block.studentProfile.studyYear,
+      bio: block.studentProfile.bio,
+      treatment: {
+        name: offering.studentTreatment.treatment.name,
+        slug: offering.studentTreatment.treatment.slug,
+        catalogDescription: offering.studentTreatment.treatment.description,
+        studentDescription: offering.studentTreatment.description,
+        durationMinutes: offering.studentTreatment.durationMinutes,
+      },
+      location: {
+        routeKey: block.studentLocation.routeKey,
+        name: block.studentLocation.name,
+        address: block.studentLocation.address,
+        city: { name: block.studentLocation.city.name, slug: block.studentLocation.city.slug },
+        supervisor: { fullName: offering.supervisor.fullName, academicTitle: offering.supervisor.academicTitle },
+      },
+    });
   }
+  const all = [...summaries.values()].sort((a, b) => a.name.localeCompare(b.name, "ro") || a.location.name.localeCompare(b.location.name, "ro"));
+  const totalResults = all.length;
+  return { results: all.slice((page - 1) * PUBLIC_STUDENTS_PAGE_SIZE, page * PUBLIC_STUDENTS_PAGE_SIZE), totalResults, totalPages: Math.max(1, Math.ceil(totalResults / PUBLIC_STUDENTS_PAGE_SIZE)), page };
+});
 
+export const getPublicStudentProfile = cache(async (publicSlug: string) => {
+  const profile = await prisma.studentProfile.findFirst({
+    where: { ...publicProfileWhere, publicSlug },
+    include: {
+      user: true,
+      availabilitySlots: {
+        where: { status: "ACTIVE", endsAt: { gt: new Date() }, studentLocation: { deletedAt: null } },
+        include: {
+          studentLocation: { include: { city: true } },
+          offerings: { where: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
+        },
+      },
+    },
+  });
+  if (!profile?.publicSlug) return null;
+  const grouped = new Map<string, PublicStudentTreatmentDto>();
+  for (const slot of profile.availabilitySlots) for (const offering of slot.offerings) {
+    const source = offering.studentTreatment;
+    if (!source.treatment.isActive || !slot.studentLocation.city.isActive) continue;
+    let treatment = grouped.get(source.id);
+    if (!treatment) {
+      treatment = { name: source.treatment.name, slug: source.treatment.slug, catalogDescription: source.treatment.description, studentDescription: source.description, durationMinutes: source.durationMinutes, locations: [] };
+      grouped.set(source.id, treatment);
+    }
+    if (!treatment.locations.some((item) => item.routeKey === slot.studentLocation.routeKey && item.supervisor.fullName === offering.supervisor.fullName)) {
+      treatment.locations.push({ routeKey: slot.studentLocation.routeKey, name: slot.studentLocation.name, address: slot.studentLocation.address, city: { name: slot.studentLocation.city.name, slug: slot.studentLocation.city.slug }, supervisor: { fullName: offering.supervisor.fullName, academicTitle: offering.supervisor.academicTitle } });
+    }
+  }
   const reviewData = await getPublishedProfileReviews(profile.user.id, "STUDENT");
-
-  return {
-    name: profile.user.name,
-    image: profile.user.image,
-    publicSlug: profile.publicSlug,
-    university: profile.university,
-    studyYear: profile.studyYear,
-    bio: profile.bio,
-    treatments: profile.studentTreatments.map(mapPublicTreatment),
-    reviewData,
-  } satisfies PublicStudentProfileDto;
+  return { name: profile.user.name, image: profile.user.image, publicSlug: profile.publicSlug, university: profile.university, studyYear: profile.studyYear, bio: profile.bio, treatments: [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "ro")), reviewData } satisfies PublicStudentProfileDto;
 });

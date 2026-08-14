@@ -23,7 +23,7 @@ export async function GET(request: Request) {
         studentProfileId: authorization.studentProfileId,
         deletedAt: null,
       },
-      orderBy: [{ isActive: "desc" }, { fullName: "asc" }],
+      orderBy: { fullName: "asc" },
       select: studentSupervisorSelect,
     });
 

@@ -24,7 +24,6 @@ export default async function NewStudentLocationPage() {
     }),
     prisma.city.findMany({
       where: {
-        isActive: true,
       },
       orderBy: {
         name: "asc",

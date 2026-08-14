@@ -93,6 +93,15 @@ export function parseCreateAppointmentInput(value: unknown) {
   }
   const slotId = parseIdentifier(value.slotId, "Slotul selectat");
   if (!slotId.ok) return slotId;
+  const offeringId = parseIdentifier(value.offeringId, "Tratamentul selectat");
+  if (!offeringId.ok) return offeringId;
+  if (typeof value.startsAt !== "string") {
+    return { ok: false, error: "Ora selectată nu este validă." } as const;
+  }
+  const startsAt = new Date(value.startsAt);
+  if (Number.isNaN(startsAt.getTime()) || !value.startsAt.includes("T")) {
+    return { ok: false, error: "Ora selectată nu este validă." } as const;
+  }
   const patientNote = parsePatientNote(value.patientNote);
   if (!patientNote.ok) return patientNote;
 
@@ -105,7 +114,13 @@ export function parseCreateAppointmentInput(value: unknown) {
   }
   return {
     ok: true,
-    data: { slotId: slotId.data, patientNote: patientNote.data, dateOfBirth },
+    data: {
+      slotId: slotId.data,
+      offeringId: offeringId.data,
+      startsAt,
+      patientNote: patientNote.data,
+      dateOfBirth,
+    },
   } as const;
 }
 

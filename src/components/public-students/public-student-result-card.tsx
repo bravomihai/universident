@@ -18,7 +18,6 @@ import type { PublicStudentSummaryDto } from "@/lib/public-students/public-stude
 type PublicStudentResultCardProps = {
   student: PublicStudentSummaryDto;
   treatmentSlug: string;
-  citySlug: string;
 };
 
 function compactBio(bio: string) {
@@ -29,7 +28,7 @@ function compactBio(bio: string) {
 }
 
 function supervisorName(
-  supervisor: PublicStudentSummaryDto["treatment"]["locations"][number]["supervisor"],
+  supervisor: PublicStudentSummaryDto["location"]["supervisor"],
 ) {
   return [supervisor.academicTitle, supervisor.fullName]
     .filter(Boolean)
@@ -39,13 +38,8 @@ function supervisorName(
 export function PublicStudentResultCard({
   student,
   treatmentSlug,
-  citySlug,
 }: PublicStudentResultCardProps) {
-  const profileHref = `/studenti/${encodeURIComponent(
-    student.publicSlug,
-  )}?tratament=${encodeURIComponent(treatmentSlug)}&oras=${encodeURIComponent(
-    citySlug,
-  )}`;
+  const profileHref = `/studenti/${encodeURIComponent(student.publicSlug)}/programare/${encodeURIComponent(treatmentSlug)}/${encodeURIComponent(student.location.routeKey)}`;
 
   return (
     <Link
@@ -74,7 +68,7 @@ export function PublicStudentResultCard({
             </div>
 
             <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-foreground sm:text-sm">
-              Vezi profilul
+              Alege o programare
               <span
                 className={clickableCardIndicatorClassName}
                 aria-hidden="true"
@@ -106,23 +100,18 @@ export function PublicStudentResultCard({
             </p>
           </div>
 
-          <ul className="space-y-2.5" aria-label="Locații disponibile">
-            {student.treatment.locations.map((location) => (
-              <li
-                key={`${location.city.slug}:${location.name}:${location.address}`}
-                className="rounded-xl border bg-muted/15 p-3"
-              >
+          <div className="rounded-xl border bg-muted/15 p-3">
                 <p className="flex items-start gap-1.5 font-medium">
                   <MapPin
                     className="mt-0.5 size-4 shrink-0"
                     aria-hidden="true"
                   />
                   <span>
-                    {location.name} · {location.city.name}
+                    {student.location.name} · {student.location.city.name}
                   </span>
                 </p>
                 <p className="mt-1 pl-5 text-sm text-muted-foreground">
-                  {location.address}
+                  {student.location.address}
                 </p>
                 <p className="mt-2 flex items-start gap-1.5 pl-5 text-sm text-muted-foreground">
                   <UserRound
@@ -130,12 +119,10 @@ export function PublicStudentResultCard({
                     aria-hidden="true"
                   />
                   <span>
-                    Profesor supervizor: {supervisorName(location.supervisor)}
+                  Profesor supervizor: {supervisorName(student.location.supervisor)}
                   </span>
                 </p>
-              </li>
-            ))}
-          </ul>
+          </div>
         </CardContent>
       </Card>
     </Link>

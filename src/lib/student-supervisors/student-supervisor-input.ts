@@ -7,16 +7,10 @@ export type CreateStudentSupervisorInput = {
   academicTitle: string | null;
 };
 
-export type UpdateStudentSupervisorInput = Partial<
-  CreateStudentSupervisorInput & { isActive: boolean }
->;
+export type UpdateStudentSupervisorInput = Partial<CreateStudentSupervisorInput>;
 
 const createFields = new Set(["fullName", "academicTitle"]);
-const updateFields = new Set([
-  "fullName",
-  "academicTitle",
-  "isActive",
-]);
+const updateFields = new Set(["fullName", "academicTitle"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -131,16 +125,6 @@ export function parseUpdateStudentSupervisorInput(
     const academicTitle = parseAcademicTitle(value.academicTitle);
     if (!academicTitle.ok) return academicTitle;
     data.academicTitle = academicTitle.data;
-  }
-
-  if (hasOwn(value, "isActive")) {
-    if (typeof value.isActive !== "boolean") {
-      return {
-        ok: false,
-        error: "Starea profesorului trebuie să fie o valoare booleană.",
-      };
-    }
-    data.isActive = value.isActive;
   }
 
   if (Object.keys(data).length === 0) {

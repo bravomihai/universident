@@ -45,13 +45,13 @@ model StudentProfile {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  locations            StudentLocation[]
-  supervisors          StudentSupervisor[]
-  studentTreatments    StudentTreatment[]
-  availabilitySeries   StudentAvailabilitySeries[]
-  availabilitySlots    StudentAvailabilitySlot[]
-  appointments         Appointment[]
+  user               User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locations          StudentLocation[]
+  supervisors        StudentSupervisor[]
+  studentTreatments  StudentTreatment[]
+  availabilitySeries StudentAvailabilitySeries[]
+  availabilitySlots  StudentAvailabilitySlot[]
+  appointments       Appointment[]
 
   @@index([isPublished, publicSlug])
   @@map("student_profile")
@@ -80,19 +80,19 @@ model StudentLocation {
   name             String
   address          String
   details          String?
-  isActive         Boolean   @default(true)
   deletedAt        DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  studentProfile     StudentProfile             @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
-  city               City                       @relation(fields: [cityId], references: [id], onDelete: Restrict)
-  treatmentLocations StudentTreatmentLocation[]
+  studentProfile     StudentProfile              @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
+  city               City                        @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  availabilitySeries StudentAvailabilitySeries[]
+  availabilitySlots  StudentAvailabilitySlot[]
 
   @@unique([id, studentProfileId])
   @@unique([studentProfileId, routeKey])
-  @@index([studentProfileId, deletedAt, isActive])
-  @@index([cityId, deletedAt, isActive, studentProfileId])
+  @@index([studentProfileId, deletedAt])
+  @@index([cityId, deletedAt, studentProfileId])
   @@map("student_location")
 }
 
@@ -102,19 +102,19 @@ model StudentTreatment {
   treatmentId      String
   description      String?
   durationMinutes  Int
-  isActive         Boolean   @default(false)
   deletedAt        DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  studentProfile     StudentProfile             @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
-  treatment          Treatment                  @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
-  treatmentLocations StudentTreatmentLocation[]
+  studentProfile  StudentProfile                      @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
+  treatment       Treatment                           @relation(fields: [treatmentId], references: [id], onDelete: Restrict)
+  seriesOfferings StudentAvailabilitySeriesOffering[]
+  slotOfferings   StudentAvailabilitySlotOffering[]
 
   @@unique([studentProfileId, treatmentId])
   @@unique([id, studentProfileId])
-  @@index([studentProfileId, deletedAt, isActive])
-  @@index([treatmentId, deletedAt, isActive, studentProfileId])
+  @@index([studentProfileId, deletedAt])
+  @@index([treatmentId, deletedAt, studentProfileId])
   @@map("student_treatment")
 }
 
@@ -123,153 +123,170 @@ model StudentSupervisor {
   studentProfileId String
   fullName         String
   academicTitle    String?
-  isActive         Boolean   @default(true)
   deletedAt        DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  studentProfile     StudentProfile             @relation(fields: [studentProfileId], references: [id], onDelete: Restrict, map: "student_supervisor_student_profile_fkey")
-  treatmentLocations StudentTreatmentLocation[]
+  studentProfile  StudentProfile                      @relation(fields: [studentProfileId], references: [id], onDelete: Restrict, map: "student_supervisor_student_profile_fkey")
+  seriesOfferings StudentAvailabilitySeriesOffering[]
+  slotOfferings   StudentAvailabilitySlotOffering[]
 
   @@unique([id, studentProfileId])
-  @@index([studentProfileId, deletedAt, isActive])
+  @@index([studentProfileId, deletedAt])
   @@map("student_supervisor")
 }
 
-model StudentTreatmentLocation {
-  id                 String    @id @default(cuid())
-  studentProfileId   String
-  studentTreatmentId String
-  studentLocationId  String
-  supervisorId       String    @map("supervisor_id")
-  isActive           Boolean   @default(true)
-  deletedAt          DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  studentTreatment StudentTreatment @relation(fields: [studentTreatmentId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_treatment_location_treatment_owner_fkey")
-
-  studentLocation StudentLocation @relation(fields: [studentLocationId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_treatment_location_location_owner_fkey")
-
-  supervisor StudentSupervisor @relation(fields: [supervisorId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_treatment_location_supervisor_owner_fkey")
-
-  availabilitySeries StudentAvailabilitySeries[]
-  availabilitySlots  StudentAvailabilitySlot[]
-
-  @@unique([id, studentProfileId])
-  @@index([studentTreatmentId, studentLocationId])
-  @@index([studentProfileId, deletedAt, isActive])
-  @@index([studentTreatmentId, deletedAt, isActive])
-  @@index([studentLocationId, deletedAt, isActive])
-  @@index([supervisorId, deletedAt, isActive])
-  @@map("student_treatment_location")
-}
-
 model StudentAvailabilitySeries {
-  id                         String                           @id @default(cuid())
-  studentProfileId           String
-  studentTreatmentLocationId String
-  timeZone                   String                           @default("Europe/Bucharest") @db.VarChar(64)
-  startsOn                   DateTime                         @db.Date
-  startMinuteOfDay           Int
-  weekdays                   StudentAvailabilityWeekday[]
-  intervalWeeks              Int
-  durationMinutes            Int
-  endMode                    StudentAvailabilityEndMode
-  endsOn                     DateTime?                        @db.Date
-  occurrenceCount            Int?
-  status                     StudentAvailabilitySeriesStatus @default(ACTIVE)
-  materializedThrough        DateTime?                        @db.Date
-  revision                   Int                              @default(1)
-  createdAt                  DateTime                         @default(now()) @db.Timestamptz(3)
-  updatedAt                  DateTime                         @updatedAt @db.Timestamptz(3)
+  id                  String                          @id @default(cuid())
+  studentProfileId    String
+  studentLocationId   String
+  timeZone            String                          @default("Europe/Bucharest") @db.VarChar(64)
+  startsOn            DateTime                        @db.Date
+  startMinuteOfDay    Int
+  weekdays            StudentAvailabilityWeekday[]
+  intervalWeeks       Int
+  durationMinutes     Int
+  endMode             StudentAvailabilityEndMode
+  endsOn              DateTime?                       @db.Date
+  occurrenceCount     Int?
+  status              StudentAvailabilitySeriesStatus @default(ACTIVE)
+  materializedThrough DateTime?                       @db.Date
+  revision            Int                             @default(1)
+  createdAt           DateTime                        @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime                        @updatedAt @db.Timestamptz(3)
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Restrict, map: "student_availability_series_student_profile_fkey")
 
-  treatmentLocation StudentTreatmentLocation @relation(fields: [studentTreatmentLocationId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_availability_series_treatment_location_owner_fkey")
+  studentLocation StudentLocation @relation(fields: [studentLocationId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_availability_series_location_owner_fkey")
 
-  slots StudentAvailabilitySlot[] @relation("AvailabilitySeriesSlots")
+  slots     StudentAvailabilitySlot[]           @relation("AvailabilitySeriesSlots")
+  offerings StudentAvailabilitySeriesOffering[]
 
-  @@unique([id, studentProfileId, studentTreatmentLocationId], map: "student_availability_series_id_owner_association_key")
+  @@unique([id, studentProfileId])
+  @@unique([id, studentProfileId, studentLocationId], map: "student_availability_series_id_owner_location_key")
   @@index([studentProfileId, status, startsOn], map: "student_availability_series_owner_status_starts_idx")
-  @@index([studentTreatmentLocationId, status, startsOn], map: "student_availability_series_association_status_starts_idx")
+  @@index([studentLocationId, status, startsOn], map: "student_availability_series_location_status_starts_idx")
   @@index([status, materializedThrough], map: "student_availability_series_status_materialized_idx")
   @@map("student_availability_series")
 }
 
+model StudentAvailabilitySeriesOffering {
+  id                 String   @id @default(cuid())
+  seriesId           String
+  studentProfileId   String
+  studentTreatmentId String
+  supervisorId       String
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+
+  series           StudentAvailabilitySeries @relation(fields: [seriesId, studentProfileId], references: [id, studentProfileId], onDelete: Cascade, map: "availability_series_offering_series_owner_fkey")
+  studentTreatment StudentTreatment          @relation(fields: [studentTreatmentId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "availability_series_offering_treatment_owner_fkey")
+  supervisor       StudentSupervisor         @relation(fields: [supervisorId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "availability_series_offering_supervisor_owner_fkey")
+
+  @@unique([seriesId, studentTreatmentId])
+  @@index([studentTreatmentId, seriesId])
+  @@index([supervisorId, seriesId])
+  @@map("student_availability_series_offering")
+}
+
 model StudentAvailabilitySlot {
-  id                         String                         @id @default(cuid())
-  studentProfileId           String
-  studentTreatmentLocationId String
-  seriesId                   String?
-  sequenceNumber             Int?
-  originalStartsAt           DateTime                       @db.Timestamptz(3)
-  startsAt                   DateTime                       @db.Timestamptz(3)
-  endsAt                     DateTime                       @db.Timestamptz(3)
-  status                     StudentAvailabilitySlotStatus @default(ACTIVE)
-  isException                Boolean                        @default(false)
-  sourceRevision             Int                            @default(0)
-  version                    Int                            @default(1)
-  cancelledAt                DateTime?                      @db.Timestamptz(3)
-  createdAt                  DateTime                       @default(now()) @db.Timestamptz(3)
-  updatedAt                  DateTime                       @updatedAt @db.Timestamptz(3)
+  id                String                        @id @default(cuid())
+  studentProfileId  String
+  studentLocationId String
+  seriesId          String?
+  sequenceNumber    Int?
+  originalStartsAt  DateTime                      @db.Timestamptz(3)
+  startsAt          DateTime                      @db.Timestamptz(3)
+  endsAt            DateTime                      @db.Timestamptz(3)
+  status            StudentAvailabilitySlotStatus @default(ACTIVE)
+  isException       Boolean                       @default(false)
+  sourceRevision    Int                           @default(0)
+  version           Int                           @default(1)
+  cancelledAt       DateTime?                     @db.Timestamptz(3)
+  createdAt         DateTime                      @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                      @updatedAt @db.Timestamptz(3)
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Restrict, map: "student_availability_slot_student_profile_fkey")
 
-  treatmentLocation StudentTreatmentLocation @relation(fields: [studentTreatmentLocationId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_availability_slot_treatment_location_owner_fkey")
+  studentLocation StudentLocation @relation(fields: [studentLocationId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "student_availability_slot_location_owner_fkey")
 
-  series StudentAvailabilitySeries? @relation("AvailabilitySeriesSlots", fields: [seriesId, studentProfileId, studentTreatmentLocationId], references: [id, studentProfileId, studentTreatmentLocationId], onDelete: Restrict, map: "student_availability_slot_series_owner_fkey")
+  series StudentAvailabilitySeries? @relation("AvailabilitySeriesSlots", fields: [seriesId, studentProfileId, studentLocationId], references: [id, studentProfileId, studentLocationId], onDelete: Restrict, map: "student_availability_slot_series_owner_fkey")
 
+  offerings    StudentAvailabilitySlotOffering[]
   appointments Appointment[]
 
+  @@unique([id, studentProfileId])
   @@unique([seriesId, originalStartsAt], map: "student_availability_slot_series_original_start_key")
   @@index([studentProfileId, status, startsAt], map: "student_availability_slot_owner_status_starts_idx")
-  @@index([studentTreatmentLocationId, status, startsAt], map: "student_availability_slot_association_status_starts_idx")
+  @@index([studentLocationId, status, startsAt], map: "student_availability_slot_location_status_starts_idx")
   @@index([seriesId, sequenceNumber], map: "student_availability_slot_series_sequence_idx")
   @@map("student_availability_slot")
 }
 
-model Appointment {
-  id                        String            @id @default(cuid())
-  routeSlug                 String            @unique
-  patientProfileId          String
-  studentProfileId          String
-  studentAvailabilitySlotId String
-  scheduledStartsAt         DateTime          @db.Timestamptz(3)
-  scheduledEndsAt           DateTime          @db.Timestamptz(3)
-  patientAgeAtAppointment   Int
-  patientNote               String?
-  patientNameSnapshot       String            @db.VarChar(120)
-  studentNameSnapshot       String            @db.VarChar(120)
-  treatmentNameSnapshot     String            @db.VarChar(160)
-  locationNameSnapshot      String            @db.VarChar(160)
-  locationAddressSnapshot   String            @db.VarChar(240)
-  supervisorNameSnapshot    String            @db.VarChar(200)
-  status                    AppointmentStatus @default(PENDING)
-  version                   Int               @default(1)
-  statusReason              String?           @db.VarChar(500)
-  statusReasonCode          String?           @db.VarChar(64)
-  statusChangedAt           DateTime          @default(now()) @db.Timestamptz(3)
-  statusChangedByUserId     String?
-  isLateCancellation        Boolean           @default(false)
-  confirmedAt               DateTime?         @db.Timestamptz(3)
-  rejectedAt                DateTime?         @db.Timestamptz(3)
-  cancelledAt               DateTime?         @db.Timestamptz(3)
-  expiredAt                 DateTime?         @db.Timestamptz(3)
-  completedAt               DateTime?         @db.Timestamptz(3)
-  noShowAt                  DateTime?         @db.Timestamptz(3)
-  createdAt                 DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt                 DateTime          @updatedAt @db.Timestamptz(3)
+model StudentAvailabilitySlotOffering {
+  id                 String    @id @default(cuid())
+  slotId             String
+  studentProfileId   String
+  studentTreatmentId String
+  supervisorId       String
+  removedAt          DateTime? @db.Timestamptz(3)
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
 
-  patientProfile      PatientProfile           @relation(fields: [patientProfileId], references: [id], onDelete: Restrict)
-  studentProfile      StudentProfile           @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
-  availabilitySlot    StudentAvailabilitySlot  @relation(fields: [studentAvailabilitySlotId], references: [id], onDelete: Restrict)
-  statusChangedByUser User?                     @relation("AppointmentStatusChangedBy", fields: [statusChangedByUserId], references: [id], onDelete: SetNull)
-  reviews             AppointmentReview[]
+  slot             StudentAvailabilitySlot @relation(fields: [slotId, studentProfileId], references: [id, studentProfileId], onDelete: Cascade, map: "availability_slot_offering_slot_owner_fkey")
+  studentTreatment StudentTreatment        @relation(fields: [studentTreatmentId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "availability_slot_offering_treatment_owner_fkey")
+  supervisor       StudentSupervisor       @relation(fields: [supervisorId, studentProfileId], references: [id, studentProfileId], onDelete: Restrict, map: "availability_slot_offering_supervisor_owner_fkey")
+  appointments     Appointment[]
+
+  @@unique([id, slotId])
+  @@index([slotId, studentTreatmentId, removedAt])
+  @@index([studentTreatmentId, slotId])
+  @@index([supervisorId, slotId])
+  @@map("student_availability_slot_offering")
+}
+
+model Appointment {
+  id                                String            @id @default(cuid())
+  routeSlug                         String            @unique
+  patientProfileId                  String
+  studentProfileId                  String
+  studentAvailabilitySlotId         String
+  studentAvailabilitySlotOfferingId String
+  scheduledStartsAt                 DateTime          @db.Timestamptz(3)
+  scheduledEndsAt                   DateTime          @db.Timestamptz(3)
+  patientAgeAtAppointment           Int
+  patientNote                       String?
+  patientNameSnapshot               String            @db.VarChar(120)
+  studentNameSnapshot               String            @db.VarChar(120)
+  treatmentNameSnapshot             String            @db.VarChar(160)
+  locationNameSnapshot              String            @db.VarChar(160)
+  locationAddressSnapshot           String            @db.VarChar(240)
+  supervisorNameSnapshot            String            @db.VarChar(200)
+  status                            AppointmentStatus @default(PENDING)
+  version                           Int               @default(1)
+  statusReason                      String?           @db.VarChar(500)
+  statusReasonCode                  String?           @db.VarChar(64)
+  statusChangedAt                   DateTime          @default(now()) @db.Timestamptz(3)
+  statusChangedByUserId             String?
+  isLateCancellation                Boolean           @default(false)
+  confirmedAt                       DateTime?         @db.Timestamptz(3)
+  rejectedAt                        DateTime?         @db.Timestamptz(3)
+  cancelledAt                       DateTime?         @db.Timestamptz(3)
+  expiredAt                         DateTime?         @db.Timestamptz(3)
+  completedAt                       DateTime?         @db.Timestamptz(3)
+  noShowAt                          DateTime?         @db.Timestamptz(3)
+  createdAt                         DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt                         DateTime          @updatedAt @db.Timestamptz(3)
+
+  patientProfile       PatientProfile                  @relation(fields: [patientProfileId], references: [id], onDelete: Restrict)
+  studentProfile       StudentProfile                  @relation(fields: [studentProfileId], references: [id], onDelete: Restrict)
+  availabilitySlot     StudentAvailabilitySlot         @relation(fields: [studentAvailabilitySlotId], references: [id], onDelete: Restrict)
+  availabilityOffering StudentAvailabilitySlotOffering @relation(fields: [studentAvailabilitySlotOfferingId, studentAvailabilitySlotId], references: [id, slotId], onDelete: Restrict)
+  statusChangedByUser  User?                           @relation("AppointmentStatusChangedBy", fields: [statusChangedByUserId], references: [id], onDelete: SetNull)
+  reviews              AppointmentReview[]
 
   @@index([patientProfileId, status, scheduledStartsAt])
   @@index([studentProfileId, status, scheduledStartsAt])
   @@index([studentAvailabilitySlotId, status])
+  @@index([studentAvailabilitySlotOfferingId, status])
   @@map("appointment")
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, TriangleAlert } from "lucide-react";
+import { Archive } from "lucide-react";
 
 import {
   AlertDialog,
@@ -13,58 +13,6 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-type StudentTreatmentDeactivateDialogProps = {
-  open: boolean;
-  isPending: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-};
-
-export function StudentTreatmentDeactivateDialog({
-  open,
-  isPending,
-  onCancel,
-  onConfirm,
-}: StudentTreatmentDeactivateDialogProps) {
-  return (
-    <AlertDialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen && !isPending) {
-          onCancel();
-        }
-      }}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogMedia>
-            <TriangleAlert aria-hidden="true" />
-          </AlertDialogMedia>
-          <AlertDialogTitle>
-            Tratamentul va deveni inactiv
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            Tratamentul nu va mai avea nicio locație activă și va fi
-            dezactivat automat. Continui salvarea?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>
-            Anulează
-          </AlertDialogCancel>
-          <AlertDialogAction
-            disabled={isPending}
-            onClick={onConfirm}
-          >
-            Salvează și dezactivează tratamentul
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
 
 type StudentTreatmentArchiveDialogProps = {
   treatmentName: string | null;
@@ -98,10 +46,8 @@ export function StudentTreatmentArchiveDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>
             Tratamentul nu va mai apărea în lista obișnuită și nu va
-            mai putea fi selectat pentru programări. Îl vei găsi în
-            Cont → Resurse arhivate și îl vei putea restaura ulterior
-            ca tratament inactiv. Asocierile sale cu locațiile vor fi
-            arhivate.
+            mai putea fi selectat în calendar. Îl vei găsi în Cont →
+            Resurse arhivate și îl vei putea restaura ulterior.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

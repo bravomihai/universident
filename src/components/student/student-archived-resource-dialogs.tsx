@@ -46,14 +46,8 @@ export function ArchivedLocationRestoreDialog({
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3">
-              <p>
-                Locația va reveni în lista obișnuită ca inactivă.
-              </p>
-              <p>
-                Tratamentele și asocierile dezactivate sau arhivate
-                anterior nu vor fi reactivate automat. Verifică
-                locația și tratamentele asociate înainte de activare.
-              </p>
+              <p>Locația va reveni în lista obișnuită.</p>
+              <p>O vei putea selecta pentru intervalele noi create în calendar.</p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -106,14 +100,8 @@ export function ArchivedTreatmentRestoreDialog({
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3">
-              <p>
-                Tratamentul va reveni în lista obișnuită ca inactiv.
-              </p>
-              <p>
-                Locațiile și asocierile anterioare nu vor fi
-                reactivate automat. Intră în editare și selectează
-                locațiile înainte de activare.
-              </p>
+              <p>Tratamentul va reveni în lista obișnuită.</p>
+              <p>Îl vei putea selecta pentru intervalele noi create în calendar.</p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -163,8 +151,8 @@ export function ArchivedSupervisorRestoreDialog({
             Restaurezi profesorul „{supervisorName}”?
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Profesorul supervizor va reveni activ în lista Supervizori și
-            va putea fi selectat în asocierile tratament–locație.
+            Profesorul va reveni în lista Supervizori și va putea fi selectat
+            pentru tratamentele oferite într-un interval din calendar.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

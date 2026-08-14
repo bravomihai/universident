@@ -9,10 +9,6 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit --incremental false",
     "test": "tsx --test src/lib/**/*.test.ts",
-    "demo:students": "tsx prisma/demo-public-students.ts seed",
-    "demo:students:cleanup": "tsx prisma/demo-public-students.ts cleanup",
-    "demo:appointments": "tsx prisma/demo-appointment-history.ts seed",
-    "demo:appointments:cleanup": "tsx prisma/demo-appointment-history.ts cleanup",
     "postinstall": "prisma generate"
   },
   "dependencies": {

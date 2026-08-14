@@ -39,12 +39,17 @@ npx prisma db seed
 - Patients can submit overlapping `PENDING` requests for different slots, but cannot have overlapping `CONFIRMED` appointments.
 - A patient can request a slot until its start time. At the start time an unconfirmed request becomes `EXPIRED`.
 - Confirming one request atomically marks the patient's other overlapping pending requests as `SUPERSEDED`.
-- A slot can have only one active (`PENDING` or `CONFIRMED`) appointment.
+- A student availability occurrence is a multi-hour block at exactly one location. It exposes one or more offerings, each pairing one student treatment with one supervisor.
+- `PENDING` and `CONFIRMED` appointments consume only their selected subinterval inside the block. Active appointment subintervals for the same student must never overlap.
+- The selected subinterval length comes from `StudentTreatment.durationMinutes`; the client never supplies a duration or end time.
+- Public search eligibility is based on real future calendar capacity for the exact treatment/location combination after active appointments are subtracted. A student with no contiguous interval long enough for the treatment must not appear in that search result.
+- Prefer optimized, non-overlapping treatment windows that leave every remainder reusable by another offered treatment duration. When no such partition exists, expose all valid starts on the 15-minute grid as a fallback; fallback never invents availability.
 - Patients can cancel only before the start time. Students use `COMPLETED` or `NO_SHOW` after the scheduled end time.
 - Patient cancellation, student rejection, student cancellation, and pending withdrawal require a trimmed reason of 20–500 characters.
 - A patient cancellation is late only when the appointment was confirmed and is cancelled less than two hours before its start. The application-wide reputation benchmark is the number of late cancellations among the patient's 10 most recent confirmed appointments; do not expose rolling-period or lifetime counters and do not apply an automatic penalty yet.
 - Moving or cancelling an occupied availability occurrence must atomically reject its pending request or cancel its confirmed appointment with a required reason. Never move the patient's appointment to the new time.
 - Appointments retain their scheduled time, names, treatment, location, address, supervisor, age, and note snapshots even when the underlying availability or professional resources later change.
+- Treatments, locations, and supervisors owned by a student have only archived/unarchived lifecycle state. Their associations are defined exclusively on calendar occurrences; do not recreate active flags or treatment-location join records.
 - Use serializable transactions and optimistic `version`/`revision` checks for scheduling writes. Database constraints are the final defense against slot and time overlaps.
 - After the scheduled end, a confirmed appointment remains active and highlighted until the student records `COMPLETED` or `NO_SHOW` together with a required 1–5 rating; the review comment is optional, but must contain 10–1,000 trimmed characters when present.
 - A completed or no-show appointment remains active and highlighted separately for each participant until that participant submits a 1–5 rating. Archive state is therefore derived per role.
@@ -67,9 +72,12 @@ npx prisma db seed
 ## Calendar and appointment UX
 
 - FullCalendar is the primary scheduling surface: `timeGridWeek` on larger screens and `timeGridDay` on phones.
-- Student events use consistent states: available (green), pending (amber), confirmed (blue), moved exception (violet), and cancelled (muted).
-- Drag-and-drop is allowed for movable occurrences. Occupied occurrences require the cancellation-reason flow before the move is committed.
-- Patients book by selecting a free event from the public student's calendar. If their birth date is missing, complete that profile step before enabling slot selection.
+- Student events use consistent states: available (green), pending (amber), confirmed (blue), moved exception (violet), and selected (primary highlight). Cancelled occurrences are never rendered.
+- Students create and edit availability in a modal dialog opened from a calendar selection or event click. The dialog configures location, treatment offerings, and a supervisor per treatment. Outside click and the explicit cancel action close without saving.
+- Patients enter booking through `/studenti/[studentSlug]/programare/[treatmentSlug]/[locationSlug]`. The page shows the exact searched combination and links the aggregate rating to the professional profile; review cards remain on the profile, not on the booking page.
+- The patient calendar renders availability windows, not a stack of overlapping events for every possible start. Optimized windows normally expose one start; a grouped fallback window opens a dialog where the patient selects one of its valid starts and may add an optional note.
+- Calendar navigation uses `Azi`, `Mâine`, `Poimâine`, or a localized date/range between the arrows, never permits past navigation, and keeps the day/week selector on the right on phones.
+- If the patient's birth date is missing, complete that profile step before enabling a booking request.
 - Keep accessible labels, keyboard-focus styles, and a non-color status label wherever status is communicated by color.
 
 ## Future features

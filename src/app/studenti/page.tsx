@@ -191,10 +191,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 <div className="grid gap-5 lg:grid-cols-2">
                   {search.results.map((student) => (
                     <PublicStudentResultCard
-                      key={student.publicSlug}
+                      key={`${student.publicSlug}:${student.location.routeKey}`}
                       student={student}
                       treatmentSlug={treatment.slug}
-                      citySlug={city.slug}
                     />
                   ))}
                 </div>

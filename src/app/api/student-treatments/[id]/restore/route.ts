@@ -89,11 +89,9 @@ export async function POST(
             },
             data: {
               deletedAt: null,
-              isActive: false,
             },
             select: {
               id: true,
-              isActive: true,
               treatment: {
                 select: {
                   name: true,
@@ -105,7 +103,6 @@ export async function POST(
         return {
           id: treatment.id,
           name: treatment.treatment.name,
-          isActive: treatment.isActive,
         };
       },
       {
@@ -115,7 +112,7 @@ export async function POST(
 
     return Response.json({
       restoredTreatment,
-      message: "Tratamentul a fost restaurat ca inactiv.",
+      message: "Tratamentul a fost restaurat.",
     });
   } catch (error) {
     return restoreErrorResponse(error);

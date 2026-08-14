@@ -14,6 +14,7 @@ import {
   createPatientProfileSlug,
 } from "@/lib/appointments/appointment-route-slug";
 import { ageOnDate } from "@/lib/availability/bucharest-time";
+import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { parsePatientProfileInput } from "@/lib/patient/patient-profile-input";
 import { prisma } from "@/lib/prisma";
 
@@ -80,13 +81,13 @@ const appointmentInclude = {
   },
   availabilitySlot: {
     include: {
-      treatmentLocation: {
-        include: {
-          studentTreatment: { include: { treatment: true } },
-          studentLocation: { include: { city: true } },
-          supervisor: true,
-        },
-      },
+      studentLocation: { include: { city: true } },
+    },
+  },
+  availabilityOffering: {
+    include: {
+      studentTreatment: { include: { treatment: true } },
+      supervisor: true,
     },
   },
   reviews: {
@@ -192,6 +193,13 @@ function isPatientOverlap(error: unknown) {
   return message.includes("appointment_patient_confirmed_time_excl");
 }
 
+function isStudentActiveOverlap(error: unknown) {
+  const message = error && typeof error === "object" && "message" in error
+    ? String(error.message)
+    : "";
+  return message.includes("appointment_student_active_time_excl");
+}
+
 export async function createAppointmentRequest(
   patientUser: { id: string; name: string },
   studentSlug: string,
@@ -205,27 +213,24 @@ export async function createAppointmentRequest(
           where: {
             id: input.slotId,
             status: "ACTIVE",
-            startsAt: { gt: new Date() },
+            startsAt: { lte: input.startsAt },
+            endsAt: { gt: input.startsAt },
             studentProfile: { publicSlug: studentSlug, isPublished: true },
-            treatmentLocation: {
-              isActive: true,
-              deletedAt: null,
-              studentTreatment: { isActive: true, deletedAt: null },
-              studentLocation: { isActive: true, deletedAt: null },
-              supervisor: { isActive: true, deletedAt: null },
-            },
-            appointments: {
-              none: { status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } },
-            },
+            studentLocation: { deletedAt: null, city: { isActive: true } },
           },
           include: {
             studentProfile: { include: { user: true } },
-            treatmentLocation: {
+            studentLocation: true,
+            offerings: {
+              where: { removedAt: null },
               include: {
                 studentTreatment: { include: { treatment: true } },
-                studentLocation: true,
                 supervisor: true,
               },
+            },
+            appointments: {
+              where: { status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } },
+              select: { scheduledStartsAt: true, scheduledEndsAt: true },
             },
           },
         });
@@ -233,6 +238,40 @@ export async function createAppointmentRequest(
           throw new AppointmentDomainError(
             "SLOT_UNAVAILABLE",
             "Slotul nu mai este disponibil. Alege alt interval.",
+          );
+        }
+        const offering = slot.offerings.find((item) => item.id === input.offeringId);
+        if (
+          !offering ||
+          offering.studentTreatment.deletedAt ||
+          !offering.studentTreatment.treatment.isActive ||
+          offering.supervisor.deletedAt
+        ) {
+          throw new AppointmentDomainError("SLOT_UNAVAILABLE", "Tratamentul nu mai este disponibil în acest interval.");
+        }
+        const generated = generateSmartBookingSlots([{
+          id: slot.id,
+          offeringId: offering.id,
+          startsAt: slot.startsAt,
+          endsAt: slot.endsAt,
+          treatmentDurationMinutes: offering.studentTreatment.durationMinutes,
+          offeredDurationsMinutes: slot.offerings
+            .filter((item) => !item.studentTreatment.deletedAt && !item.supervisor.deletedAt)
+            .map((item) => item.studentTreatment.durationMinutes),
+          occupied: slot.appointments.map((appointment) => ({
+            startsAt: appointment.scheduledStartsAt,
+            endsAt: appointment.scheduledEndsAt,
+          })),
+        }]);
+        const selected = generated.find(
+          (candidate) =>
+            candidate.offeringId === input.offeringId &&
+            candidate.startsAt.getTime() === input.startsAt.getTime(),
+        );
+        if (!selected) {
+          throw new AppointmentDomainError(
+            "SLOT_UNAVAILABLE",
+            "Ora nu mai este disponibilă. Alege alt interval din calendar.",
           );
         }
         const patient = await getOrCreatePatientProfile(
@@ -254,35 +293,35 @@ export async function createAppointmentRequest(
             "Lasă recenzia pentru programarea anterioară înainte de a trimite o cerere nouă.",
           );
         }
-        const age = ageOnDate(patient.dateOfBirth!, slot.startsAt);
+        const age = ageOnDate(patient.dateOfBirth!, selected.startsAt);
         if (age < 18 || age > 130) {
           throw new AppointmentDomainError(
             "PROFILE_REQUIRED",
             "Rezervările Universident sunt disponibile momentan persoanelor de minimum 18 ani.",
           );
         }
-        const association = slot.treatmentLocation;
         return transaction.appointment.create({
           data: {
             routeSlug: createAppointmentRouteSlug(
-              association.studentTreatment.treatment.name,
-              slot.startsAt,
+              offering.studentTreatment.treatment.name,
+              selected.startsAt,
             ),
             patientProfileId: patient.id,
             studentProfileId: slot.studentProfileId,
             studentAvailabilitySlotId: slot.id,
-            scheduledStartsAt: slot.startsAt,
-            scheduledEndsAt: slot.endsAt,
+            studentAvailabilitySlotOfferingId: offering.id,
+            scheduledStartsAt: selected.startsAt,
+            scheduledEndsAt: selected.endsAt,
             patientAgeAtAppointment: age,
             patientNote: input.patientNote,
             patientNameSnapshot: patientUser.name,
             studentNameSnapshot: slot.studentProfile.user.name,
-            treatmentNameSnapshot: association.studentTreatment.treatment.name,
-            locationNameSnapshot: association.studentLocation.name,
-            locationAddressSnapshot: association.studentLocation.address,
+            treatmentNameSnapshot: offering.studentTreatment.treatment.name,
+            locationNameSnapshot: slot.studentLocation.name,
+            locationAddressSnapshot: slot.studentLocation.address,
             supervisorNameSnapshot: [
-              association.supervisor.academicTitle,
-              association.supervisor.fullName,
+              offering.supervisor.academicTitle,
+              offering.supervisor.fullName,
             ].filter(Boolean).join(" "),
             statusChangedByUserId: patientUser.id,
           },
@@ -292,7 +331,7 @@ export async function createAppointmentRequest(
       { isolationLevel: "Serializable" },
     );
   } catch (error) {
-    if (isUniqueConflict(error)) {
+    if (isUniqueConflict(error) || isStudentActiveOverlap(error)) {
       throw new AppointmentDomainError(
         "SLOT_UNAVAILABLE",
         "Alt pacient a trimis deja o cerere pentru acest slot.",

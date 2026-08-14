@@ -1,22 +1,17 @@
 import type { Prisma } from "@/generated/prisma/client";
 import {
   AppointmentStatus,
-  StudentAvailabilityEndMode,
   StudentAvailabilitySeriesStatus,
   StudentAvailabilitySlotStatus,
-  StudentAvailabilityWeekday,
 } from "@/generated/prisma/enums";
 import type {
   parseCancelAvailabilityInput,
   parseCreateAvailabilityInput,
-  parseMoveAvailabilityInput,
+  parseUpdateAvailabilityInput,
 } from "@/lib/availability/availability-input";
 import {
-  addLocalDays,
-  bucharestPartsForInstant,
   localDateForInstant,
   localDateToPrismaDate,
-  prismaDateToLocalDate,
 } from "@/lib/availability/bucharest-time";
 import { materializeSeriesThrough } from "@/lib/availability/materializer";
 import { defaultMaterializationDate } from "@/lib/availability/recurrence";
@@ -26,9 +21,8 @@ type SuccessData<T> = T extends { ok: true; data: infer Data } ? Data : never;
 type Parsed<T extends (value: unknown) => unknown> = SuccessData<ReturnType<T>>;
 
 export type AvailabilityDomainErrorCode =
-  | "ASSOCIATION_NOT_FOUND"
+  | "RESOURCE_NOT_FOUND"
   | "SLOT_NOT_FOUND"
-  | "SERIES_NOT_FOUND"
   | "SLOT_ALREADY_STARTED"
   | "SLOT_OCCUPIED_REASON_REQUIRED"
   | "STALE_VERSION"
@@ -36,26 +30,22 @@ export type AvailabilityDomainErrorCode =
   | "CONFLICT";
 
 export class AvailabilityDomainError extends Error {
-  constructor(
-    readonly code: AvailabilityDomainErrorCode,
-    message: string,
-  ) {
+  constructor(readonly code: AvailabilityDomainErrorCode, message: string) {
     super(message);
   }
 }
 
-const activeAppointmentStatuses = [
-  AppointmentStatus.PENDING,
-  AppointmentStatus.CONFIRMED,
-];
+const activeAppointmentStatuses = [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED];
 
 const slotInclude = {
-  treatmentLocation: {
+  studentLocation: { include: { city: true } },
+  offerings: {
+    where: { removedAt: null },
     include: {
       studentTreatment: { include: { treatment: true } },
-      studentLocation: { include: { city: true } },
       supervisor: true,
     },
+    orderBy: { studentTreatment: { treatment: { name: "asc" as const } } },
   },
   series: true,
   appointments: {
@@ -78,125 +68,128 @@ const slotInclude = {
         },
       },
     },
-    take: 1,
+    orderBy: { scheduledStartsAt: "asc" as const },
   },
 } satisfies Prisma.StudentAvailabilitySlotInclude;
 
-async function activeAssociation(
+type OfferingInput = { studentTreatmentId: string; supervisorId: string };
+
+async function validateConfiguration(
   transaction: Prisma.TransactionClient,
   studentProfileId: string,
-  id: string,
+  studentLocationId: string,
+  offerings: OfferingInput[],
 ) {
-  const association = await transaction.studentTreatmentLocation.findFirst({
-    where: {
-      id,
-      studentProfileId,
-      isActive: true,
-      deletedAt: null,
-      studentTreatment: { isActive: true, deletedAt: null },
-      studentLocation: { isActive: true, deletedAt: null },
-      supervisor: { isActive: true, deletedAt: null },
-    },
-    include: { studentTreatment: true },
-  });
-  if (!association) {
+  const [location, treatments, supervisors] = await Promise.all([
+    transaction.studentLocation.findFirst({
+      where: { id: studentLocationId, studentProfileId, deletedAt: null, city: { isActive: true } },
+      select: { id: true },
+    }),
+    transaction.studentTreatment.findMany({
+      where: {
+        id: { in: offerings.map((item) => item.studentTreatmentId) },
+        studentProfileId,
+        deletedAt: null,
+        treatment: { isActive: true },
+      },
+      select: { id: true },
+    }),
+    transaction.studentSupervisor.findMany({
+      where: {
+        id: { in: offerings.map((item) => item.supervisorId) },
+        studentProfileId,
+        deletedAt: null,
+      },
+      select: { id: true },
+    }),
+  ]);
+  if (
+    !location ||
+    treatments.length !== offerings.length ||
+    supervisors.length !== new Set(offerings.map((item) => item.supervisorId)).size
+  ) {
     throw new AvailabilityDomainError(
-      "ASSOCIATION_NOT_FOUND",
-      "Tratamentul, locația și supervizorul selectate nu mai sunt disponibile.",
+      "RESOURCE_NOT_FOUND",
+      "Locația, tratamentele sau supervizorii selectați nu mai sunt disponibili.",
     );
   }
-  return association;
 }
 
-async function resolveActiveAppointment(
-  transaction: Prisma.TransactionClient,
-  slot: {
-    appointments: Array<{ id: string; status: AppointmentStatus; version: number }>;
-  },
-  reason: string | null,
-  actorUserId: string,
-  now: Date,
-) {
-  const appointment = slot.appointments[0];
-  if (!appointment) return;
-  if (!reason) {
-    throw new AvailabilityDomainError(
-      "SLOT_OCCUPIED_REASON_REQUIRED",
-      "Slotul are o cerere sau o programare. Scrie motivul anulării înainte de a continua.",
-    );
-  }
-  const pending = appointment.status === AppointmentStatus.PENDING;
-  await transaction.appointment.update({
-    where: { id: appointment.id, version: appointment.version },
-    data: {
-      status: pending
-        ? AppointmentStatus.REJECTED
-        : AppointmentStatus.CANCELLED_BY_STUDENT,
-      statusReason: reason,
-      statusReasonCode: pending ? "SLOT_CHANGED" : "STUDENT_SLOT_CHANGED",
-      statusChangedAt: now,
-      statusChangedByUserId: actorUserId,
-      rejectedAt: pending ? now : undefined,
-      cancelledAt: pending ? undefined : now,
-      version: { increment: 1 },
-    },
-  });
-}
-
-function assertFuture(startsAt: Date, now = new Date()) {
-  if (startsAt.getTime() <= now.getTime()) {
-    throw new AvailabilityDomainError(
-      "SLOT_ALREADY_STARTED",
-      "Disponibilitatea trebuie să înceapă în viitor.",
-    );
+function assertFuture(startsAt: Date) {
+  if (startsAt <= new Date()) {
+    throw new AvailabilityDomainError("SLOT_ALREADY_STARTED", "Disponibilitatea trebuie să înceapă în viitor.");
   }
 }
 
 function isTemporalConflict(error: unknown) {
-  if (!error || typeof error !== "object") return false;
-  const text = "message" in error ? String(error.message) : "";
+  const text = error && typeof error === "object" && "message" in error ? String(error.message) : "";
   return text.includes("student_availability_slot_active_owner_time_excl");
 }
 
-export async function getStudentAvailabilityCatalog(studentProfileId: string) {
-  return prisma.studentTreatmentLocation.findMany({
-    where: {
-      studentProfileId,
-      isActive: true,
-      deletedAt: null,
-      studentTreatment: { isActive: true, deletedAt: null },
-      studentLocation: { isActive: true, deletedAt: null },
-      supervisor: { isActive: true, deletedAt: null },
-    },
-    orderBy: [
-      { studentTreatment: { treatment: { name: "asc" } } },
-      { studentLocation: { name: "asc" } },
-    ],
-    select: {
-      id: true,
-      studentTreatment: {
-        select: { durationMinutes: true, treatment: { select: { name: true } } },
+async function resolveActiveAppointments(
+  transaction: Prisma.TransactionClient,
+  appointments: Array<{ id: string; status: AppointmentStatus; version: number }>,
+  reason: string | null,
+  actorUserId: string,
+  now: Date,
+) {
+  if (appointments.length > 0 && !reason) {
+    throw new AvailabilityDomainError(
+      "SLOT_OCCUPIED_REASON_REQUIRED",
+      "Intervalul conține cereri sau programări. Scrie motivul anulării înainte de a continua.",
+    );
+  }
+  for (const appointment of appointments) {
+    const pending = appointment.status === AppointmentStatus.PENDING;
+    await transaction.appointment.update({
+      where: { id: appointment.id, version: appointment.version },
+      data: {
+        status: pending ? AppointmentStatus.REJECTED : AppointmentStatus.CANCELLED_BY_STUDENT,
+        statusReason: reason,
+        statusReasonCode: pending ? "AVAILABILITY_CHANGED" : "STUDENT_AVAILABILITY_CHANGED",
+        statusChangedAt: now,
+        statusChangedByUserId: actorUserId,
+        rejectedAt: pending ? now : undefined,
+        cancelledAt: pending ? undefined : now,
+        version: { increment: 1 },
       },
-      studentLocation: { select: { name: true, address: true } },
-      supervisor: { select: { fullName: true, academicTitle: true } },
-    },
-  });
+    });
+  }
 }
 
-export async function listStudentAvailability(
-  studentProfileId: string,
-  from: Date,
-  to: Date,
-) {
+export async function getStudentAvailabilityCatalog(studentProfileId: string) {
+  const [locations, treatments, supervisors] = await Promise.all([
+    prisma.studentLocation.findMany({
+      where: { studentProfileId, deletedAt: null, city: { isActive: true } },
+      orderBy: [{ city: { name: "asc" } }, { name: "asc" }],
+      select: { id: true, name: true, address: true, city: { select: { name: true } } },
+    }),
+    prisma.studentTreatment.findMany({
+      where: { studentProfileId, deletedAt: null, treatment: { isActive: true } },
+      orderBy: { treatment: { name: "asc" } },
+      select: {
+        id: true,
+        durationMinutes: true,
+        treatment: { select: { name: true, slug: true } },
+      },
+    }),
+    prisma.studentSupervisor.findMany({
+      where: { studentProfileId, deletedAt: null },
+      orderBy: { fullName: "asc" },
+      select: { id: true, fullName: true, academicTitle: true },
+    }),
+  ]);
+  return { locations, treatments, supervisors };
+}
+
+export async function listStudentAvailability(studentProfileId: string, from: Date, to: Date) {
   if (to <= from || to.getTime() - from.getTime() > 370 * 86_400_000) {
-    throw new AvailabilityDomainError(
-      "INVALID_INTERVAL",
-      "Intervalul calendarului nu este valid.",
-    );
+    throw new AvailabilityDomainError("INVALID_INTERVAL", "Intervalul calendarului nu este valid.");
   }
   await prisma.$transaction(async (transaction) => {
     const series = await transaction.studentAvailabilitySeries.findMany({
       where: { studentProfileId, status: StudentAvailabilitySeriesStatus.ACTIVE },
+      include: { offerings: true },
     });
     for (const item of series) {
       await materializeSeriesThrough(transaction, item, localDateForInstant(to));
@@ -205,6 +198,7 @@ export async function listStudentAvailability(
   return prisma.studentAvailabilitySlot.findMany({
     where: {
       studentProfileId,
+      status: StudentAvailabilitySlotStatus.ACTIVE,
       startsAt: { lt: to },
       endsAt: { gt: from },
     },
@@ -218,234 +212,110 @@ export async function createAvailability(
   input: Parsed<typeof parseCreateAvailabilityInput>,
 ) {
   try {
-    return await prisma.$transaction(
-      async (transaction) => {
-        const association = await activeAssociation(
-          transaction,
-          studentProfileId,
-          input.studentTreatmentLocationId,
-        );
-        const durationMinutes = association.studentTreatment.durationMinutes;
-
-        if (input.kind === "SINGLE") {
-          assertFuture(input.startsAt);
-          return transaction.studentAvailabilitySlot.create({
-            data: {
-              studentProfileId,
-              studentTreatmentLocationId: association.id,
-              originalStartsAt: input.startsAt,
-              startsAt: input.startsAt,
-              endsAt: new Date(input.startsAt.getTime() + durationMinutes * 60_000),
-            },
-            include: slotInclude,
-          });
-        }
-
-        const firstInstant = new Date(`${input.rule.startsOn}T00:00:00Z`);
-        if (Number.isNaN(firstInstant.getTime())) {
-          throw new AvailabilityDomainError("INVALID_INTERVAL", "Data de început nu este validă.");
-        }
-        const series = await transaction.studentAvailabilitySeries.create({
+    return await prisma.$transaction(async (transaction) => {
+      await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings);
+      if (input.kind === "SINGLE") {
+        assertFuture(input.startsAt);
+        return transaction.studentAvailabilitySlot.create({
           data: {
             studentProfileId,
-            studentTreatmentLocationId: association.id,
-            startsOn: localDateToPrismaDate(input.rule.startsOn)!,
-            startMinuteOfDay: input.rule.startMinuteOfDay,
-            weekdays: input.rule.weekdays,
-            intervalWeeks: input.rule.intervalWeeks,
-            durationMinutes,
-            endMode: input.rule.endMode,
-            endsOn: input.rule.endsOn
-              ? localDateToPrismaDate(input.rule.endsOn)
-              : null,
-            occurrenceCount: input.rule.occurrenceCount,
+            studentLocationId: input.studentLocationId,
+            originalStartsAt: input.startsAt,
+            startsAt: input.startsAt,
+            endsAt: input.endsAt,
+            offerings: {
+              create: input.offerings.map((item) => ({ studentProfileId, ...item })),
+            },
           },
+          include: slotInclude,
         });
-        const materialized = await materializeSeriesThrough(
-          transaction,
-          series,
-          defaultMaterializationDate(),
-        );
-        if (!materialized.occurrences.some((item) => item.startsAt > new Date())) {
-          throw new AvailabilityDomainError(
-            "SLOT_ALREADY_STARTED",
-            "Seria trebuie să conțină cel puțin o apariție viitoare.",
-          );
-        }
-        return transaction.studentAvailabilitySeries.findUniqueOrThrow({
-          where: { id: series.id },
-          include: { slots: { orderBy: { startsAt: "asc" }, include: slotInclude } },
-        });
-      },
-      { isolationLevel: "Serializable" },
-    );
+      }
+
+      const series = await transaction.studentAvailabilitySeries.create({
+        data: {
+          studentProfileId,
+          studentLocationId: input.studentLocationId,
+          startsOn: localDateToPrismaDate(input.rule.startsOn)!,
+          startMinuteOfDay: input.rule.startMinuteOfDay,
+          weekdays: input.rule.weekdays,
+          intervalWeeks: input.rule.intervalWeeks,
+          durationMinutes: input.rule.durationMinutes,
+          endMode: input.rule.endMode,
+          endsOn: input.rule.endsOn ? localDateToPrismaDate(input.rule.endsOn) : null,
+          occurrenceCount: input.rule.occurrenceCount,
+          offerings: {
+            create: input.offerings.map((item) => ({ studentProfileId, ...item })),
+          },
+        },
+        include: { offerings: true },
+      });
+      const materialized = await materializeSeriesThrough(transaction, series, defaultMaterializationDate());
+      if (!materialized.occurrences.some((item) => item.startsAt > new Date())) {
+        throw new AvailabilityDomainError("SLOT_ALREADY_STARTED", "Seria trebuie să conțină cel puțin o apariție viitoare.");
+      }
+      return series;
+    }, { isolationLevel: "Serializable" });
   } catch (error) {
     if (isTemporalConflict(error)) {
-      throw new AvailabilityDomainError(
-        "CONFLICT",
-        "Intervalul se suprapune peste o altă disponibilitate.",
-      );
+      throw new AvailabilityDomainError("CONFLICT", "Intervalul se suprapune peste o altă disponibilitate.");
     }
     throw error;
   }
 }
 
-function weekdayShift(
-  weekdays: StudentAvailabilityWeekday[],
-  oldInstant: Date,
-  newInstant: Date,
-) {
-  const order = [
-    StudentAvailabilityWeekday.SUNDAY,
-    StudentAvailabilityWeekday.MONDAY,
-    StudentAvailabilityWeekday.TUESDAY,
-    StudentAvailabilityWeekday.WEDNESDAY,
-    StudentAvailabilityWeekday.THURSDAY,
-    StudentAvailabilityWeekday.FRIDAY,
-    StudentAvailabilityWeekday.SATURDAY,
-  ];
-  const oldParts = bucharestPartsForInstant(oldInstant);
-  const newParts = bucharestPartsForInstant(newInstant);
-  const oldDay = new Date(Date.UTC(oldParts.year, oldParts.month - 1, oldParts.day)).getUTCDay();
-  const newDay = new Date(Date.UTC(newParts.year, newParts.month - 1, newParts.day)).getUTCDay();
-  const delta = (newDay - oldDay + 7) % 7;
-  return weekdays.map((weekday) => order[(order.indexOf(weekday) + delta) % 7]);
-}
-
-function localDayDifference(first: Date, second: Date) {
-  const a = bucharestPartsForInstant(first);
-  const b = bucharestPartsForInstant(second);
-  return Math.round(
-    (Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) /
-      86_400_000,
-  );
-}
-
-export async function moveAvailability(
+export async function updateAvailability(
   studentProfileId: string,
   actorUserId: string,
   slotId: string,
-  input: Parsed<typeof parseMoveAvailabilityInput>,
+  input: Parsed<typeof parseUpdateAvailabilityInput>,
 ) {
   assertFuture(input.startsAt);
   try {
-    return await prisma.$transaction(
-      async (transaction) => {
-        await transaction.$executeRaw`SET CONSTRAINTS ALL DEFERRED`;
-        const slot = await transaction.studentAvailabilitySlot.findFirst({
-          where: { id: slotId, studentProfileId },
-          include: { series: true, appointments: { where: { status: { in: activeAppointmentStatuses } } } },
+    return await prisma.$transaction(async (transaction) => {
+      const slot = await transaction.studentAvailabilitySlot.findFirst({
+        where: { id: slotId, studentProfileId },
+        include: {
+          appointments: { where: { status: { in: activeAppointmentStatuses } } },
+          offerings: { where: { removedAt: null } },
+        },
+      });
+      if (!slot) throw new AvailabilityDomainError("SLOT_NOT_FOUND", "Intervalul nu a fost găsit.");
+      if (slot.version !== input.expectedVersion) {
+        throw new AvailabilityDomainError("STALE_VERSION", "Calendarul s-a modificat. Reîncarcă pagina.");
+      }
+      if (slot.status !== StudentAvailabilitySlotStatus.ACTIVE || slot.startsAt <= new Date()) {
+        throw new AvailabilityDomainError("SLOT_ALREADY_STARTED", "Intervalul nu mai poate fi editat.");
+      }
+      const now = new Date();
+      await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings);
+      await resolveActiveAppointments(transaction, slot.appointments, input.appointmentReason, actorUserId, now);
+
+      if (slot.appointments.length === 0) {
+        await transaction.studentAvailabilitySlotOffering.deleteMany({ where: { slotId: slot.id } });
+      } else {
+        await transaction.studentAvailabilitySlotOffering.updateMany({
+          where: { slotId: slot.id, removedAt: null },
+          data: { removedAt: now },
         });
-        if (!slot) throw new AvailabilityDomainError("SLOT_NOT_FOUND", "Slotul nu a fost găsit.");
-        if (slot.version !== input.expectedVersion) {
-          throw new AvailabilityDomainError("STALE_VERSION", "Calendarul s-a modificat. Reîncarcă pagina.");
-        }
-        if (slot.status !== StudentAvailabilitySlotStatus.ACTIVE || slot.startsAt <= new Date()) {
-          throw new AvailabilityDomainError("SLOT_ALREADY_STARTED", "Slotul nu mai poate fi mutat.");
-        }
-        const now = new Date();
-
-        if (input.scope === "OCCURRENCE" || !slot.series) {
-          await resolveActiveAppointment(transaction, slot, input.appointmentReason, actorUserId, now);
-          const duration = slot.endsAt.getTime() - slot.startsAt.getTime();
-          return transaction.studentAvailabilitySlot.update({
-            where: { id: slot.id, version: slot.version },
-            data: {
-              startsAt: input.startsAt,
-              endsAt: new Date(input.startsAt.getTime() + duration),
-              isException: slot.seriesId !== null || slot.isException,
-              version: { increment: 1 },
-            },
-            include: slotInclude,
-          });
-        }
-
-        const series = slot.series;
-        if (series.revision !== input.expectedSeriesRevision) {
-          throw new AvailabilityDomainError("STALE_VERSION", "Seria s-a modificat. Reîncarcă pagina.");
-        }
-        const affectedWhere = input.scope === "SERIES"
-          ? { seriesId: series.id, status: StudentAvailabilitySlotStatus.ACTIVE }
-          : { seriesId: series.id, status: StudentAvailabilitySlotStatus.ACTIVE, originalStartsAt: { gte: slot.originalStartsAt } };
-        const affected = await transaction.studentAvailabilitySlot.findMany({
-          where: affectedWhere,
-          include: { appointments: { where: { status: { in: activeAppointmentStatuses } } } },
-        });
-        if (affected.some((item) => item.appointments.length > 0) && !input.appointmentReason) {
-          throw new AvailabilityDomainError(
-            "SLOT_OCCUPIED_REASON_REQUIRED",
-            "Seria conține cereri sau programări. Scrie motivul anulării înainte de a continua.",
-          );
-        }
-        for (const item of affected) {
-          await resolveActiveAppointment(transaction, item, input.appointmentReason, actorUserId, now);
-        }
-        await transaction.studentAvailabilitySlot.updateMany({
-          where: affectedWhere,
-          data: { status: StudentAvailabilitySlotStatus.CANCELLED, cancelledAt: now, version: { increment: 1 } },
-        });
-
-        const newParts = bucharestPartsForInstant(input.startsAt);
-        const newStartDate = localDateForInstant(input.startsAt);
-        const startMinuteOfDay = newParts.hour * 60 + newParts.minute;
-        const shiftedWeekdays = weekdayShift(series.weekdays, slot.startsAt, input.startsAt);
-        const dayDelta = localDayDifference(slot.startsAt, input.startsAt);
-
-        if (input.scope === "SERIES") {
-          const updated = await transaction.studentAvailabilitySeries.update({
-            where: { id: series.id, revision: series.revision },
-            data: {
-              startsOn: localDateToPrismaDate(addLocalDays(prismaDateToLocalDate(series.startsOn), dayDelta))!,
-              startMinuteOfDay,
-              weekdays: shiftedWeekdays,
-              endsOn: series.endsOn
-                ? localDateToPrismaDate(addLocalDays(prismaDateToLocalDate(series.endsOn), dayDelta))
-                : null,
-              revision: { increment: 1 },
-              materializedThrough: null,
-            },
-          });
-          await materializeSeriesThrough(transaction, updated, defaultMaterializationDate());
-          return updated;
-        }
-
-        const previousDay = addLocalDays(localDateForInstant(slot.originalStartsAt), -1);
-        await transaction.studentAvailabilitySeries.update({
-          where: { id: series.id, revision: series.revision },
-          data: {
-            endMode: StudentAvailabilityEndMode.UNTIL,
-            endsOn: localDateToPrismaDate(previousDay),
-            occurrenceCount: null,
-            revision: { increment: 1 },
+      }
+      return transaction.studentAvailabilitySlot.update({
+        where: { id: slot.id, version: slot.version },
+        data: {
+          studentLocationId: input.studentLocationId,
+          startsAt: input.startsAt,
+          endsAt: input.endsAt,
+          isException: slot.seriesId !== null || slot.isException,
+          version: { increment: 1 },
+          offerings: {
+            create: input.offerings.map((item) => ({ studentProfileId, ...item })),
           },
-        });
-        const remainingCount = series.endMode === StudentAvailabilityEndMode.COUNT && series.occurrenceCount
-          ? Math.max(1, series.occurrenceCount - ((slot.sequenceNumber ?? 1) - 1))
-          : null;
-        const nextSeries = await transaction.studentAvailabilitySeries.create({
-          data: {
-            studentProfileId,
-            studentTreatmentLocationId: series.studentTreatmentLocationId,
-            startsOn: localDateToPrismaDate(newStartDate)!,
-            startMinuteOfDay,
-            weekdays: shiftedWeekdays,
-            intervalWeeks: series.intervalWeeks,
-            durationMinutes: series.durationMinutes,
-            endMode: series.endMode,
-            endsOn: series.endsOn
-              ? localDateToPrismaDate(addLocalDays(prismaDateToLocalDate(series.endsOn), dayDelta))
-              : null,
-            occurrenceCount: remainingCount,
-          },
-        });
-        await materializeSeriesThrough(transaction, nextSeries, defaultMaterializationDate());
-        return nextSeries;
-      },
-      { isolationLevel: "Serializable" },
-    );
+        },
+        include: slotInclude,
+      });
+    }, { isolationLevel: "Serializable" });
   } catch (error) {
     if (isTemporalConflict(error)) {
-      throw new AvailabilityDomainError("CONFLICT", "Mutarea se suprapune peste altă disponibilitate.");
+      throw new AvailabilityDomainError("CONFLICT", "Intervalul editat se suprapune peste altă disponibilitate.");
     }
     throw error;
   }
@@ -457,48 +327,57 @@ export async function cancelAvailability(
   slotId: string,
   input: Parsed<typeof parseCancelAvailabilityInput>,
 ) {
-  return prisma.$transaction(
-    async (transaction) => {
-      const slot = await transaction.studentAvailabilitySlot.findFirst({
-        where: { id: slotId, studentProfileId },
-        include: { series: true, appointments: { where: { status: { in: activeAppointmentStatuses } } } },
-      });
-      if (!slot) throw new AvailabilityDomainError("SLOT_NOT_FOUND", "Slotul nu a fost găsit.");
-      if (slot.version !== input.expectedVersion) {
-        throw new AvailabilityDomainError("STALE_VERSION", "Calendarul s-a modificat. Reîncarcă pagina.");
-      }
-      const now = new Date();
-      const where = input.scope === "SERIES" && slot.seriesId
-        ? { seriesId: slot.seriesId, status: StudentAvailabilitySlotStatus.ACTIVE, startsAt: { gt: now } }
-        : { id: slot.id, status: StudentAvailabilitySlotStatus.ACTIVE };
-      const affected = await transaction.studentAvailabilitySlot.findMany({
-        where,
-        include: { appointments: { where: { status: { in: activeAppointmentStatuses } } } },
-      });
-      if (affected.some((item) => item.appointments.length > 0) && !input.appointmentReason) {
-        throw new AvailabilityDomainError(
-          "SLOT_OCCUPIED_REASON_REQUIRED",
-          "Există cereri sau programări active. Motivul anulării este obligatoriu.",
-        );
-      }
-      for (const item of affected) {
-        await resolveActiveAppointment(transaction, item, input.appointmentReason, actorUserId, now);
-      }
+  return prisma.$transaction(async (transaction) => {
+    const slot = await transaction.studentAvailabilitySlot.findFirst({
+      where: { id: slotId, studentProfileId },
+      include: { series: true },
+    });
+    if (!slot) throw new AvailabilityDomainError("SLOT_NOT_FOUND", "Intervalul nu a fost găsit.");
+    if (slot.version !== input.expectedVersion) {
+      throw new AvailabilityDomainError("STALE_VERSION", "Calendarul s-a modificat. Reîncarcă pagina.");
+    }
+    const now = new Date();
+    if (slot.startsAt <= now) {
+      throw new AvailabilityDomainError(
+        "SLOT_ALREADY_STARTED",
+        "Un interval care a început nu mai poate fi șters din calendar.",
+      );
+    }
+    const where = input.scope === "SERIES" && slot.seriesId
+      ? { seriesId: slot.seriesId, status: StudentAvailabilitySlotStatus.ACTIVE, startsAt: { gt: now } }
+      : { id: slot.id, status: StudentAvailabilitySlotStatus.ACTIVE };
+    const affected = await transaction.studentAvailabilitySlot.findMany({
+      where,
+      include: { appointments: { where: { status: { in: activeAppointmentStatuses } } } },
+    });
+    const appointments = affected.flatMap((item) => item.appointments);
+    await resolveActiveAppointments(transaction, appointments, input.appointmentReason, actorUserId, now);
+
+    const occupiedIds = affected.filter((item) => item.appointments.length > 0).map((item) => item.id);
+    const emptyIds = affected.filter((item) => item.appointments.length === 0).map((item) => item.id);
+    if (occupiedIds.length > 0) {
       await transaction.studentAvailabilitySlot.updateMany({
-        where,
-        data: { status: StudentAvailabilitySlotStatus.CANCELLED, cancelledAt: now, version: { increment: 1 } },
+        where: { id: { in: occupiedIds } },
+        data: { status: StudentAvailabilitySlotStatus.CANCELLED, cancelledAt: now, isException: true, version: { increment: 1 } },
       });
-      if (input.scope === "SERIES" && slot.series) {
-        if (slot.series.revision !== input.expectedSeriesRevision) {
-          throw new AvailabilityDomainError("STALE_VERSION", "Seria s-a modificat. Reîncarcă pagina.");
-        }
-        await transaction.studentAvailabilitySeries.update({
-          where: { id: slot.series.id, revision: slot.series.revision },
-          data: { status: StudentAvailabilitySeriesStatus.CANCELLED, revision: { increment: 1 } },
-        });
+    }
+    if (input.scope === "OCCURRENCE" && slot.seriesId && emptyIds.length > 0) {
+      await transaction.studentAvailabilitySlot.updateMany({
+        where: { id: { in: emptyIds } },
+        data: { status: StudentAvailabilitySlotStatus.CANCELLED, cancelledAt: now, isException: true, version: { increment: 1 } },
+      });
+    } else if (emptyIds.length > 0) {
+      await transaction.studentAvailabilitySlot.deleteMany({ where: { id: { in: emptyIds } } });
+    }
+    if (input.scope === "SERIES" && slot.series) {
+      if (slot.series.revision !== input.expectedSeriesRevision) {
+        throw new AvailabilityDomainError("STALE_VERSION", "Seria s-a modificat. Reîncarcă pagina.");
       }
-      return { cancelledSlots: affected.length };
-    },
-    { isolationLevel: "Serializable" },
-  );
+      await transaction.studentAvailabilitySeries.update({
+        where: { id: slot.series.id, revision: slot.series.revision },
+        data: { status: StudentAvailabilitySeriesStatus.CANCELLED, revision: { increment: 1 } },
+      });
+    }
+    return { cancelledSlots: affected.length };
+  }, { isolationLevel: "Serializable" });
 }

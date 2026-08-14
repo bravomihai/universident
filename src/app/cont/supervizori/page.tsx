@@ -16,13 +16,12 @@ export default async function StudentSupervisorsPage() {
     select: {
       id: true,
       supervisors: {
-        where: { deletedAt: null, isActive: true },
+        where: { deletedAt: null },
         orderBy: { fullName: "asc" },
         select: {
           id: true,
           fullName: true,
           academicTitle: true,
-          isActive: true,
           deletedAt: true,
           createdAt: true,
           updatedAt: true,

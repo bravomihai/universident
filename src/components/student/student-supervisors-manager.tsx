@@ -160,8 +160,8 @@ export function StudentSupervisorsManager({
             Supervizori
           </h1>
           <p className="text-muted-foreground">
-            Administrează profesorii supervizori pe care îi poți asocia
-            locațiilor fiecărui tratament.
+            Administrează profesorii pe care îi poți selecta pentru
+            tratamentele fiecărui interval din calendar.
           </p>
         </div>
 
@@ -259,8 +259,7 @@ export function StudentSupervisorsManager({
               Nu ai adăugat niciun supervizor
             </h2>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Adaugă primul profesor supervizor pentru a-l putea selecta
-              în asocierile tratament–locație.
+              Adaugă primul profesor pentru a-l putea selecta în calendar.
             </p>
           </CardContent>
         </Card>
@@ -292,8 +291,7 @@ export function StudentSupervisorsManager({
             </AlertDialogTitle>
             <AlertDialogDescription>
               Profesorul nu mai poate fi selectat până la restaurare. Dacă
-              este folosit de asocieri active, arhivarea va fi blocată și
-              va trebui să îl realoci mai întâi.
+              este folosit într-o apariție viitoare, arhivarea va fi blocată.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

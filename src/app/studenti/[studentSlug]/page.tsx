@@ -4,7 +4,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
-import { PublicBookingPanel } from "@/components/public-students/public-booking-panel";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -203,10 +202,6 @@ export default async function PublicStudentProfilePage({
           </div>
         </section>
 
-        <PublicBookingPanel
-          studentSlug={profile.publicSlug}
-          initialTreatmentSlug={highlightedTreatment?.slug}
-        />
       </div>
     </main>
   );

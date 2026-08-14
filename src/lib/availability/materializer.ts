@@ -21,7 +21,7 @@ const activeAppointmentStatuses = [
 type MaterializableSeries = {
   id: string;
   studentProfileId: string;
-  studentTreatmentLocationId: string;
+  studentLocationId: string;
   startsOn: Date;
   startMinuteOfDay: number;
   weekdays: Parameters<typeof generateOccurrences>[0]["weekdays"];
@@ -31,6 +31,10 @@ type MaterializableSeries = {
   endsOn: Date | null;
   occurrenceCount: number | null;
   revision: number;
+  offerings: Array<{
+    studentTreatmentId: string;
+    supervisorId: string;
+  }>;
 };
 
 function materializationTarget(series: MaterializableSeries, requested?: string) {
@@ -93,13 +97,20 @@ export async function materializeSeriesThrough(
       await transaction.studentAvailabilitySlot.create({
         data: {
           studentProfileId: series.studentProfileId,
-          studentTreatmentLocationId: series.studentTreatmentLocationId,
+          studentLocationId: series.studentLocationId,
           seriesId: series.id,
           sequenceNumber: occurrence.sequenceNumber,
           originalStartsAt: occurrence.startsAt,
           startsAt: occurrence.startsAt,
           endsAt: occurrence.endsAt,
           sourceRevision: series.revision,
+          offerings: {
+            create: series.offerings.map((offering) => ({
+              studentProfileId: series.studentProfileId,
+              studentTreatmentId: offering.studentTreatmentId,
+              supervisorId: offering.supervisorId,
+            })),
+          },
         },
       });
       created += 1;
@@ -149,10 +160,10 @@ export async function ensureStudentSeriesMaterializedThrough(
         { materializedThrough: { lt: localDateToPrismaDate(through) ?? undefined } },
       ],
     },
+    include: { offerings: true },
   });
 
   for (const item of series) {
     await materializeSeriesThrough(transaction, item, through);
   }
 }
-

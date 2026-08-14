@@ -31,14 +31,7 @@ export async function GET(request: Request) {
         studentProfileId: authorization.studentProfileId,
         deletedAt: null,
       },
-      orderBy: [
-        {
-          isActive: "desc",
-        },
-        {
-          createdAt: "desc",
-        },
-      ],
+      orderBy: { createdAt: "desc" },
       select: studentLocationSelect,
     });
 

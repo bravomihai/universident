@@ -88,14 +88,6 @@ function DashboardLinkCard({
   );
 }
 
-function activeResourceLabel(
-  count: number,
-  singularLabel: string,
-  pluralLabel: string,
-) {
-  return count === 1 ? `1 ${singularLabel}` : `${count} ${pluralLabel}`;
-}
-
 function resourceCountLabel(
   count: number,
   singularLabel: string,
@@ -161,21 +153,18 @@ export default async function AccountPage() {
           prisma.studentTreatment.count({
             where: {
               studentProfileId: profile.id,
-              isActive: true,
               deletedAt: null,
             },
           }),
           prisma.studentLocation.count({
             where: {
               studentProfileId: profile.id,
-              isActive: true,
               deletedAt: null,
             },
           }),
           prisma.studentSupervisor.count({
             where: {
               studentProfileId: profile.id,
-              isActive: true,
               deletedAt: null,
             },
           }),
@@ -341,10 +330,10 @@ export default async function AccountPage() {
               action="Gestionează tratamentele"
             >
               <p className="font-medium">
-                {activeResourceLabel(
+                {resourceCountLabel(
                   studentData.activeTreatments,
-                  "tratament activ",
-                  "tratamente active",
+                  "tratament",
+                  "tratamente",
                 )}
               </p>
             </DashboardLinkCard>
@@ -356,10 +345,10 @@ export default async function AccountPage() {
               action="Gestionează locațiile"
             >
               <p className="font-medium">
-                {activeResourceLabel(
+                {resourceCountLabel(
                   studentData.activeLocations,
-                  "locație activă",
-                  "locații active",
+                  "locație",
+                  "locații",
                 )}
               </p>
             </DashboardLinkCard>
@@ -371,10 +360,10 @@ export default async function AccountPage() {
               action="Gestionează supervizorii"
             >
               <p className="font-medium">
-                {activeResourceLabel(
+                {resourceCountLabel(
                   studentData.activeSupervisors,
-                  "supervizor activ",
-                  "supervizori activi",
+                  "supervizor",
+                  "supervizori",
                 )}
               </p>
             </DashboardLinkCard>

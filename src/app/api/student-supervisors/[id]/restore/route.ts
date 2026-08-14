@@ -58,7 +58,7 @@ export async function POST(request: Request, context: RouteContext) {
 
         return transaction.studentSupervisor.update({
           where: { id },
-          data: { deletedAt: null, isActive: true },
+          data: { deletedAt: null },
           select: studentSupervisorSelect,
         });
       },

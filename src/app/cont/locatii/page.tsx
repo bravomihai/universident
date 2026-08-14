@@ -22,14 +22,7 @@ export default async function StudentLocationsPage() {
         where: {
           deletedAt: null,
         },
-        orderBy: [
-          {
-            isActive: "desc",
-          },
-          {
-            createdAt: "desc",
-          },
-        ],
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           cityId: true,
@@ -37,7 +30,6 @@ export default async function StudentLocationsPage() {
           name: true,
           address: true,
           details: true,
-          isActive: true,
           createdAt: true,
           updatedAt: true,
           city: {
@@ -59,7 +51,6 @@ export default async function StudentLocationsPage() {
       cityName: location.city.name,
       address: location.address,
       details: location.details,
-      isActive: location.isActive,
       createdAt: location.createdAt.toISOString(),
       updatedAt: location.updatedAt.toISOString(),
     })) ?? [];
