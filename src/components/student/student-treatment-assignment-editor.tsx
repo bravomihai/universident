@@ -90,6 +90,9 @@ export function StudentTreatmentAssignmentEditor({
     (supervisor) =>
       supervisor.isActive && supervisor.deletedAt === null,
   );
+  const hasActiveLocations = locations.some(
+    (location) => location.isActive,
+  );
 
   return (
     <div className="space-y-4">
@@ -111,6 +114,29 @@ export function StudentTreatmentAssignmentEditor({
           >
             <Link href="/cont/supervizori">
               Gestionează supervizorii
+            </Link>
+          </Button>
+        </div>
+      ) : null}
+
+      {!hasActiveLocations ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-dashed bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">
+              Nu ai locații active.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Adaugă sau reactivează o locație înainte de configurarea
+              tratamentului.
+            </p>
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+          >
+            <Link href="/cont/locatii">
+              Gestionează locațiile
             </Link>
           </Button>
         </div>
@@ -274,12 +300,6 @@ export function StudentTreatmentAssignmentEditor({
         Adaugă locație și profesor
       </Button>
 
-      {locations.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nu ai nicio locație disponibilă. Adaugă sau reactivează o
-          locație înainte de a crea o asociere.
-        </p>
-      ) : null}
     </div>
   );
 }

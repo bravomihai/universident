@@ -193,10 +193,13 @@ async function updateTreatmentLocationAssociations(
       where: {
         studentProfileId,
         studentTreatmentId,
+        isActive: true,
+        deletedAt: null,
       },
       select: {
         id: true,
         studentLocationId: true,
+        supervisorId: true,
       },
     });
 
@@ -212,7 +215,7 @@ async function updateTreatmentLocationAssociations(
     const existingAssociation =
       associationsByLocationId.get(studentLocationId);
 
-    if (existingAssociation) {
+    if (existingAssociation?.supervisorId === supervisorId) {
       await transaction.studentTreatmentLocation.update({
         where: {
           id: existingAssociation.id,
@@ -224,6 +227,12 @@ async function updateTreatmentLocationAssociations(
         },
       });
     } else {
+      if (existingAssociation) {
+        await transaction.studentTreatmentLocation.update({
+          where: { id: existingAssociation.id },
+          data: { isActive: false, deletedAt: new Date() },
+        });
+      }
       await transaction.studentTreatmentLocation.create({
         data: {
           studentProfileId,
@@ -240,6 +249,7 @@ async function updateTreatmentLocationAssociations(
     where: {
       studentProfileId,
       studentTreatmentId,
+      isActive: true,
       deletedAt: null,
       ...(assignments.length > 0
         ? {

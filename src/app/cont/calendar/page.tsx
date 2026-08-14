@@ -2,13 +2,13 @@ import { CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { StudentCalendarPrototype } from "@/components/student-calendar/student-calendar-prototype";
+import { StudentCalendar } from "@/components/student-calendar/student-calendar";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
 export const metadata: Metadata = {
   title: "Calendar și disponibilitate",
   description:
-    "Prototip pentru gestionarea calendarului și disponibilității studentului.",
+    "Gestionează calendarul, disponibilitatea și cererile pacienților.",
 };
 
 export default async function StudentCalendarPage() {
@@ -35,17 +35,14 @@ export default async function StudentCalendarPage() {
                 </h1>
               </div>
               <p className="max-w-3xl text-muted-foreground">
-                Explorează programarea sloturilor și recurențelor înaintea
-                conectării calendarului la datele reale.
+                Creează sloturi unice sau recurente și gestionează cererile pacienților.
               </p>
             </div>
-            <span className="w-fit rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              Prototip cu date demonstrative
-            </span>
+            <span className="w-fit rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">Europe/Bucharest</span>
           </div>
         </header>
 
-        <StudentCalendarPrototype />
+        <StudentCalendar />
       </div>
     </main>
   );

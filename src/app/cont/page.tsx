@@ -14,6 +14,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
+import { AppointmentList } from "@/components/appointments/appointment-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/clickable-card-styles";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
+import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
 import { prisma } from "@/lib/prisma";
 import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
 
@@ -112,6 +114,10 @@ function compactBio(bio: string | null) {
 export default async function AccountPage() {
   const session = await requireAccountPageSession();
   const isStudent = session.user.role === UserRole.STUDENT;
+  const appointmentData =
+    session.user.role === UserRole.PATIENT || session.user.role === UserRole.STUDENT
+      ? await listAppointmentsForUser(session.user.id, session.user.role)
+      : null;
 
   const studentData = isStudent
     ? await (async () => {
@@ -359,7 +365,7 @@ export default async function AccountPage() {
 
                   <div className="flex flex-wrap items-center gap-3 sm:ml-auto sm:shrink-0 sm:justify-end">
                     <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs text-muted-foreground">
-                      Date demonstrative
+                      Date reale
                     </span>
                     <span className="inline-flex items-center gap-1 text-sm font-medium">
                       Deschide calendarul
@@ -374,6 +380,30 @@ export default async function AccountPage() {
                 </CardContent>
               </Card>
             </Link>
+          </section>
+        ) : null}
+
+        {appointmentData ? (
+          <section aria-labelledby="account-appointments-title" className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="account-appointments-title" className="text-xl font-semibold">Programări</h2>
+                <p className="text-sm text-muted-foreground">
+                  {isStudent ? "Cererile și întâlnirile pacienților tăi." : "Cererile trimise și întâlnirile tale."}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm"><Link href="/cont/programari">Vezi toate programările</Link></Button>
+            </div>
+            <AppointmentList
+              appointments={appointmentData.appointments.slice(0, 3)}
+              role={isStudent ? "STUDENT" : "PATIENT"}
+              compact
+            />
+            {!isStudent && appointmentData.reputation ? (
+              <p className="text-xs text-muted-foreground">
+                Reputație: {appointmentData.reputation.lateCancellations12Months} anulări confirmate cu mai puțin de 2 ore în ultimele 12 luni.
+              </p>
+            ) : null}
           </section>
         ) : null}
 

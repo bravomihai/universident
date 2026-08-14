@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test": "tsx --test src/lib/**/*.test.ts",
     "demo:students": "tsx prisma/demo-public-students.ts seed",
     "demo:students:cleanup": "tsx prisma/demo-public-students.ts cleanup",
     "postinstall": "prisma generate"

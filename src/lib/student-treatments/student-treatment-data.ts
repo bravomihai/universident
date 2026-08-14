@@ -17,6 +17,7 @@ export const studentTreatmentSelect = {
   treatmentLocations: {
     where: {
       deletedAt: null,
+      isActive: true,
       studentLocation: {
         deletedAt: null,
       },

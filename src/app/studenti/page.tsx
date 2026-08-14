@@ -1,12 +1,15 @@
 import { SearchX, UsersRound } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PublicStudentResultCard } from "@/components/public-students/public-student-result-card";
 import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { UserRole } from "@/generated/prisma/enums";
+import { auth } from "@/lib/auth";
 import {
   getPublicStudentCatalog,
   searchPublicStudents,
@@ -68,7 +71,10 @@ export async function generateMetadata({
 }
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
-  const params = await searchParams;
+  const [params, session] = await Promise.all([
+    searchParams,
+    auth.api.getSession({ headers: await headers() }),
+  ]);
   const requestedTreatmentSlug = singleQueryValue(params.tratament);
   const requestedCitySlug = singleQueryValue(params.oras);
   const page = requestedPage(params.pagina);
@@ -95,6 +101,10 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           treatmentSlug: treatment.slug,
           citySlug: city.slug,
           page,
+          excludedUserId:
+            session?.user.role === UserRole.STUDENT
+              ? session.user.id
+              : undefined,
         })
       : null;
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
+import { AppointmentList } from "@/components/appointments/appointment-list";
 import {
     Card,
     CardContent,
@@ -10,6 +11,8 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
+import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
+import { UserRole } from "@/generated/prisma/enums";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
 export const metadata: Metadata = {
@@ -20,7 +23,7 @@ export const metadata: Metadata = {
 export default async function StudentProfilePage() {
     const session = await requireStudentPageSession();
 
-    const profile = await prisma.studentProfile.findUnique({
+    const [profile, appointmentData] = await Promise.all([prisma.studentProfile.findUnique({
         where: {
             userId: session.user.id,
         },
@@ -29,7 +32,7 @@ export default async function StudentProfilePage() {
             studyYear: true,
             bio: true,
         },
-    });
+    }), listAppointmentsForUser(session.user.id, UserRole.STUDENT)]);
 
     return (
         <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -70,6 +73,14 @@ export default async function StudentProfilePage() {
                         <StudentProfileForm initialProfile={profile} />
                     </CardContent>
                 </Card>
+
+                <section className="space-y-3" aria-labelledby="student-profile-appointments">
+                    <div className="flex flex-wrap items-end justify-between gap-2">
+                        <div><h2 id="student-profile-appointments" className="text-xl font-semibold">Programările tale</h2><p className="text-sm text-muted-foreground">Cererile pacienților apar numai în contul tău privat.</p></div>
+                        <Link href="/cont/programari" className="text-sm font-medium hover:underline">Vezi toate</Link>
+                    </div>
+                    <AppointmentList appointments={appointmentData.appointments.slice(0, 5)} role="STUDENT" compact />
+                </section>
             </div>
         </main>
     );

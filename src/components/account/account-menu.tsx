@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
     ChevronDown,
+    CalendarDays,
     GraduationCap,
     LogOut,
     MapPin,
@@ -108,6 +109,22 @@ export function AccountMenu({
                         Contul meu
                     </Link>
                 </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                    <Link href="/cont/programari">
+                        <CalendarDays />
+                        Programările mele
+                    </Link>
+                </DropdownMenuItem>
+
+                {!showStudentNavigation ? (
+                    <DropdownMenuItem asChild>
+                        <Link href="/cont/profil-pacient">
+                            <UserRound />
+                            Profil pacient
+                        </Link>
+                    </DropdownMenuItem>
+                ) : null}
 
                 {showStudentNavigation ? (
                     <>

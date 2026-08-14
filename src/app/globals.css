@@ -212,6 +212,16 @@
     color: var(--foreground) !important;
   }
 
+  .student-calendar .calendar-event-selected {
+    box-shadow:
+      0 0 0 2px var(--background),
+      0 0 0 4px var(--primary) !important;
+  }
+
+  .booking-calendar .fc-timegrid-event {
+    cursor: pointer;
+  }
+
   .student-calendar .calendar-event-pending {
     border-color: color-mix(in oklch, #f59e0b 70%, var(--border)) !important;
     background: color-mix(in oklch, #f59e0b 28%, var(--card)) !important;

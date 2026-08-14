@@ -145,15 +145,20 @@ export const searchPublicStudents = cache(
     treatmentSlug,
     citySlug,
     page,
+    excludedUserId,
   }: {
     treatmentSlug: string;
     citySlug: string;
     page: number;
+    excludedUserId?: string;
   }) => {
-    const where = publiclyEligibleStudentProfileWhere({
-      treatmentSlug,
-      citySlug,
-    });
+    const where = {
+      ...publiclyEligibleStudentProfileWhere({
+        treatmentSlug,
+        citySlug,
+      }),
+      ...(excludedUserId ? { userId: { not: excludedUserId } } : {}),
+    };
     const skip = (page - 1) * PUBLIC_STUDENTS_PAGE_SIZE;
 
     const [profiles, totalResults] = await Promise.all([
