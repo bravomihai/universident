@@ -53,7 +53,7 @@ export async function materializeSeriesThrough(
 ) {
   // Public calendar reads can race for the same series. A transaction-scoped
   // advisory lock keeps the read/create materialization cycle idempotent.
-  await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${series.id}))`;
+  await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${series.id}))`;
   const target = materializationTarget(series, requestedThrough);
   const occurrences = generateOccurrences(
     {
