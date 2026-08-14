@@ -94,7 +94,7 @@ export async function materializeSeriesThrough(
     const slot = byOriginalStart.get(key);
 
     if (!slot) {
-      await transaction.studentAvailabilitySlot.create({
+      const createdSlot = await transaction.studentAvailabilitySlot.create({
         data: {
           studentProfileId: series.studentProfileId,
           studentLocationId: series.studentLocationId,
@@ -104,14 +104,16 @@ export async function materializeSeriesThrough(
           startsAt: occurrence.startsAt,
           endsAt: occurrence.endsAt,
           sourceRevision: series.revision,
-          offerings: {
-            create: series.offerings.map((offering) => ({
-              studentProfileId: series.studentProfileId,
-              studentTreatmentId: offering.studentTreatmentId,
-              supervisorId: offering.supervisorId,
-            })),
-          },
         },
+        select: { id: true },
+      });
+      await transaction.studentAvailabilitySlotOffering.createMany({
+        data: series.offerings.map((offering) => ({
+          slotId: createdSlot.id,
+          studentProfileId: series.studentProfileId,
+          studentTreatmentId: offering.studentTreatmentId,
+          supervisorId: offering.supervisorId,
+        })),
       });
       created += 1;
       continue;

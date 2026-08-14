@@ -27,7 +27,7 @@ export async function evaluateStudentPublication(transaction: Prisma.Transaction
   if (!treatments) missingRequirements.push({ code: "TREATMENT_MISSING", message: "Adaugă cel puțin un tratament.", href: "/cont/tratamente" });
   if (!locations) missingRequirements.push({ code: "LOCATION_MISSING", message: "Adaugă cel puțin o locație.", href: "/cont/locatii" });
   if (!supervisors) missingRequirements.push({ code: "SUPERVISOR_MISSING", message: "Adaugă cel puțin un supervizor.", href: "/cont/supervizori" });
-  if (treatments && locations && supervisors && !appearances) missingRequirements.push({ code: "COMPLETE_OFFER_MISSING", message: "Adaugă în calendar cel puțin o apariție viitoare complet configurată.", href: "/cont/disponibilitate" });
+  if (treatments && locations && supervisors && !appearances) missingRequirements.push({ code: "COMPLETE_OFFER_MISSING", message: "Adaugă în calendar cel puțin o apariție viitoare complet configurată.", href: "/cont/calendar" });
   const canPublish = missingRequirements.length === 0;
   return { profileId: profile.id, userName: profile.user.name, isPublished: profile.isPublished, publishedAt: profile.publishedAt, publicSlug: profile.publicSlug, canPublish, isPubliclyVisible: profile.isPublished && canPublish && profile.publicSlug !== null, missingRequirements };
 }

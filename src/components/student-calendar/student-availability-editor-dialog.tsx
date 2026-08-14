@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, MapPin, Repeat2, Stethoscope } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
 import { RatingStars } from "@/components/reviews/rating-summary";
@@ -38,6 +38,7 @@ export function StudentAvailabilityEditorDialog({ open, catalog, slot, range, pe
   onDelete: (scope: "OCCURRENCE" | "SERIES", reason: string | null) => Promise<string | null>;
   onAppointmentChange: () => void;
 }) {
+  const dialogContentRef = useRef<HTMLDivElement>(null);
   const start = inputParts(range.startsAt); const end = inputParts(range.endsAt);
   const [date, setDate] = useState(start.date);
   const [startTime, setStartTime] = useState(start.time);
@@ -64,7 +65,7 @@ export function StudentAvailabilityEditorDialog({ open, catalog, slot, range, pe
   }
   async function remove(scope: "OCCURRENCE" | "SERIES") { setError(null); if (occupied && reason.trim().length < 20) return setError("Motivul anulării trebuie să aibă minimum 20 de caractere."); const result = await onDelete(scope, occupied ? reason.trim() : null); if (result) setError(result); else onOpenChange(false); }
 
-  return <Dialog open={open} onOpenChange={(next) => { if (!pending) onOpenChange(next); }}><DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+  return <Dialog open={open} onOpenChange={(next) => { if (!pending) onOpenChange(next); }}><DialogContent ref={dialogContentRef} className="max-h-[90vh] max-w-2xl overflow-y-auto focus:outline-none" onOpenAutoFocus={(event) => { event.preventDefault(); dialogContentRef.current?.focus({ preventScroll: true }); }}>
     <DialogHeader><DialogTitle>{slot ? "Editează apariția" : "Adaugă disponibilitate"}</DialogTitle><DialogDescription>{slot ? "Modificarea se aplică apariției selectate. Apasă în afara dialogului sau Anulează editarea pentru a-l închide." : "Alege unde vei fi, tratamentele oferite și supervizorul fiecăruia."}</DialogDescription></DialogHeader>
     <form className="space-y-5" onSubmit={submit}>
       <div className="grid gap-4 sm:grid-cols-3"><div className="space-y-2"><Label htmlFor="availability-date">Data</Label><Input id="availability-date" type="date" value={date} disabled={!editable || pending} onChange={(event) => setDate(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="availability-start">Început</Label><Input id="availability-start" type="time" step={900} value={startTime} disabled={!editable || pending} onChange={(event) => setStartTime(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="availability-end">Final</Label><Input id="availability-end" type="time" step={900} value={endTime} disabled={!editable || pending} onChange={(event) => setEndTime(event.target.value)} /></div></div>

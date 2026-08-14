@@ -216,22 +216,30 @@ export async function createAvailability(
       await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings);
       if (input.kind === "SINGLE") {
         assertFuture(input.startsAt);
-        return transaction.studentAvailabilitySlot.create({
+        const slot = await transaction.studentAvailabilitySlot.create({
           data: {
             studentProfileId,
             studentLocationId: input.studentLocationId,
             originalStartsAt: input.startsAt,
             startsAt: input.startsAt,
             endsAt: input.endsAt,
-            offerings: {
-              create: input.offerings.map((item) => ({ studentProfileId, ...item })),
-            },
           },
+          select: { id: true },
+        });
+        await transaction.studentAvailabilitySlotOffering.createMany({
+          data: input.offerings.map((item) => ({
+            slotId: slot.id,
+            studentProfileId,
+            ...item,
+          })),
+        });
+        return transaction.studentAvailabilitySlot.findUniqueOrThrow({
+          where: { id: slot.id },
           include: slotInclude,
         });
       }
 
-      const series = await transaction.studentAvailabilitySeries.create({
+      const createdSeries = await transaction.studentAvailabilitySeries.create({
         data: {
           studentProfileId,
           studentLocationId: input.studentLocationId,
@@ -243,10 +251,18 @@ export async function createAvailability(
           endMode: input.rule.endMode,
           endsOn: input.rule.endsOn ? localDateToPrismaDate(input.rule.endsOn) : null,
           occurrenceCount: input.rule.occurrenceCount,
-          offerings: {
-            create: input.offerings.map((item) => ({ studentProfileId, ...item })),
-          },
         },
+        select: { id: true },
+      });
+      await transaction.studentAvailabilitySeriesOffering.createMany({
+        data: input.offerings.map((item) => ({
+          seriesId: createdSeries.id,
+          studentProfileId,
+          ...item,
+        })),
+      });
+      const series = await transaction.studentAvailabilitySeries.findUniqueOrThrow({
+        where: { id: createdSeries.id },
         include: { offerings: true },
       });
       const materialized = await materializeSeriesThrough(transaction, series, defaultMaterializationDate());
@@ -298,7 +314,7 @@ export async function updateAvailability(
           data: { removedAt: now },
         });
       }
-      return transaction.studentAvailabilitySlot.update({
+      await transaction.studentAvailabilitySlot.update({
         where: { id: slot.id, version: slot.version },
         data: {
           studentLocationId: input.studentLocationId,
@@ -306,10 +322,17 @@ export async function updateAvailability(
           endsAt: input.endsAt,
           isException: slot.seriesId !== null || slot.isException,
           version: { increment: 1 },
-          offerings: {
-            create: input.offerings.map((item) => ({ studentProfileId, ...item })),
-          },
         },
+      });
+      await transaction.studentAvailabilitySlotOffering.createMany({
+        data: input.offerings.map((item) => ({
+          slotId: slot.id,
+          studentProfileId,
+          ...item,
+        })),
+      });
+      return transaction.studentAvailabilitySlot.findUniqueOrThrow({
+        where: { id: slot.id },
         include: slotInclude,
       });
     }, { isolationLevel: "Serializable" });

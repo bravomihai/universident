@@ -1,8 +1,10 @@
 import { CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { StudentCalendar } from "@/components/student-calendar/student-calendar";
+import { prisma } from "@/lib/prisma";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
 export const metadata: Metadata = {
@@ -12,7 +14,15 @@ export const metadata: Metadata = {
 };
 
 export default async function StudentCalendarPage() {
-  await requireStudentPageSession();
+  const session = await requireStudentPageSession();
+  const studentProfile = await prisma.studentProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { id: true },
+  });
+
+  if (!studentProfile) {
+    redirect("/cont/profil-student");
+  }
 
   return (
     <main className="flex flex-1 justify-center px-3 py-8 sm:px-6 sm:py-12">
