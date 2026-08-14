@@ -1,10 +1,11 @@
 import { GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
+import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
+import { BackLink } from "@/components/ui/back-link";
 import {
     Card,
     CardContent,
@@ -12,6 +13,9 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { UserRole } from "@/generated/prisma/enums";
+import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
+import { formatStudentCancellationReputation } from "@/lib/appointments/student-reputation-label";
 import { prisma } from "@/lib/prisma";
 import { getPublishedProfileReviews } from "@/lib/reviews/profile-review-service";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
@@ -32,7 +36,7 @@ function normalizeUniversityName(value: string) {
 export default async function StudentProfilePage() {
     const session = await requireStudentPageSession();
 
-    const [profile, reviewData, universities] = await Promise.all([
+    const [profile, reviewData, universities, appointmentData] = await Promise.all([
         prisma.studentProfile.findUnique({
             where: {
                 userId: session.user.id,
@@ -53,6 +57,7 @@ export default async function StudentProfilePage() {
                 fullName: true,
             },
         }),
+        listAppointmentsForUser(session.user.id, UserRole.STUDENT),
     ]);
     const normalizedProfileUniversity = profile?.university
         ? normalizeUniversityName(profile.university)
@@ -68,12 +73,7 @@ export default async function StudentProfilePage() {
     return (
         <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
             <div className="w-full max-w-6xl space-y-6">
-                <Link
-                    href="/cont"
-                    className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground"
-                >
-                    ← Înapoi la cont
-                </Link>
+                <BackLink href="/cont">Înapoi la cont</BackLink>
 
                 <div className="space-y-2">
                     <div className="flex items-center gap-3">
@@ -104,6 +104,7 @@ export default async function StudentProfilePage() {
 
                     <CardContent>
                         <StudentProfileForm
+                            initialName={session.user.name}
                             initialProfile={
                                 profile
                                     ? {
@@ -117,6 +118,13 @@ export default async function StudentProfilePage() {
                         />
                     </CardContent>
                 </Card>
+
+                <SchedulingReputationCard
+                    description="Reper calculat din ultimele 10 programări confirmate."
+                    value={formatStudentCancellationReputation(
+                        appointmentData.studentReputation?.cancellationsLast10 ?? 0,
+                    )}
+                />
 
                 <ProfileReviewList data={reviewData} title="Recenziile tale" />
             </div>

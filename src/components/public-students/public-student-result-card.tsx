@@ -1,8 +1,8 @@
 import {
+  CalendarClock,
   Clock3,
   GraduationCap,
   MapPin,
-  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,19 +27,20 @@ function compactBio(bio: string) {
     : normalized;
 }
 
-function supervisorName(
-  supervisor: PublicStudentSummaryDto["location"]["supervisor"],
-) {
-  return [supervisor.academicTitle, supervisor.fullName]
-    .filter(Boolean)
-    .join(" ");
-}
+const availabilityFormatter = new Intl.DateTimeFormat("ro-RO", {
+  timeZone: "Europe/Bucharest",
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 export function PublicStudentResultCard({
   student,
   treatmentSlug,
 }: PublicStudentResultCardProps) {
-  const profileHref = `/studenti/${encodeURIComponent(student.publicSlug)}/programare/${encodeURIComponent(treatmentSlug)}/${encodeURIComponent(student.location.routeKey)}`;
+  const profileHref = `/studenti/${encodeURIComponent(student.publicSlug)}/programare/${encodeURIComponent(treatmentSlug)}/${encodeURIComponent(student.city.slug)}`;
 
   return (
     <Link
@@ -101,27 +102,26 @@ export function PublicStudentResultCard({
           </div>
 
           <div className="rounded-xl border bg-muted/15 p-3">
-                <p className="flex items-start gap-1.5 font-medium">
-                  <MapPin
-                    className="mt-0.5 size-4 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    {student.location.name} · {student.location.city.name}
-                  </span>
-                </p>
-                <p className="mt-1 pl-5 text-sm text-muted-foreground">
-                  {student.location.address}
-                </p>
-                <p className="mt-2 flex items-start gap-1.5 pl-5 text-sm text-muted-foreground">
-                  <UserRound
-                    className="mt-0.5 size-4 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span>
-                  Profesor supervizor: {supervisorName(student.location.supervisor)}
-                  </span>
-                </p>
+            <p className="flex items-start gap-1.5 font-medium">
+              <MapPin
+                className="mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <span>
+                {student.locationCount === 1
+                  ? `O locație disponibilă în ${student.city.name}`
+                  : `${student.locationCount} locații disponibile în ${student.city.name}`}
+              </span>
+            </p>
+            <p className="mt-2 flex items-start gap-1.5 pl-5 text-sm text-muted-foreground">
+              <CalendarClock
+                className="mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
+              <span>
+                Prima oră liberă: {availabilityFormatter.format(student.firstAvailableAt)}
+              </span>
+            </p>
           </div>
         </CardContent>
       </Card>

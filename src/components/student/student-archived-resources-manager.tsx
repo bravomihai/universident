@@ -19,6 +19,7 @@ import {
   ArchivedTreatmentRestoreDialog,
 } from "@/components/student/student-archived-resource-dialogs";
 import { useCardFeedback } from "@/components/student/use-card-feedback";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 
 type StudentArchivedResourcesManagerProps = {
@@ -184,12 +185,7 @@ export function StudentArchivedResourcesManager({
 
   return (
     <>
-      <Link
-        href="/cont"
-        className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        ← Înapoi la cont
-      </Link>
+      <BackLink href="/cont">Înapoi la cont</BackLink>
 
       <div className="space-y-2">
         <div className="flex items-center gap-3">

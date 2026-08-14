@@ -1,12 +1,12 @@
 import { Clock3, GraduationCap, MapPin, UserRound } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { BackLink } from "@/components/ui/back-link";
 import { getPublicStudentProfile } from "@/lib/public-students/public-student-service";
 
 type PublicStudentProfilePageProps = {
@@ -91,12 +91,9 @@ export default async function PublicStudentProfilePage({
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-8">
-        <Link
-          href={backHref}
-          className="inline-flex rounded-sm text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-        >
-          ← Înapoi la {highlightedTreatment ? "rezultate" : "căutare"}
-        </Link>
+        <BackLink href={backHref}>
+          Înapoi la {highlightedTreatment ? "rezultate" : "căutare"}
+        </BackLink>
 
         <header className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <PublicStudentAvatar

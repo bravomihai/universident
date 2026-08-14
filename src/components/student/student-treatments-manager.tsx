@@ -9,6 +9,7 @@ import { StudentTreatmentCard, type StudentTreatmentCardData } from "@/component
 import { StudentTreatmentArchiveDialog } from "@/components/student/student-treatment-dialogs";
 import { StudentProfessionalNavigation } from "@/components/student/student-professional-navigation";
 import { useCardFeedback } from "@/components/student/use-card-feedback";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -29,7 +30,7 @@ export function StudentTreatmentsManager({ initialTreatments, hasStudentProfile 
     finally { setPendingId(null); }
   }
   return <>
-    <Link href="/cont" className="inline-flex text-sm font-medium text-muted-foreground hover:text-foreground">← Înapoi la cont</Link>
+    <BackLink href="/cont">Înapoi la cont</BackLink>
     <StudentProfessionalNavigation current="treatments" />
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="space-y-2"><div className="flex items-center gap-3"><span className="inline-flex size-10 items-center justify-center rounded-full border bg-card"><Stethoscope className="size-5" aria-hidden="true" /></span><h1 className="text-3xl font-semibold tracking-tight">Tratamente</h1></div><p className="max-w-3xl text-muted-foreground">Configurează tratamentele și durata folosită de algoritmul calendarului. Locația și supervizorul se aleg direct pentru fiecare interval din calendar.</p></div><Button asChild><Link href="/cont/tratamente/nou"><Plus />Adaugă tratament</Link></Button></div>
     {!hasStudentProfile ? <p className="rounded-2xl border p-4 text-sm text-muted-foreground">Completează mai întâi profilul profesional.</p> : null}

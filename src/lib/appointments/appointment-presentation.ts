@@ -20,6 +20,13 @@ export function hasAppointmentReview(
   return appointment.reviews.some((review) => review.authorRole === role);
 }
 
+export function appointmentReviewIsAllowed(
+  status: string,
+  role: "PATIENT" | "STUDENT",
+) {
+  return status === "COMPLETED" || (status === "NO_SHOW" && role === "STUDENT");
+}
+
 export function appointmentNeedsAttention(
   appointment: PresentationAppointment,
   role: "PATIENT" | "STUDENT",
@@ -33,7 +40,7 @@ export function appointmentNeedsAttention(
     return true;
   }
   return (
-    (appointment.status === "COMPLETED" || appointment.status === "NO_SHOW") &&
+    appointmentReviewIsAllowed(appointment.status, role) &&
     !hasAppointmentReview(appointment, role)
   );
 }
@@ -43,6 +50,7 @@ export function appointmentIsArchived(
   role: "PATIENT" | "STUDENT",
 ) {
   if (directlyArchivedStatuses.has(appointment.status)) return true;
+  if (appointment.status === "NO_SHOW" && role === "PATIENT") return true;
   if (appointment.status === "COMPLETED" || appointment.status === "NO_SHOW") {
     return hasAppointmentReview(appointment, role);
   }

@@ -27,8 +27,8 @@ export function StudentTreatmentCard({ treatment, isPending, isDisabled, feedbac
   onArchive: (treatment: StudentTreatmentCardData) => void;
 }) {
   return (
-    <Card aria-busy={isPending}>
-      <CardHeader className="gap-2 p-5 pb-3">
+    <Card size="sm" className="h-fit self-start" aria-busy={isPending}>
+      <CardHeader className="gap-1.5">
         <div className="flex items-start justify-between gap-4">
           <CardTitle className="text-lg leading-snug">{treatment.name}</CardTitle>
           <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-foreground">
@@ -40,11 +40,11 @@ export function StudentTreatmentCard({ treatment, isPending, isDisabled, feedbac
           {treatment.description || treatment.catalogDescription}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 px-5 pt-0 pb-5">
+      <CardContent className="space-y-2">
         <StudentCardFeedbackMessage feedback={feedback} />
-        <div className="flex flex-wrap gap-2 border-t pt-3">
-          <Button asChild variant="outline" size="sm"><Link href={`/cont/tratamente/${treatment.treatmentSlug}/editare`}><Pencil />Editare</Link></Button>
-          <Button type="button" variant="destructive" size="sm" disabled={isDisabled} onClick={() => onArchive(treatment)}><Archive />Arhivare</Button>
+        <div className="grid grid-cols-2 gap-2 border-t pt-3">
+          <Button asChild variant="outline" className="w-full"><Link href={`/cont/tratamente/${treatment.treatmentSlug}/editare`}><Pencil />Editare</Link></Button>
+          <Button type="button" variant="destructive" className="w-full" disabled={isDisabled} onClick={() => onArchive(treatment)}><Archive />Arhivare</Button>
         </div>
       </CardContent>
     </Card>

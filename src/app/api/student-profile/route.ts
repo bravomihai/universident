@@ -1,5 +1,6 @@
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
+import { parseAccountName } from "@/lib/account/account-name";
 import { prisma } from "@/lib/prisma";
 
 import {
@@ -8,12 +9,14 @@ import {
 } from "@/lib/student-public-slug";
 
 type StudentProfileBody = {
+    name?: unknown;
     universitySlug?: unknown;
     studyYear?: unknown;
     bio?: unknown;
 };
 
 const allowedBodyFields = new Set([
+    "name",
     "universitySlug",
     "studyYear",
     "bio",
@@ -69,8 +72,6 @@ export async function PUT(request: Request) {
     }
 
     const userId = session.user.id;
-    const userName = session.user.name;
-
     let body: StudentProfileBody;
 
     try {
@@ -105,6 +106,17 @@ export async function PUT(request: Request) {
 
     const studyYear =
         typeof body.studyYear === "number" ? body.studyYear : Number.NaN;
+
+    const parsedName = parseAccountName(body.name);
+
+    if (!parsedName.ok) {
+        return Response.json(
+            { error: parsedName.error },
+            { status: 400 },
+        );
+    }
+
+    const name = parsedName.data;
 
     if (!universitySlug) {
         return Response.json(
@@ -155,23 +167,32 @@ export async function PUT(request: Request) {
     });
 
     async function saveProfile(publicSlug: string | null) {
-        return prisma.studentProfile.upsert({
-            where: {
-                userId: userId,
-            },
-            update: {
-                publicSlug,
-                university: universityShortName,
-                studyYear,
-                bio: bio || null,
-            },
-            create: {
-                userId: userId,
-                publicSlug,
-                university: universityShortName,
-                studyYear,
-                bio: bio || null,
-            },
+        return prisma.$transaction(async (transaction) => {
+            const savedProfile = await transaction.studentProfile.upsert({
+                where: {
+                    userId: userId,
+                },
+                update: {
+                    publicSlug,
+                    university: universityShortName,
+                    studyYear,
+                    bio: bio || null,
+                },
+                create: {
+                    userId: userId,
+                    publicSlug,
+                    university: universityShortName,
+                    studyYear,
+                    bio: bio || null,
+                },
+            });
+
+            await transaction.user.update({
+                where: { id: userId },
+                data: { name },
+            });
+
+            return savedProfile;
         });
     }
 
@@ -185,7 +206,7 @@ export async function PUT(request: Request) {
         const maximumAttempts = 5;
 
         for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
-            const generatedSlug = createStudentPublicSlug(userName);
+            const generatedSlug = createStudentPublicSlug(name);
 
             try {
                 profile = await saveProfile(generatedSlug);

@@ -9,6 +9,7 @@ import {
   type AppointmentReasonAction,
 } from "@/components/appointments/appointment-reason-dialog";
 import { Button } from "@/components/ui/button";
+import { appointmentReviewIsAllowed } from "@/lib/appointments/appointment-presentation";
 import { cn } from "@/lib/utils";
 
 type Action = "CONFIRM" | "REJECT" | "CANCEL" | "COMPLETE" | "NO_SHOW" | "REVIEW";
@@ -49,7 +50,7 @@ export function AppointmentActions({
   const studentPending = role === "STUDENT" && !started && status === "PENDING";
   const studentCanCancel = role === "STUDENT" && !started && status === "CONFIRMED";
   const studentCanFinish = role === "STUDENT" && ended && status === "CONFIRMED";
-  const reviewNeeded = (status === "COMPLETED" || status === "NO_SHOW") && !reviewedByActor;
+  const reviewNeeded = appointmentReviewIsAllowed(status, role) && !reviewedByActor;
 
   function openReasonDialog(action: AppointmentReasonAction) {
     setError(null);

@@ -15,12 +15,10 @@ export async function evaluateStudentPublication(transaction: Prisma.Transaction
   const profile = await transaction.studentProfile.findUnique({ where: { userId }, include: { user: true } });
   if (!profile) return { profileId: null, userName: null, isPublished: false, publishedAt: null, publicSlug: null, canPublish: false, isPubliclyVisible: false, missingRequirements: [{ code: "PROFILE_MISSING", message: "Completează profilul profesional.", href: "/cont/profil-student" }] };
   const now = new Date();
-  const [treatments, locations, supervisors, appearances] = await Promise.all([
-    transaction.studentTreatment.count({ where: { studentProfileId: profile.id, deletedAt: null, treatment: { isActive: true } } }),
-    transaction.studentLocation.count({ where: { studentProfileId: profile.id, deletedAt: null, city: { isActive: true } } }),
-    transaction.studentSupervisor.count({ where: { studentProfileId: profile.id, deletedAt: null } }),
-    transaction.studentAvailabilitySlot.count({ where: { studentProfileId: profile.id, status: "ACTIVE", startsAt: { gt: now }, studentLocation: { deletedAt: null }, offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } } } } }),
-  ]);
+  const treatments = await transaction.studentTreatment.count({ where: { studentProfileId: profile.id, deletedAt: null, treatment: { isActive: true } } });
+  const locations = await transaction.studentLocation.count({ where: { studentProfileId: profile.id, deletedAt: null, city: { isActive: true } } });
+  const supervisors = await transaction.studentSupervisor.count({ where: { studentProfileId: profile.id, deletedAt: null } });
+  const appearances = await transaction.studentAvailabilitySlot.count({ where: { studentProfileId: profile.id, status: "ACTIVE", startsAt: { gt: now }, studentLocation: { deletedAt: null }, offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } } } } });
   const missingRequirements: StudentPublicationRequirement[] = [];
   if (profile.user.role !== UserRole.STUDENT || !profile.user.emailVerified) missingRequirements.push({ code: "EMAIL_NOT_VERIFIED", message: "Verifică adresa de email a contului.", href: "/verifica-email" });
   if (profile.university.trim().length < 2 || profile.university.trim().length > 120 || profile.studyYear < 1 || profile.studyYear > 6) missingRequirements.push({ code: "PROFILE_INVALID", message: "Completează universitatea și anul de studiu.", href: "/cont/profil-student" });

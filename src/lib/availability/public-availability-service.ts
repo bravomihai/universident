@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export async function listPublicStudentAvailability(
   publicSlug: string,
   treatmentSlug: string,
-  locationSlug: string,
+  citySlug: string,
   from: Date,
   to: Date,
 ) {
@@ -20,6 +20,7 @@ export async function listPublicStudentAvailability(
     if (!student) return null;
     const series = await transaction.studentAvailabilitySeries.findMany({
       where: { studentProfileId: student.id, status: StudentAvailabilitySeriesStatus.ACTIVE },
+      orderBy: { id: "asc" },
       include: { offerings: true },
     });
     for (const item of series) {
@@ -33,9 +34,8 @@ export async function listPublicStudentAvailability(
         startsAt: { lt: to },
         endsAt: { gt: from },
         studentLocation: {
-          routeKey: locationSlug,
           deletedAt: null,
-          city: { isActive: true },
+          city: { slug: citySlug, isActive: true },
         },
         offerings: {
           some: {

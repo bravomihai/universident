@@ -2,8 +2,11 @@ import "server-only";
 
 import { cache } from "react";
 import { AppointmentStatus, UserRole } from "@/generated/prisma/enums";
+import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
+import { ensureActiveSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { prisma } from "@/lib/prisma";
+import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
 
 export const PUBLIC_STUDENTS_PAGE_SIZE = 12;
@@ -31,7 +34,9 @@ export type PublicStudentSummaryDto = {
   studyYear: number;
   bio: string | null;
   treatment: Omit<PublicStudentTreatmentDto, "locations">;
-  location: PublicStudentLocationDto;
+  city: PublicCatalogOption;
+  firstAvailableAt: Date;
+  locationCount: number;
 };
 export type PublicStudentProfileDto = {
   name: string;
@@ -61,10 +66,18 @@ const publicProfileWhere = {
 } as const;
 
 export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page, excludedUserId }: { treatmentSlug: string; citySlug: string; page: number; excludedUserId?: string }) => {
+  const now = new Date();
+  await prisma.$transaction(async (transaction) => {
+    await ensureActiveSeriesMaterializedThrough(
+      transaction,
+      publicBookingWindowEnd(now),
+    );
+  });
   const blocks = await prisma.studentAvailabilitySlot.findMany({
     where: {
       status: "ACTIVE",
-      endsAt: { gt: new Date() },
+      startsAt: { lt: publicBookingWindowEnd(now) },
+      endsAt: { gt: now },
       studentProfile: { ...publicProfileWhere, ...(excludedUserId ? { userId: { not: excludedUserId } } : {}) },
       studentLocation: { deletedAt: null, city: { slug: citySlug, isActive: true } },
       offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { slug: treatmentSlug, isActive: true } }, supervisor: { deletedAt: null } } },
@@ -75,9 +88,10 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       offerings: { where: { removedAt: null }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
       appointments: { where: { status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } }, select: { scheduledStartsAt: true, scheduledEndsAt: true } },
     },
+    orderBy: [{ startsAt: "asc" }, { id: "asc" }],
   });
 
-  const summaries = new Map<string, PublicStudentSummaryDto>();
+  const candidates = [];
   for (const block of blocks) {
     const offering = block.offerings.find((item) => item.studentTreatment.treatment.slug === treatmentSlug && !item.studentTreatment.deletedAt && !item.supervisor.deletedAt);
     if (!offering || !block.studentProfile.publicSlug) continue;
@@ -89,34 +103,42 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       treatmentDurationMinutes: offering.studentTreatment.durationMinutes,
       offeredDurationsMinutes: block.offerings.filter((item) => !item.studentTreatment.deletedAt && !item.supervisor.deletedAt).map((item) => item.studentTreatment.durationMinutes),
       occupied: block.appointments.map((item) => ({ startsAt: item.scheduledStartsAt, endsAt: item.scheduledEndsAt })),
-    }]);
+    }], now);
     if (choices.length === 0) continue;
-    const key = `${block.studentProfile.id}:${offering.studentTreatmentId}:${block.studentLocationId}`;
-    if (summaries.has(key)) continue;
-    summaries.set(key, {
-      name: block.studentProfile.user.name,
-      image: block.studentProfile.user.image,
-      publicSlug: block.studentProfile.publicSlug,
-      university: block.studentProfile.university,
-      studyYear: block.studentProfile.studyYear,
-      bio: block.studentProfile.bio,
-      treatment: {
-        name: offering.studentTreatment.treatment.name,
-        slug: offering.studentTreatment.treatment.slug,
-        catalogDescription: offering.studentTreatment.treatment.description,
-        studentDescription: offering.studentTreatment.description,
-        durationMinutes: offering.studentTreatment.durationMinutes,
-      },
-      location: {
-        routeKey: block.studentLocation.routeKey,
-        name: block.studentLocation.name,
-        address: block.studentLocation.address,
-        city: { name: block.studentLocation.city.name, slug: block.studentLocation.city.slug },
-        supervisor: { fullName: offering.supervisor.fullName, academicTitle: offering.supervisor.academicTitle },
+    candidates.push({
+      studentProfileId: block.studentProfile.id,
+      studentName: block.studentProfile.user.name,
+      locationKey: block.studentLocationId,
+      firstAvailableAt: choices[0].startsAt,
+      tieBreaker: `${block.studentLocation.routeKey}:${offering.id}`,
+      value: {
+        name: block.studentProfile.user.name,
+        image: block.studentProfile.user.image,
+        publicSlug: block.studentProfile.publicSlug,
+        university: block.studentProfile.university,
+        studyYear: block.studentProfile.studyYear,
+        bio: block.studentProfile.bio,
+        treatment: {
+          name: offering.studentTreatment.treatment.name,
+          slug: offering.studentTreatment.treatment.slug,
+          catalogDescription: offering.studentTreatment.treatment.description,
+          studentDescription: offering.studentTreatment.description,
+          durationMinutes: offering.studentTreatment.durationMinutes,
+        },
+        city: {
+          name: block.studentLocation.city.name,
+          slug: block.studentLocation.city.slug,
+        },
       },
     });
   }
-  const all = [...summaries.values()].sort((a, b) => a.name.localeCompare(b.name, "ro") || a.location.name.localeCompare(b.location.name, "ro"));
+  const all: PublicStudentSummaryDto[] = rankUniquePublicStudents(candidates).map(
+    (student) => ({
+      ...student.value,
+      firstAvailableAt: student.firstAvailableAt,
+      locationCount: student.locationCount,
+    }),
+  );
   const totalResults = all.length;
   return { results: all.slice((page - 1) * PUBLIC_STUDENTS_PAGE_SIZE, page * PUBLIC_STUDENTS_PAGE_SIZE), totalResults, totalPages: Math.max(1, Math.ceil(totalResults / PUBLIC_STUDENTS_PAGE_SIZE)), page };
 });

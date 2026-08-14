@@ -46,7 +46,7 @@ export function StudentTreatmentArchiveDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>
             Tratamentul nu va mai apărea în lista obișnuită și nu va
-            mai putea fi selectat în calendar. Îl vei găsi în Cont →
+            mai putea fi selectat în calendar. Îl vei găsi în Cont &gt;
             Resurse arhivate și îl vei putea restaura ulterior.
           </AlertDialogDescription>
         </AlertDialogHeader>

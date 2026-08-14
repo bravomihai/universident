@@ -51,6 +51,9 @@ export async function materializeSeriesThrough(
   series: MaterializableSeries,
   requestedThrough?: string,
 ) {
+  // Public calendar reads can race for the same series. A transaction-scoped
+  // advisory lock keeps the read/create materialization cycle idempotent.
+  await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${series.id}))`;
   const target = materializationTarget(series, requestedThrough);
   const occurrences = generateOccurrences(
     {
@@ -162,6 +165,29 @@ export async function ensureStudentSeriesMaterializedThrough(
         { materializedThrough: { lt: localDateToPrismaDate(through) ?? undefined } },
       ],
     },
+    orderBy: { id: "asc" },
+    include: { offerings: true },
+  });
+
+  for (const item of series) {
+    await materializeSeriesThrough(transaction, item, through);
+  }
+}
+
+export async function ensureActiveSeriesMaterializedThrough(
+  transaction: Prisma.TransactionClient,
+  throughInstant: Date,
+) {
+  const through = localDateForInstant(throughInstant);
+  const series = await transaction.studentAvailabilitySeries.findMany({
+    where: {
+      status: "ACTIVE",
+      OR: [
+        { materializedThrough: null },
+        { materializedThrough: { lt: localDateToPrismaDate(through) ?? undefined } },
+      ],
+    },
+    orderBy: { id: "asc" },
     include: { offerings: true },
   });
 

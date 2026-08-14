@@ -3,6 +3,7 @@ import {
   StudentAvailabilityWeekday,
 } from "@/generated/prisma/enums";
 import { parseLocalDate } from "@/lib/availability/bucharest-time";
+import type { AvailabilityRule } from "@/lib/availability/recurrence";
 import {
   isRecord,
   parseExpectedVersion,
@@ -172,6 +173,10 @@ export function parseCreateAvailabilityInput(value: unknown) {
 
 export function parseUpdateAvailabilityInput(value: unknown) {
   if (!isRecord(value)) return { ok: false, error: "Datele trimise nu sunt valide." } as const;
+  const scope = value.scope === undefined ? "OCCURRENCE" : value.scope;
+  if (scope !== "OCCURRENCE" && scope !== "SERIES") {
+    return { ok: false, error: "Modul de editare nu este valid." } as const;
+  }
   const configuration = parseConfiguration(value);
   if (!configuration.ok) return configuration;
   const startsAt = parseIsoInstant(value.startsAt);
@@ -182,6 +187,21 @@ export function parseUpdateAvailabilityInput(value: unknown) {
   if (!duration.ok) return duration;
   const version = parseExpectedVersion(value.expectedVersion);
   if (!version.ok) return version;
+  let expectedSeriesRevision: number | null = null;
+  let rule: AvailabilityRule | null = null;
+  if (scope === "SERIES") {
+    if (
+      typeof value.expectedSeriesRevision !== "number" ||
+      !Number.isInteger(value.expectedSeriesRevision) ||
+      value.expectedSeriesRevision < 1
+    ) {
+      return { ok: false, error: "Revizia seriei nu este validă." } as const;
+    }
+    expectedSeriesRevision = value.expectedSeriesRevision;
+    const parsedRule = parseRule(value.rule);
+    if (!parsedRule.ok) return parsedRule;
+    rule = parsedRule.data;
+  }
   let appointmentReason: string | null = null;
   if (value.appointmentReason !== undefined && value.appointmentReason !== null && value.appointmentReason !== "") {
     const reason = parseStatusReason(value.appointmentReason);
@@ -192,9 +212,12 @@ export function parseUpdateAvailabilityInput(value: unknown) {
     ok: true,
     data: {
       ...configuration.data,
+      scope,
       startsAt: startsAt.data,
       endsAt: endsAt.data,
       expectedVersion: version.data,
+      expectedSeriesRevision,
+      rule,
       appointmentReason,
     },
   } as const;

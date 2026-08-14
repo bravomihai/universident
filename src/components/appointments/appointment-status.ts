@@ -2,7 +2,7 @@ export const appointmentStatusLabels: Record<string, string> = {
   PENDING: "Cerere în așteptare",
   CONFIRMED: "Confirmată",
   REJECTED: "Respinsă",
-  SUPERSEDED: "Închisă după confirmarea altei cereri",
+  SUPERSEDED: "Înlocuită",
   EXPIRED: "Expirată",
   CANCELLED_BY_PATIENT: "Anulată de pacient",
   CANCELLED_BY_STUDENT: "Anulată de student",

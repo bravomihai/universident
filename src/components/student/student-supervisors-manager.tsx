@@ -10,6 +10,7 @@ import { StudentProfessionalNavigation } from "@/components/student/student-prof
 import { StudentSupervisorDialog } from "@/components/student/student-supervisor-dialog";
 import type { StudentSupervisorOption } from "@/components/student/student-supervisor-form";
 import { useCardFeedback } from "@/components/student/use-card-feedback";
+import { BackLink } from "@/components/ui/back-link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,12 +143,7 @@ export function StudentSupervisorsManager({
 
   return (
     <>
-      <Link
-        href="/cont"
-        className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground"
-      >
-        ← Înapoi la cont
-      </Link>
+      <BackLink href="/cont">Înapoi la cont</BackLink>
 
       <StudentProfessionalNavigation current="supervisors" />
 
@@ -203,25 +199,28 @@ export function StudentSupervisorsManager({
       {supervisors.length > 0 ? (
         <div className="grid gap-4 lg:grid-cols-2">
           {supervisors.map((supervisor) => (
-            <Card key={supervisor.id} aria-busy={pendingSupervisorId === supervisor.id}>
-              <CardContent className="flex h-full flex-col gap-3 p-5">
-                <div className="flex items-start gap-2">
-                  <UserRound className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <Card size="sm" className="h-fit self-start" key={supervisor.id} aria-busy={pendingSupervisorId === supervisor.id}>
+              <CardContent className="flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-4">
                   <h2 className="text-lg font-semibold leading-snug">
                     {supervisor.academicTitle ? `${supervisor.academicTitle} ` : null}
                     {supervisor.fullName}
                   </h2>
+                  <UserRound
+                    className="size-4 shrink-0 stroke-[2.5] text-foreground"
+                    aria-hidden="true"
+                  />
                 </div>
 
                 <StudentCardFeedbackMessage
                   feedback={feedbackById[supervisor.id] ?? null}
                 />
 
-                <div className="mt-auto flex flex-wrap gap-2 border-t pt-3">
+                <div className="grid grid-cols-2 gap-2 border-t pt-3">
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    className="w-full"
                     disabled={pendingSupervisorId !== null}
                     onClick={() => setEditor({ supervisor })}
                   >
@@ -230,9 +229,8 @@ export function StudentSupervisorsManager({
                   </Button>
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
+                    variant="destructive"
+                    className="w-full"
                     disabled={pendingSupervisorId !== null}
                     onClick={() => setArchiveCandidate(supervisor)}
                   >

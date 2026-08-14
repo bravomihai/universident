@@ -9,7 +9,15 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit --incremental false",
     "test": "tsx --test src/lib/**/*.test.ts",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "db:validate": "prisma validate",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "demo:seed": "tsx scripts/seed-local-demo.ts",
     "postinstall": "prisma generate"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.23",

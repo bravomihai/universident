@@ -47,7 +47,7 @@ export function StudentLocationArchiveDialog({
           <AlertDialogDescription>
             Locația nu va mai apărea în lista obișnuită și nu va mai
             putea fi selectată în calendar. O vei
-            găsi în Cont → Resurse arhivate și o vei putea restaura
+            găsi în Cont &gt; Resurse arhivate și o vei putea restaura
             ulterior. Intervalele viitoare care folosesc locația trebuie
             eliminate înainte de arhivare.
           </AlertDialogDescription>

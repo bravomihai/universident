@@ -3,7 +3,6 @@ import {
   CalendarDays,
   GraduationCap,
   MapPin,
-  ShieldCheck,
   Stethoscope,
   UserRound,
   UsersRound,
@@ -13,6 +12,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { AccountDetailsCard } from "@/components/account/account-details-card";
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -23,8 +23,7 @@ import {
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
-import { appointmentNeedsAttention } from "@/lib/appointments/appointment-presentation";
-import { formatLateCancellationReputation } from "@/lib/appointments/patient-reputation-label";
+import { formatUnreadAppointmentNotifications } from "@/lib/appointments/appointment-notification-label";
 import { prisma } from "@/lib/prisma";
 import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
 
@@ -45,6 +44,11 @@ type DashboardLinkCardProps = {
   title: string;
   description: string;
   action: string;
+  actionOnDesktop?: boolean;
+  emphasized?: boolean;
+  prefetch?: boolean;
+  status?: string;
+  statusVariant?: "default" | "success";
   children: ReactNode;
 };
 
@@ -54,12 +58,29 @@ function DashboardLinkCard({
   title,
   description,
   action,
+  actionOnDesktop = false,
+  emphasized = false,
+  prefetch,
+  status,
+  statusVariant = "default",
   children,
 }: DashboardLinkCardProps) {
   return (
-    <Link href={href} className={clickableCardLinkClassName}>
-      <Card className={clickableCardClassName}>
-        <CardContent className="flex h-full flex-col gap-4 p-5">
+    <Link
+      href={href}
+      prefetch={prefetch}
+      className={clickableCardLinkClassName}
+    >
+      <Card
+        className={`${clickableCardClassName} ${
+          emphasized ? "bg-primary/[0.04] ring-primary/30" : ""
+        }`}
+      >
+        <CardContent
+          className={`relative flex h-full flex-col gap-4 p-5 ${
+            actionOnDesktop ? "sm:pr-56" : ""
+          }`}
+        >
           <div className="flex items-start gap-3">
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
               <Icon className="size-4" aria-hidden="true" />
@@ -68,11 +89,28 @@ function DashboardLinkCard({
               <h2 className="font-semibold">{title}</h2>
               <p className="text-sm text-muted-foreground">{description}</p>
             </div>
+            {status ? (
+              <span
+                className={`ml-auto shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                  statusVariant === "success"
+                    ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "bg-muted/30"
+                }`}
+              >
+                {status}
+              </span>
+            ) : null}
           </div>
 
           <div className="text-sm">{children}</div>
 
-          <span className="mt-auto inline-flex items-center gap-1 text-sm font-medium">
+          <span
+            className={`mt-auto inline-flex items-center gap-1 text-sm font-medium ${
+              actionOnDesktop
+                ? "sm:absolute sm:right-5 sm:top-1/2 sm:mt-0 sm:-translate-y-1/2"
+                : ""
+            }`}
+          >
             {action}
             <span
               className={clickableCardIndicatorClassName}
@@ -110,12 +148,6 @@ export default async function AccountPage() {
     session.user.role === UserRole.PATIENT || session.user.role === UserRole.STUDENT
       ? await listAppointmentsForUser(session.user.id, session.user.role)
       : null;
-  const appointmentRole = isStudent ? "STUDENT" : "PATIENT";
-  const appointmentsNeedingAttention = appointmentData
-    ? appointmentData.appointments.filter((appointment) =>
-        appointmentNeedsAttention(appointment, appointmentRole),
-      ).length
-    : 0;
 
   const studentData = isStudent
     ? await (async () => {
@@ -141,42 +173,33 @@ export default async function AccountPage() {
           };
         }
 
-        const [
-          activeTreatments,
-          activeLocations,
-          activeSupervisors,
-          archivedTreatments,
-          archivedLocations,
-          archivedSupervisors,
-        ] = await Promise.all([
-          prisma.studentTreatment.count({
-            where: {
-              studentProfileId: profile.id,
-              deletedAt: null,
-            },
-          }),
-          prisma.studentLocation.count({
-            where: {
-              studentProfileId: profile.id,
-              deletedAt: null,
-            },
-          }),
-          prisma.studentSupervisor.count({
-            where: {
-              studentProfileId: profile.id,
-              deletedAt: null,
-            },
-          }),
-          prisma.studentTreatment.count({
-            where: { studentProfileId: profile.id, deletedAt: { not: null } },
-          }),
-          prisma.studentLocation.count({
-            where: { studentProfileId: profile.id, deletedAt: { not: null } },
-          }),
-          prisma.studentSupervisor.count({
-            where: { studentProfileId: profile.id, deletedAt: { not: null } },
-          }),
-        ]);
+        const activeTreatments = await prisma.studentTreatment.count({
+          where: {
+            studentProfileId: profile.id,
+            deletedAt: null,
+          },
+        });
+        const activeLocations = await prisma.studentLocation.count({
+          where: {
+            studentProfileId: profile.id,
+            deletedAt: null,
+          },
+        });
+        const activeSupervisors = await prisma.studentSupervisor.count({
+          where: {
+            studentProfileId: profile.id,
+            deletedAt: null,
+          },
+        });
+        const archivedTreatments = await prisma.studentTreatment.count({
+          where: { studentProfileId: profile.id, deletedAt: { not: null } },
+        });
+        const archivedLocations = await prisma.studentLocation.count({
+          where: { studentProfileId: profile.id, deletedAt: { not: null } },
+        });
+        const archivedSupervisors = await prisma.studentSupervisor.count({
+          where: { studentProfileId: profile.id, deletedAt: { not: null } },
+        });
 
         return {
           profile,
@@ -192,20 +215,15 @@ export default async function AccountPage() {
 
   const profileCompletion = !studentData?.profile
     ? "Profil necompletat"
-    : studentData.profile.bio?.trim()
-      ? "Profil complet"
-      : "Profil parțial";
+    : "Profil complet";
   const publication = isStudent
     ? await getStudentPublicationReadiness(session.user.id)
     : null;
 
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
-      <div className="w-full max-w-6xl space-y-8">
-        <header className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            Contul meu
-          </p>
+      <div className="w-full max-w-6xl space-y-4">
+        <header className="space-y-2 pb-4">
           <div className="flex items-center gap-3">
             <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
               <UserRound className="size-5" aria-hidden="true" />
@@ -220,24 +238,28 @@ export default async function AccountPage() {
         </header>
 
         {studentData ? (
-          <section aria-label="Profil profesional" className="space-y-8">
+          <section aria-label="Profil profesional" className="space-y-4">
             <DashboardLinkCard
               href="/cont/profil-student"
               icon={GraduationCap}
               title="Profil profesional"
               description="Datele profesionale afișate în profilul tău."
               action="Editează profilul"
+              status={profileCompletion}
+              statusVariant={
+                profileCompletion === "Profil complet" ? "success" : "default"
+              }
             >
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                <div className="flex min-w-0 flex-wrap items-center gap-3">
-                    <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-medium">
-                      {profileCompletion}
-                    </span>
+                <div className="min-w-0 space-y-2">
+                  <p className="font-semibold">{session.user.name}</p>
+                  <div className="min-w-0">
                     <p className="min-w-0 flex-1 text-sm text-muted-foreground">
                       {studentData.profile
                         ? compactBio(studentData.profile.bio)
                         : "Completează universitatea, anul de studiu și descrierea profesională."}
                     </p>
+                  </div>
                 </div>
                 {studentData.profile ? (
                   <dl className="grid grid-cols-2 gap-4 text-sm sm:border-l sm:pl-5">
@@ -254,7 +276,7 @@ export default async function AccountPage() {
               </div>
             </DashboardLinkCard>
 
-            <div className="grid gap-8 md:grid-cols-2 md:gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardContent className="h-full p-5">
                 {publication ? (
@@ -274,41 +296,10 @@ export default async function AccountPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="flex h-full flex-col gap-4 p-5">
-                  <div className="flex items-start gap-3">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
-                      <UserRound className="size-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 space-y-1">
-                      <h2 id="account-details-title" className="font-semibold">
-                        Detalii cont
-                      </h2>
-                      <p className="text-sm text-muted-foreground">
-                        Datele contului sunt disponibile doar pentru consultare.
-                      </p>
-                    </div>
-                  </div>
-                  <dl className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                    <div className="min-w-0">
-                      <dt className="text-xs text-muted-foreground">Nume</dt>
-                      <dd className="truncate font-medium" title={session.user.name}>
-                        {session.user.name}
-                      </dd>
-                    </div>
-                    <div className="min-w-0">
-                      <dt className="text-xs text-muted-foreground">Email</dt>
-                      <dd className="truncate font-medium" title={session.user.email}>
-                        {session.user.email}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Rol</dt>
-                      <dd className="font-medium">{roleLabels[session.user.role]}</dd>
-                    </div>
-                  </dl>
-                </CardContent>
-              </Card>
+              <AccountDetailsCard
+                email={session.user.email}
+                roleLabel={roleLabels[session.user.role]}
+              />
             </div>
           </section>
         ) : null}
@@ -321,21 +312,22 @@ export default async function AccountPage() {
               title="Programările mele"
               description={isStudent ? "Cererile și întâlnirile pacienților tăi." : "Cererile trimise și întâlnirile tale."}
               action="Vezi programările"
+              actionOnDesktop
+              emphasized={appointmentData.unreadNotificationCount > 0}
+              prefetch={false}
             >
               <div className="space-y-1">
-                <p className="font-medium">
-                  {appointmentData.appointments.length === 1
-                    ? "O cerere sau programare în istoric"
-                    : `${appointmentData.appointments.length} cereri și programări în istoric`}
+                <p
+                  className={
+                    appointmentData.unreadNotificationCount > 0
+                      ? "font-semibold text-primary"
+                      : "font-medium"
+                  }
+                >
+                  {formatUnreadAppointmentNotifications(
+                    appointmentData.unreadNotificationCount,
+                  )}
                 </p>
-                {appointmentsNeedingAttention ? (
-                  <p className="text-orange-700 dark:text-orange-300">Necesită atenția ta: {appointmentsNeedingAttention}</p>
-                ) : null}
-                {!isStudent && appointmentData.reputation ? (
-                  <p className="text-muted-foreground">
-                    {formatLateCancellationReputation(appointmentData.reputation.lateCancellationsLast10)}
-                  </p>
-                ) : null}
               </div>
             </DashboardLinkCard>
           </section>
@@ -359,9 +351,6 @@ export default async function AccountPage() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 sm:ml-auto sm:shrink-0 sm:justify-end">
-                    <span className="rounded-full border bg-muted/20 px-2.5 py-1 text-xs text-muted-foreground">
-                      Date reale
-                    </span>
                     <span className="inline-flex items-center gap-1 text-sm font-medium">
                       Deschide calendarul
                       <span
@@ -381,7 +370,7 @@ export default async function AccountPage() {
         {studentData ? (
           <section
             aria-label="Administrare profesională"
-            className="grid gap-8 md:grid-cols-3 md:gap-4"
+            className="grid gap-4 md:grid-cols-3"
           >
             <DashboardLinkCard
               href="/cont/tratamente"
@@ -431,35 +420,42 @@ export default async function AccountPage() {
           </section>
         ) : null}
 
-        {!isStudent ? (
+        {!isStudent && appointmentData ? (
           <section
-            aria-label="Administrarea contului"
+            aria-label="Profil și detalii cont"
             className="grid gap-4 md:grid-cols-2"
           >
-          <DashboardLinkCard
-            href="/cont/informatii-cont"
-            icon={UserRound}
-            title="Informații despre cont"
-            description="Identitatea și datele generale ale contului."
-            action="Gestionează informațiile"
-          >
-            <div className="space-y-1">
-              <p className="font-medium">{session.user.name}</p>
-              <p className="break-all text-muted-foreground">{session.user.email}</p>
-              <p className="text-muted-foreground">
-                Rol: {roleLabels[session.user.role]}
-              </p>
-            </div>
-          </DashboardLinkCard>
-          <DashboardLinkCard
-            href="/cont/securitate"
-            icon={ShieldCheck}
-            title="Confidențialitate și securitate"
-            description="Parolă, sesiuni și recuperarea contului."
-            action="Gestionează securitatea"
-          >
-            <p className="font-medium">Protecția contului</p>
-          </DashboardLinkCard>
+            <DashboardLinkCard
+              href="/cont/profil-pacient"
+              icon={UserRound}
+              title="Profil pacient"
+              description="Datele profilului și recenziile tale."
+              action="Editează profilul"
+              status={
+                appointmentData.patientProfile?.dateOfBirth
+                  ? "Profil complet"
+                  : "Profil incomplet"
+              }
+              statusVariant={
+                appointmentData.patientProfile?.dateOfBirth
+                  ? "success"
+                  : "default"
+              }
+            >
+              <div className="space-y-2">
+                <p className="font-semibold">{session.user.name}</p>
+                <p className="text-muted-foreground">
+                  {appointmentData.patientProfile?.bio?.trim()
+                    ? compactBio(appointmentData.patientProfile.bio)
+                    : "Poți adăuga o descriere opțională pentru studenții cu care ai o programare."}
+                </p>
+              </div>
+            </DashboardLinkCard>
+
+            <AccountDetailsCard
+              email={session.user.email}
+              roleLabel={roleLabels[session.user.role]}
+            />
           </section>
         ) : null}
 
@@ -471,6 +467,7 @@ export default async function AccountPage() {
               title="Resurse arhivate"
               description="Tratamente, locații și supervizori păstrați pentru restaurare."
               action="Vezi resursele arhivate"
+              actionOnDesktop
             >
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 <span>

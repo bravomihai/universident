@@ -41,6 +41,27 @@ test("falls back to every valid grid start when no exact packing exists", () => 
     assert.equal(slots.every((slot) => !slot.optimized), true);
 });
 
+test("compacts consecutive appointments when at least two fit", () => {
+    const slots = generateSmartBookingSlots([{
+      id: "block",
+      offeringId: "offering",
+      startsAt: at(9),
+      endsAt: at(13),
+      treatmentDurationMinutes: 90,
+      offeredDurationsMinutes: [90],
+      occupied: [],
+    }], at(8));
+
+    assert.deepEqual(slots.map((slot) => ({
+      startsAt: slot.startsAt.toISOString(),
+      endsAt: slot.endsAt.toISOString(),
+    })), [
+      { startsAt: at(9).toISOString(), endsAt: at(10, 30).toISOString() },
+      { startsAt: at(10, 30).toISOString(), endsAt: at(12).toISOString() },
+    ]);
+    assert.equal(slots.every((slot) => slot.optimized), true);
+});
+
 test("treats pending and confirmed intervals as occupied", () => {
     const slots = generateSmartBookingSlots([{
       id: "block",

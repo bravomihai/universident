@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { type SubmitEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,6 +21,7 @@ type UniversityOption = {
 };
 
 type StudentProfileFormProps = {
+  initialName: string;
   initialProfile?: {
     universitySlug: string | null;
     studyYear: number;
@@ -29,6 +31,7 @@ type StudentProfileFormProps = {
 };
 
 export function StudentProfileForm({
+  initialName,
   initialProfile,
   universities,
 }: StudentProfileFormProps) {
@@ -47,6 +50,7 @@ export function StudentProfileForm({
 
     const formData = new FormData(event.currentTarget);
 
+    const name = String(formData.get("name") ?? "");
     const universitySlug = String(formData.get("universitySlug") ?? "");
     const studyYear = Number(formData.get("studyYear"));
     const bio = String(formData.get("bio") ?? "");
@@ -58,6 +62,7 @@ export function StudentProfileForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          name,
           universitySlug,
           studyYear,
           bio,
@@ -88,6 +93,22 @@ export function StudentProfileForm({
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="space-y-2">
+        <Label htmlFor="student-name">Nume</Label>
+        <Input
+          id="student-name"
+          name="name"
+          autoComplete="name"
+          defaultValue={initialName}
+          minLength={2}
+          maxLength={100}
+          required
+        />
+        <p className="text-xs text-muted-foreground">
+          Numele apare pe profilul profesional și în programările viitoare.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="university">Universitate</Label>
         <Select

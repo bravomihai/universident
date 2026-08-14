@@ -9,6 +9,7 @@ import type {
   parseAppointmentReviewInput,
   parseCreateAppointmentInput,
 } from "@/lib/appointments/appointment-input";
+import { appointmentReviewIsAllowed } from "@/lib/appointments/appointment-presentation";
 import {
   createAppointmentRouteSlug,
   createPatientProfileSlug,
@@ -129,14 +130,59 @@ async function publishAppointmentReviews(
   });
 }
 
+async function createAppointmentNotifications(
+  transaction: Prisma.TransactionClient,
+  notifications: Array<{
+    appointmentId: string;
+    recipientUserId: string;
+    eventType: string;
+    createdAt: Date;
+  }>,
+) {
+  if (notifications.length === 0) return;
+  await transaction.appointmentNotification.createMany({ data: notifications });
+}
+
 export async function expirePendingAppointments(
   transaction: Prisma.TransactionClient,
   now = new Date(),
 ) {
-  return transaction.appointment.updateMany({
+  const expiring = await transaction.appointment.findMany({
     where: {
       status: AppointmentStatus.PENDING,
       scheduledStartsAt: { lte: now },
+    },
+    select: {
+      id: true,
+      patientProfileId: true,
+      studentProfileId: true,
+    },
+  });
+  if (expiring.length === 0) return { count: 0 };
+
+  const patientProfiles = await transaction.patientProfile.findMany({
+    where: {
+      id: { in: expiring.map((appointment) => appointment.patientProfileId) },
+    },
+    select: { id: true, userId: true },
+  });
+  const studentProfiles = await transaction.studentProfile.findMany({
+    where: {
+      id: { in: expiring.map((appointment) => appointment.studentProfileId) },
+    },
+    select: { id: true, userId: true },
+  });
+  const patientUserIds = new Map(
+    patientProfiles.map((profile) => [profile.id, profile.userId]),
+  );
+  const studentUserIds = new Map(
+    studentProfiles.map((profile) => [profile.id, profile.userId]),
+  );
+
+  const expired = await transaction.appointment.updateManyAndReturn({
+    where: {
+      id: { in: expiring.map((appointment) => appointment.id) },
+      status: AppointmentStatus.PENDING,
     },
     data: {
       status: AppointmentStatus.EXPIRED,
@@ -146,7 +192,34 @@ export async function expirePendingAppointments(
       expiredAt: now,
       version: { increment: 1 },
     },
+    select: { id: true },
   });
+  const expiredIds = new Set(expired.map((appointment) => appointment.id));
+  await createAppointmentNotifications(
+    transaction,
+    expiring
+      .filter((appointment) => expiredIds.has(appointment.id))
+      .flatMap((appointment) => {
+        const patientUserId = patientUserIds.get(appointment.patientProfileId);
+        const studentUserId = studentUserIds.get(appointment.studentProfileId);
+        if (!patientUserId || !studentUserId) return [];
+        return [
+          {
+            appointmentId: appointment.id,
+            recipientUserId: patientUserId,
+            eventType: AppointmentStatus.EXPIRED,
+            createdAt: now,
+          },
+          {
+            appointmentId: appointment.id,
+            recipientUserId: studentUserId,
+            eventType: AppointmentStatus.EXPIRED,
+            createdAt: now,
+          },
+        ];
+      }),
+  );
+  return { count: expired.length };
 }
 
 async function getOrCreatePatientProfile(
@@ -282,7 +355,7 @@ export async function createAppointmentRequest(
         const reviewRequired = await transaction.appointment.findFirst({
           where: {
             patientProfileId: patient.id,
-            status: { in: [AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW] },
+            status: AppointmentStatus.COMPLETED,
             reviews: { none: { authorRole: AppointmentReviewAuthorRole.PATIENT } },
           },
           select: { routeSlug: true },
@@ -300,7 +373,7 @@ export async function createAppointmentRequest(
             "Rezervările Universident sunt disponibile momentan persoanelor de minimum 18 ani.",
           );
         }
-        return transaction.appointment.create({
+        const appointment = await transaction.appointment.create({
           data: {
             routeSlug: createAppointmentRouteSlug(
               offering.studentTreatment.treatment.name,
@@ -327,6 +400,15 @@ export async function createAppointmentRequest(
           },
           include: appointmentInclude,
         });
+        await createAppointmentNotifications(transaction, [
+          {
+            appointmentId: appointment.id,
+            recipientUserId: slot.studentProfile.user.id,
+            eventType: "REQUEST_CREATED",
+            createdAt: new Date(),
+          },
+        ]);
+        return appointment;
       },
       { isolationLevel: "Serializable" },
     );
@@ -341,42 +423,117 @@ export async function createAppointmentRequest(
   }
 }
 
-export async function listAppointmentsForUser(userId: string, role: UserRole) {
-  return prisma.$transaction(async (transaction) => {
+export async function listAppointmentsForUser(
+  userId: string,
+  role: UserRole,
+  options: { consumeNotifications?: boolean } = {},
+) {
+  const unreadNotifications = await prisma.$transaction(async (transaction) => {
     await expirePendingAppointments(transaction);
-    if (role === UserRole.PATIENT) {
-      const patient = await transaction.patientProfile.findUnique({
-        where: { userId },
-        select: { id: true, profileSlug: true, dateOfBirth: true, bio: true },
+    const notifications = await transaction.appointmentNotification.findMany({
+      where: { recipientUserId: userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        appointmentId: true,
+      },
+    });
+    if (options.consumeNotifications && notifications.length > 0) {
+      await transaction.appointmentNotification.deleteMany({
+        where: { id: { in: notifications.map((notification) => notification.id) } },
       });
-      if (!patient) return { appointments: [], patientProfile: null, reputation: { lateCancellationsLast10: 0 } };
-      const [appointments, recentConfirmedAppointments] = await Promise.all([
-        transaction.appointment.findMany({
-          where: { patientProfileId: patient.id },
-          orderBy: { scheduledStartsAt: "desc" },
-          include: privateAppointmentInclude(userId),
-        }),
-        transaction.appointment.findMany({
-          where: { patientProfileId: patient.id, confirmedAt: { not: null } },
-          orderBy: { scheduledStartsAt: "desc" },
-          take: 10,
-          select: { isLateCancellation: true },
-        }),
-      ]);
-      const lateCancellationsLast10 = recentConfirmedAppointments.filter(
-        (appointment) => appointment.isLateCancellation,
-      ).length;
-      return { appointments, patientProfile: patient, reputation: { lateCancellationsLast10 } };
     }
-    const student = await transaction.studentProfile.findUnique({ where: { userId }, select: { id: true } });
-    if (!student) return { appointments: [], patientProfile: null, reputation: null };
-    const appointments = await transaction.appointment.findMany({
-      where: { studentProfileId: student.id },
+    return notifications;
+  });
+
+  const unreadAppointmentIds = Array.from(
+    new Set(unreadNotifications.map((notification) => notification.appointmentId)),
+  );
+  const unreadAppointments = unreadAppointmentIds.length
+    ? await prisma.appointment.findMany({
+        where: { id: { in: unreadAppointmentIds } },
+        select: { routeSlug: true },
+      })
+    : [];
+  const notificationData = {
+    unreadNotificationCount: unreadNotifications.length,
+    unreadAppointmentSlugs: unreadAppointments.map(
+      (appointment) => appointment.routeSlug,
+    ),
+  };
+
+  if (role === UserRole.PATIENT) {
+    const patient = await prisma.patientProfile.findUnique({
+      where: { userId },
+      select: { id: true, profileSlug: true, dateOfBirth: true, bio: true },
+    });
+    if (!patient) {
+      return {
+        appointments: [],
+        patientProfile: null,
+        reputation: { lateCancellationsLast10: 0 },
+        studentReputation: null,
+        ...notificationData,
+      };
+    }
+    const appointments = await prisma.appointment.findMany({
+      where: { patientProfileId: patient.id },
       orderBy: { scheduledStartsAt: "desc" },
       include: privateAppointmentInclude(userId),
     });
-    return { appointments, patientProfile: null, reputation: null };
+    const recentConfirmedAppointments = await prisma.appointment.findMany({
+      where: { patientProfileId: patient.id, confirmedAt: { not: null } },
+      orderBy: { scheduledStartsAt: "desc" },
+      take: 10,
+      select: { isLateCancellation: true },
+    });
+    const lateCancellationsLast10 = recentConfirmedAppointments.filter(
+      (appointment) => appointment.isLateCancellation,
+    ).length;
+    return {
+      appointments,
+      patientProfile: patient,
+      reputation: { lateCancellationsLast10 },
+      studentReputation: null,
+      ...notificationData,
+    };
+  }
+
+  const student = await prisma.studentProfile.findUnique({
+    where: { userId },
+    select: { id: true },
   });
+  if (!student) {
+    return {
+      appointments: [],
+      patientProfile: null,
+      reputation: null,
+      studentReputation: { cancellationsLast10: 0 },
+      ...notificationData,
+    };
+  }
+  const appointments = await prisma.appointment.findMany({
+    where: { studentProfileId: student.id },
+    orderBy: { scheduledStartsAt: "desc" },
+    include: privateAppointmentInclude(userId),
+  });
+  const recentConfirmedAppointments = await prisma.appointment.findMany({
+    where: { studentProfileId: student.id, confirmedAt: { not: null } },
+    orderBy: { scheduledStartsAt: "desc" },
+    take: 10,
+    select: { status: true },
+  });
+    const cancellationsLast10 = recentConfirmedAppointments.filter(
+      (appointment) =>
+        appointment.status === AppointmentStatus.CANCELLED_BY_STUDENT,
+    ).length;
+    return {
+      appointments,
+      patientProfile: null,
+      reputation: null,
+      studentReputation: { cancellationsLast10 },
+      ...notificationData,
+    };
 }
 
 export async function getAppointmentForUser(
@@ -529,6 +686,19 @@ export async function actOnAppointment(
           include: appointmentInclude,
         });
 
+        if (status !== AppointmentStatus.NO_SHOW) {
+          await createAppointmentNotifications(transaction, [
+            {
+              appointmentId: appointment.id,
+              recipientUserId: isPatient
+                ? appointment.studentProfile.userId
+                : appointment.patientProfile.userId,
+              eventType: status,
+              createdAt: now,
+            },
+          ]);
+        }
+
         if (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.NO_SHOW) {
           await transaction.appointmentReview.create({
             data: {
@@ -538,19 +708,32 @@ export async function actOnAppointment(
               authorRole: AppointmentReviewAuthorRole.STUDENT,
               rating: input.rating!,
               comment: input.comment,
+              publishedAt: status === AppointmentStatus.NO_SHOW ? now : null,
             },
           });
-          await publishAppointmentReviews(transaction, appointment.id, now);
+          if (status === AppointmentStatus.COMPLETED) {
+            await publishAppointmentReviews(transaction, appointment.id, now);
+          }
         }
 
         if (status === AppointmentStatus.CONFIRMED) {
-          await transaction.appointment.updateMany({
+          const supersededCandidates = await transaction.appointment.findMany({
             where: {
               id: { not: appointment.id },
               patientProfileId: appointment.patientProfileId,
               status: AppointmentStatus.PENDING,
               scheduledStartsAt: { lt: appointment.scheduledEndsAt },
               scheduledEndsAt: { gt: appointment.scheduledStartsAt },
+            },
+            select: {
+              id: true,
+              studentProfile: { select: { userId: true } },
+            },
+          });
+          const superseded = await transaction.appointment.updateManyAndReturn({
+            where: {
+              id: { in: supersededCandidates.map((candidate) => candidate.id) },
+              status: AppointmentStatus.PENDING,
             },
             data: {
               status: AppointmentStatus.SUPERSEDED,
@@ -560,7 +743,32 @@ export async function actOnAppointment(
               statusChangedByUserId: actor.id,
               version: { increment: 1 },
             },
+            select: { id: true },
           });
+          const supersededIds = new Set(superseded.map((item) => item.id));
+          await createAppointmentNotifications(
+            transaction,
+            supersededCandidates
+              .filter((candidate) => supersededIds.has(candidate.id))
+              .flatMap((candidate) => [
+                {
+                  appointmentId: candidate.id,
+                  recipientUserId: appointment.patientProfile.userId,
+                  eventType: AppointmentStatus.SUPERSEDED,
+                  createdAt: now,
+                },
+                ...(candidate.studentProfile.userId !== actor.id
+                  ? [
+                      {
+                        appointmentId: candidate.id,
+                        recipientUserId: candidate.studentProfile.userId,
+                        eventType: AppointmentStatus.SUPERSEDED,
+                        createdAt: now,
+                      },
+                    ]
+                  : []),
+              ]),
+          );
         }
         if (status !== AppointmentStatus.COMPLETED && status !== AppointmentStatus.NO_SHOW) {
           return updated;
@@ -604,13 +812,16 @@ export async function reviewAppointment(
         if (!isPatient && !isStudent) {
           throw new AppointmentDomainError("APPOINTMENT_NOT_FOUND", "Programarea nu a fost găsită.");
         }
-        if (appointment.status !== AppointmentStatus.COMPLETED && appointment.status !== AppointmentStatus.NO_SHOW) {
+        const reviewerRole = isPatient ? "PATIENT" : "STUDENT";
+        if (!appointmentReviewIsAllowed(appointment.status, reviewerRole)) {
           throw new AppointmentDomainError(
             "REVIEW_NOT_AVAILABLE",
-            "Recenzia poate fi trimisă după ce studentul închide programarea.",
+            appointment.status === AppointmentStatus.NO_SHOW && isPatient
+              ? "Nu poți evalua studentul pentru o programare la care nu te-ai prezentat."
+              : "Recenzia poate fi trimisă după ce studentul închide programarea.",
           );
         }
-        const authorRole = isPatient
+        const authorRole = reviewerRole === "PATIENT"
           ? AppointmentReviewAuthorRole.PATIENT
           : AppointmentReviewAuthorRole.STUDENT;
         const targetUserId = isPatient

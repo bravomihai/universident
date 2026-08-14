@@ -116,9 +116,6 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-8">
         <header className="max-w-3xl space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            Descoperă studenți
-          </p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Găsește tratamentul potrivit în orașul tău
           </h1>
@@ -191,7 +188,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 <div className="grid gap-5 lg:grid-cols-2">
                   {search.results.map((student) => (
                     <PublicStudentResultCard
-                      key={`${student.publicSlug}:${student.location.routeKey}`}
+                      key={student.publicSlug}
                       student={student}
                       treatmentSlug={treatment.slug}
                     />

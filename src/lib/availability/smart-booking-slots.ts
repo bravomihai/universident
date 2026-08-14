@@ -97,6 +97,9 @@ export function generateSmartBookingSlots(
           }
         }
       }
+      if (!layout && maxCount >= 2) {
+        layout = { count: maxCount, before: 0 };
+      }
       if (layout) {
         const layoutStart = usableStart.getTime() + layout.before * 60_000;
         for (let index = 0; index < layout.count; index += 1) {

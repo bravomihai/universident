@@ -31,3 +31,13 @@ test("patient bio rejects content longer than one thousand characters", () => {
   });
   assert.equal(result.ok, false);
 });
+
+test("patient profile normalizes an optional account name", () => {
+  const result = parsePatientProfileInput({
+    dateOfBirth: "1990-01-15",
+    name: "  Ana   Popescu ",
+  });
+
+  assert.equal(result.ok, true);
+  if (result.ok) assert.equal(result.data.name, "Ana Popescu");
+});

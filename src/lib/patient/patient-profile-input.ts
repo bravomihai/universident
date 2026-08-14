@@ -1,5 +1,6 @@
 import { ageOnDate, localDateToPrismaDate } from "@/lib/availability/bucharest-time";
 import { isRecord } from "@/lib/appointments/appointment-input";
+import { parseAccountName } from "@/lib/account/account-name";
 
 export function parsePatientProfileInput(value: unknown) {
   if (!isRecord(value) || typeof value.dateOfBirth !== "string") {
@@ -20,6 +21,13 @@ export function parsePatientProfileInput(value: unknown) {
     } as const;
   }
 
+  let name: string | undefined;
+  if ("name" in value) {
+    const parsedName = parseAccountName(value.name);
+    if (!parsedName.ok) return parsedName;
+    name = parsedName.data;
+  }
+
   let bio: string | null | undefined;
   if ("bio" in value) {
     if (value.bio !== null && typeof value.bio !== "string") {
@@ -32,5 +40,5 @@ export function parsePatientProfileInput(value: unknown) {
     bio = normalizedBio || null;
   }
 
-  return { ok: true, data: { dateOfBirth, bio } } as const;
+  return { ok: true, data: { dateOfBirth, bio, name } } as const;
 }

@@ -3,6 +3,7 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
+import { headerIconControlClassName } from "@/components/layout/header-action-styles";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -11,6 +12,7 @@ import {
     DropdownMenuRadioItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 export function ThemeSelector() {
     const { theme, setTheme } = useTheme();
@@ -22,7 +24,7 @@ export function ThemeSelector() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="relative size-9 shrink-0"
+                    className={cn(headerIconControlClassName, "relative shrink-0")}
                     aria-label="Schimbă tema"
                 >
                     <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />

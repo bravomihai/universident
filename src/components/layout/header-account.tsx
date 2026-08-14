@@ -5,9 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { AccountMenu } from "@/components/account/account-menu";
+import {
+  headerControlGeometryClassName,
+  headerNeutralControlClassName,
+} from "@/components/layout/header-action-styles";
 import { HeaderMobileNavigation } from "@/components/layout/header-mobile-navigation";
 import { UserRole } from "@/generated/prisma/enums";
 import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 const roleLabels: Record<UserRole, string> = {
   [UserRole.PATIENT]: "Pacient",
@@ -73,14 +78,20 @@ export function HeaderAccount({ initialUser }: HeaderAccountProps) {
       >
         <Link
           href="/autentificare"
-          className="rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className={cn(
+            headerNeutralControlClassName,
+            "inline-flex items-center px-3 text-sm font-medium",
+          )}
         >
           Autentificare
         </Link>
 
         <Link
           href="/inregistrare"
-          className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          className={cn(
+            headerControlGeometryClassName,
+            "inline-flex items-center bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          )}
         >
           Creează cont
         </Link>

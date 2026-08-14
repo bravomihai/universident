@@ -6,14 +6,13 @@ import {
     CalendarDays,
     GraduationCap,
     LogOut,
-    MapPin,
-    Stethoscope,
     UserRound,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ProfileIcon } from "@/components/icons/profile-icon";
+import { headerNeutralControlClassName } from "@/components/layout/header-action-styles";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -24,6 +23,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 type AccountMenuProps = {
     name: string;
@@ -68,17 +68,20 @@ export function AccountMenu({
                 <Button
                     type="button"
                     variant="ghost"
-                    className="h-9 min-w-0 max-w-full shrink gap-1 px-1.5 min-[300px]:px-2 sm:h-auto sm:gap-2 sm:px-3 sm:py-1.5"
+                    className={cn(
+                        headerNeutralControlClassName,
+                        "min-w-0 max-w-full shrink gap-1 px-1.5 min-[300px]:px-2 sm:gap-2 sm:px-3",
+                    )}
                     aria-label={`Deschide meniul contului pentru ${name}`}
                 >
                     <ProfileIcon className="size-5 shrink-0 text-foreground" />
 
                     <span className="hidden min-w-0 text-right sm:block">
-                        <span className="block max-w-48 truncate text-sm font-medium">
+                        <span className="block max-w-48 truncate text-sm font-medium leading-4">
                             {name}
                         </span>
 
-                        <span className="block text-xs text-muted-foreground">
+                        <span className="block text-xs leading-3 text-muted-foreground">
                             {roleLabel}
                         </span>
                     </span>
@@ -136,16 +139,9 @@ export function AccountMenu({
                         </DropdownMenuItem>
 
                         <DropdownMenuItem asChild>
-                            <Link href="/cont/locatii">
-                                <MapPin />
-                                Locații
-                            </Link>
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem asChild>
-                            <Link href="/cont/tratamente">
-                                <Stethoscope />
-                                Tratamente
+                            <Link href="/cont/calendar">
+                                <CalendarDays />
+                                Calendar
                             </Link>
                         </DropdownMenuItem>
                     </>

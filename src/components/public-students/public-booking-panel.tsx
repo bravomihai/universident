@@ -34,6 +34,7 @@ type PatientState = "loading" | "anonymous" | "student" | "missing-birth-date" |
 
 const datePartsFormatter = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" });
 const dayLabelFormatter = new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", weekday: "short", day: "numeric", month: "short" });
+const timePartsFormatter = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 function localKey(date: Date) {
   const parts = datePartsFormatter.formatToParts(date);
@@ -45,6 +46,12 @@ function dayDistance(date: Date) {
   const [todayYear, todayMonth, todayDay] = localKey(new Date()).split("-").map(Number);
   const [year, month, day] = localKey(date).split("-").map(Number);
   return Math.round((Date.UTC(year, month - 1, day) - Date.UTC(todayYear, todayMonth - 1, todayDay)) / 86_400_000);
+}
+
+function scrollTimeForInstant(value: string) {
+  const parts = timePartsFormatter.formatToParts(new Date(value));
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
+  return `${get("hour")}:${get("minute")}:00`;
 }
 
 function navigationLabel(arg: DatesSetArg) {
@@ -69,7 +76,7 @@ function BookingEventContent({ event, timeText }: EventContentArg) {
   return <div className="min-w-0 p-1 leading-tight" data-booking-slot-id={slot.id}><p className="truncate text-[11px] font-semibold sm:text-xs">{slot.treatment.name}</p><p className="truncate text-[10px] opacity-85">{slot.location.name}</p><p className="truncate text-[10px] opacity-75">{timeText}</p>{selected ? <p className="mt-0.5 text-[10px] font-bold uppercase">Selectat</p> : null}</div>;
 }
 
-export function PublicBookingPanel({ studentSlug, treatmentSlug, locationSlug }: { studentSlug: string; treatmentSlug: string; locationSlug: string }) {
+export function PublicBookingPanel({ studentSlug, treatmentSlug, citySlug }: { studentSlug: string; treatmentSlug: string; citySlug: string }) {
   const calendarRef = useRef<FullCalendar>(null);
   const [slots, setSlots] = useState<PublicSlot[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -90,15 +97,15 @@ export function PublicBookingPanel({ studentSlug, treatmentSlug, locationSlug }:
   const loadAvailability = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ tratament: treatmentSlug, locatie: locationSlug });
+      const params = new URLSearchParams({ tratament: treatmentSlug, oras: citySlug });
       const response = await fetch(`/api/studenti/${encodeURIComponent(studentSlug)}/disponibilitati?${params}`, { signal });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Disponibilitatea nu a putut fi încărcată.");
-      setSlots(payload.slots); setSelectedId(""); setSelectedStart(""); setBookingDialogOpen(false);
+      setSlots(Array.isArray(payload.slots) ? payload.slots : []); setSelectedId(""); setSelectedStart(""); setBookingDialogOpen(false);
     } catch (caught) {
       if (!(caught instanceof DOMException && caught.name === "AbortError")) setError(caught instanceof Error ? caught.message : "Disponibilitatea nu a putut fi încărcată.");
     } finally { setLoading(false); }
-  }, [locationSlug, studentSlug, treatmentSlug]);
+  }, [citySlug, studentSlug, treatmentSlug]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -114,6 +121,19 @@ export function PublicBookingPanel({ studentSlug, treatmentSlug, locationSlug }:
     const timer = window.setTimeout(synchronize, 0); media.addEventListener("change", synchronize);
     return () => { controller.abort(); window.clearTimeout(availabilityTimer); window.clearTimeout(timer); media.removeEventListener("change", synchronize); };
   }, [loadAvailability]);
+
+  const firstAvailableStart = slots[0]?.startOptions[0] ?? slots[0]?.startsAt ?? null;
+
+  useEffect(() => {
+    if (!firstAvailableStart || patientState === "missing-birth-date") return;
+    const timer = window.setTimeout(() => {
+      const calendar = calendarRef.current?.getApi();
+      if (!calendar) return;
+      calendar.gotoDate(firstAvailableStart);
+      calendar.scrollToTime(scrollTimeForInstant(firstAvailableStart));
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [firstAvailableStart, patientState]);
 
   const events = useMemo(() => slots.map((slot) => bookingEvent(slot, slot.id === selectedId)), [slots, selectedId]);
   const selected = slots.find((slot) => slot.id === selectedId) ?? null;

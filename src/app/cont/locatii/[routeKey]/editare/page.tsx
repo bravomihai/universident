@@ -1,9 +1,9 @@
 import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { StudentLocationFormController } from "@/components/student/student-location-form-controller";
+import { BackLink } from "@/components/ui/back-link";
 import { prisma } from "@/lib/prisma";
 import { isStudentLocationRouteKey } from "@/lib/student-locations/student-location-route-key";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
@@ -79,12 +79,7 @@ export default async function EditStudentLocationPage({
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-6">
-        <Link
-          href="/cont/locatii"
-          className="inline-flex items-center text-sm font-medium text-muted-foreground transition hover:text-foreground"
-        >
-          ← Înapoi la locații
-        </Link>
+        <BackLink href="/cont/locatii">Înapoi la locații</BackLink>
 
         <div className="space-y-2">
           <div className="flex items-center gap-3">

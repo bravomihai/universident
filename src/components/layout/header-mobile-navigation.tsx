@@ -4,7 +4,9 @@ import { LogIn, Menu, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { headerIconControlClassName } from "@/components/layout/header-action-styles";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +38,7 @@ export function HeaderMobileNavigation({
           type="button"
           variant="ghost"
           size="icon"
-          className="size-9 shrink-0 md:hidden"
+          className={cn(headerIconControlClassName, "shrink-0 md:hidden")}
           aria-label="Deschide navigarea principală"
           aria-controls="mobile-primary-navigation"
         >

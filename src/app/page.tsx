@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin, Search, Stethoscope } from "lucide-react";
+import { MapPin, Search, Stethoscope } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,12 @@ export default function Home() {
               <Link href="/studenti">
                 <Search aria-hidden="true" />
                 Găsește un student
-                <ArrowRight aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  className="inline-block font-semibold leading-none transition-transform group-hover/button:translate-x-0.5"
+                >
+                  {">"}
+                </span>
               </Link>
             </Button>
           </div>

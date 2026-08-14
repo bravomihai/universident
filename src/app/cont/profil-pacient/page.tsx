@@ -1,11 +1,12 @@
 import { UserRound } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PatientProfileForm } from "@/components/patient/patient-profile-form";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
+import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
@@ -22,5 +23,49 @@ export default async function PatientProfilePage() {
   const reviewData = await getPublishedProfileReviews(session.user.id, "PATIENT");
   const dateOfBirth = result.patientProfile?.dateOfBirth?.toISOString().slice(0, 10) ?? "";
   const bio = result.patientProfile?.bio ?? "";
-  return <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16"><div className="w-full max-w-5xl space-y-6"><Link href="/cont" className="text-sm font-medium text-muted-foreground hover:text-foreground">← Înapoi la cont</Link><header className="space-y-3"><div><div className="flex items-center gap-3"><span className="inline-flex size-10 items-center justify-center rounded-full border bg-card"><UserRound className="size-5" aria-hidden="true" /></span><h1 className="text-3xl font-semibold tracking-tight">Profilul pacientului</h1></div><p className="mt-2 text-muted-foreground">Datele profilului și recenziile tale.</p></div><RatingSummaryLink summary={reviewData.summary} href="#recenzii" /></header><Card><CardHeader><CardTitle>Date pentru profil</CardTitle></CardHeader><CardContent><PatientProfileForm initialDateOfBirth={dateOfBirth} initialBio={bio} /></CardContent></Card><Card><CardContent className="flex flex-wrap items-center justify-between gap-3 p-5"><div><p className="font-semibold">Reputație de programare</p><p className="text-sm text-muted-foreground">Reper calculat din ultimele 10 programări confirmate.</p></div><span className="rounded-full border px-3 py-1 text-sm font-medium">{formatLateCancellationReputation(result.reputation?.lateCancellationsLast10 ?? 0)}</span></CardContent></Card><ProfileReviewList data={reviewData} title="Recenziile tale" /></div></main>;
+  return (
+    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+      <div className="w-full max-w-5xl space-y-6">
+        <BackLink href="/cont">Înapoi la cont</BackLink>
+        <header className="space-y-3">
+          <div>
+            <div className="flex items-center gap-3">
+              <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+                <UserRound className="size-5" aria-hidden="true" />
+              </span>
+              <h1 className="text-3xl font-semibold tracking-tight">
+                Profilul pacientului
+              </h1>
+            </div>
+            <p className="mt-2 text-muted-foreground">
+              Datele profilului și recenziile tale.
+            </p>
+          </div>
+          <RatingSummaryLink summary={reviewData.summary} href="#recenzii" />
+        </header>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Date pentru profil</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PatientProfileForm
+              initialName={session.user.name}
+              initialDateOfBirth={dateOfBirth}
+              initialBio={bio}
+            />
+          </CardContent>
+        </Card>
+
+        <SchedulingReputationCard
+          description="Reper calculat din ultimele 10 programări confirmate."
+          value={formatLateCancellationReputation(
+            result.reputation?.lateCancellationsLast10 ?? 0,
+          )}
+        />
+
+        <ProfileReviewList data={reviewData} title="Recenziile tale" />
+      </div>
+    </main>
+  );
 }

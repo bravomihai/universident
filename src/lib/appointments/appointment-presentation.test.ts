@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   appointmentIsArchived,
   appointmentNeedsAttention,
+  appointmentReviewIsAllowed,
   orderAppointmentsForRole,
 } from "@/lib/appointments/appointment-presentation";
 
@@ -30,6 +31,22 @@ test("a completed appointment archives separately after each review", () => {
   assert.equal(appointmentIsArchived(appointment, "STUDENT"), true);
   assert.equal(appointmentIsArchived(appointment, "PATIENT"), false);
   assert.equal(appointmentNeedsAttention(appointment, "PATIENT", now), true);
+});
+
+test("a no-show cannot be reviewed by the patient and archives immediately", () => {
+  const appointment = { ...base, status: "NO_SHOW" };
+  assert.equal(appointmentReviewIsAllowed(appointment.status, "PATIENT"), false);
+  assert.equal(appointmentNeedsAttention(appointment, "PATIENT", now), false);
+  assert.equal(appointmentIsArchived(appointment, "PATIENT"), true);
+  assert.equal(appointmentReviewIsAllowed(appointment.status, "STUDENT"), true);
+  assert.equal(appointmentNeedsAttention(appointment, "STUDENT", now), true);
+
+  const reviewed = {
+    ...appointment,
+    reviews: [{ authorRole: "STUDENT" }],
+  };
+  assert.equal(appointmentNeedsAttention(reviewed, "STUDENT", now), false);
+  assert.equal(appointmentIsArchived(reviewed, "STUDENT"), true);
 });
 
 test("appointments requiring action are ordered before the others", () => {

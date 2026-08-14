@@ -2,9 +2,11 @@ import Link from "next/link";
 
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
 import { appointmentStatusLabels, formatAppointmentInterval } from "@/components/appointments/appointment-status";
+import { ExpandableReviewComment } from "@/components/reviews/expandable-review-comment";
 import { RatingStars } from "@/components/reviews/rating-summary";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { clickableCardIndicatorClassName } from "@/components/ui/clickable-card-styles";
 import {
   appointmentNeedsAttention,
   hasAppointmentReview,
@@ -44,11 +46,13 @@ export type AppointmentListItem = {
 export function AppointmentList({
   appointments,
   role,
+  unreadAppointmentSlugs = [],
   compact = false,
   emptyMessage = "Nu există încă programări.",
 }: {
   appointments: AppointmentListItem[];
   role: "PATIENT" | "STUDENT";
+  unreadAppointmentSlugs?: string[];
   compact?: boolean;
   emptyMessage?: string;
 }) {
@@ -56,11 +60,13 @@ export function AppointmentList({
     return <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">{emptyMessage}</p>;
   }
   const now = new Date();
+  const unreadSlugs = new Set(unreadAppointmentSlugs);
   const orderedAppointments = orderAppointmentsForRole(appointments, role, now);
   return (
     <div className="grid gap-3">
       {orderedAppointments.map((appointment) => {
         const needsAttention = appointmentNeedsAttention(appointment, role, now);
+        const isUnread = unreadSlugs.has(appointment.routeSlug);
         const reviewedByActor = hasAppointmentReview(appointment, role);
         const ownReview = appointment.reviews.find((review) => review.authorRole === role);
         const counterpartRatings = role === "PATIENT"
@@ -83,7 +89,8 @@ export function AppointmentList({
         return <Card
           key={appointment.routeSlug}
           className={cn(
-            "group relative h-full cursor-pointer transition duration-150 hover:bg-muted/15 hover:shadow-sm hover:ring-primary/35 has-focus-visible:bg-muted/15 has-focus-visible:ring-primary/35",
+            "group relative h-full cursor-pointer transition duration-150 hover:bg-accent/45 hover:shadow-sm hover:ring-primary/35 has-focus-visible:bg-accent/45 has-focus-visible:ring-primary/35 dark:hover:bg-muted/40 dark:has-focus-visible:bg-muted/40",
+            isUnread && "bg-primary/[0.04] ring-1 ring-primary/30 hover:bg-primary/[0.07] hover:ring-primary/45",
             needsAttention && "border-orange-400/70 bg-orange-500/10 ring-1 ring-orange-400/30 hover:bg-orange-500/15 hover:ring-orange-400/60",
           )}
         >
@@ -95,8 +102,9 @@ export function AppointmentList({
             <span className="sr-only">Vezi detaliile</span>
           </Link>
           <CardContent className="pointer-events-none relative z-10 space-y-3 p-4 sm:p-5">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+            <div className="space-y-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                <div className="min-w-0">
                 <p className="font-semibold">{appointment.treatmentNameSnapshot}</p>
                 <p className="text-sm text-muted-foreground">
                   {formatAppointmentInterval(appointment.scheduledStartsAt, appointment.scheduledEndsAt)}
@@ -104,14 +112,31 @@ export function AppointmentList({
                 <p className="text-sm text-muted-foreground">
                   {role === "PATIENT" ? appointment.studentNameSnapshot : appointment.patientNameSnapshot} · {appointment.locationNameSnapshot}
                 </p>
-                <div className="pointer-events-auto relative z-20 mt-2 flex flex-wrap items-center gap-2">
-                  <RatingStars {...counterpartSummary} className="gap-1.5" />
-                  {counterpartProfileHref ? <Button asChild variant="outline" size="sm"><Link href={counterpartProfileHref}>Vezi recenziile</Link></Button> : null}
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-2">
+                  {isUnread ? (
+                    <span className="w-fit rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                      Nou
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      "w-fit rounded-full border px-2.5 py-1 text-xs font-medium",
+                      needsAttention && "border-orange-500/40 bg-orange-500/10 text-orange-700 dark:text-orange-300",
+                      !needsAttention && appointment.status === "CONFIRMED" && "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+                      !needsAttention && appointment.status === "PENDING" && "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+                      !needsAttention && appointment.status === "COMPLETED" && "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+                      !needsAttention && !["CONFIRMED", "PENDING", "COMPLETED"].includes(appointment.status) && "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
+                    )}
+                  >
+                    {needsAttention ? attentionLabel : appointmentStatusLabels[appointment.status] ?? appointment.status}
+                  </span>
                 </div>
               </div>
-              <span className="w-fit rounded-full border px-2.5 py-1 text-xs font-medium">
-                {needsAttention ? attentionLabel : appointmentStatusLabels[appointment.status] ?? appointment.status}
-              </span>
+              <div className="pointer-events-auto relative z-20 flex flex-wrap items-center gap-2">
+                <RatingStars {...counterpartSummary} className="gap-1.5" />
+                {counterpartProfileHref ? <Button asChild variant="outline" size="sm"><Link href={counterpartProfileHref}>Vezi recenziile</Link></Button> : null}
+              </div>
             </div>
             {role === "STUDENT" && (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && appointment.patientNote ? (
               <div className="rounded-xl border bg-background/70 px-3 py-2.5">
@@ -125,14 +150,21 @@ export function AppointmentList({
             ) : null}
             {!compact && appointment.statusReason ? <p className="text-sm text-muted-foreground">Motiv: {appointment.statusReason}</p> : null}
             {ownReview?.rating ? (
-              <div className="rounded-xl border bg-background/65 px-3 py-2.5 text-sm">
+              <div className="pointer-events-auto relative z-20 rounded-xl border bg-background/65 px-3 py-2 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">Recenzia ta</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">Recenzia ta</p>
+                    <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                      Salvată
+                    </span>
+                  </div>
                   <span className="text-base tracking-wider text-orange-500" aria-label={`${ownReview.rating} din 5 stele`}>
                     {"★".repeat(ownReview.rating)}{"☆".repeat(5 - ownReview.rating)}
                   </span>
                 </div>
-                {ownReview.comment ? <p className="mt-1 whitespace-pre-line text-muted-foreground">{ownReview.comment}</p> : null}
+                {ownReview.comment ? (
+                  <ExpandableReviewComment comment={ownReview.comment} className="mt-1" />
+                ) : null}
                 {!ownReview.publishedAt ? <p className="mt-1 text-xs text-muted-foreground">Recenzia va deveni vizibilă după ce răspunde și cealaltă persoană.</p> : null}
               </div>
             ) : null}
@@ -150,7 +182,7 @@ export function AppointmentList({
               </div>
             ) : null}
             <span className="inline-flex items-center gap-1 text-sm font-medium">
-              Vezi detaliile <span aria-hidden="true" className="transition-transform group-hover:translate-x-0.5">→</span>
+              Vezi detaliile <span aria-hidden="true" className={clickableCardIndicatorClassName}>{">"}</span>
             </span>
           </CardContent>
         </Card>;

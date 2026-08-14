@@ -10,6 +10,7 @@ import type {
   parseUpdateAvailabilityInput,
 } from "@/lib/availability/availability-input";
 import {
+  bucharestPartsForInstant,
   localDateForInstant,
   localDateToPrismaDate,
 } from "@/lib/availability/bucharest-time";
@@ -25,6 +26,7 @@ export type AvailabilityDomainErrorCode =
   | "SLOT_NOT_FOUND"
   | "SLOT_ALREADY_STARTED"
   | "SLOT_OCCUPIED_REASON_REQUIRED"
+  | "SERIES_NOT_FOUND"
   | "STALE_VERSION"
   | "INVALID_INTERVAL"
   | "CONFLICT";
@@ -35,7 +37,10 @@ export class AvailabilityDomainError extends Error {
   }
 }
 
-const activeAppointmentStatuses = [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED];
+const activeAppointmentStatuses: AppointmentStatus[] = [
+  AppointmentStatus.PENDING,
+  AppointmentStatus.CONFIRMED,
+];
 
 const slotInclude = {
   studentLocation: { include: { city: true } },
@@ -138,7 +143,12 @@ function isTemporalConflict(error: unknown) {
 
 async function resolveActiveAppointments(
   transaction: Prisma.TransactionClient,
-  appointments: Array<{ id: string; status: AppointmentStatus; version: number }>,
+  appointments: Array<{
+    id: string;
+    status: AppointmentStatus;
+    version: number;
+    patientProfile: { userId: string };
+  }>,
   reason: string | null,
   actorUserId: string,
   now: Date,
@@ -162,6 +172,16 @@ async function resolveActiveAppointments(
         rejectedAt: pending ? now : undefined,
         cancelledAt: pending ? undefined : now,
         version: { increment: 1 },
+      },
+    });
+    await transaction.appointmentNotification.create({
+      data: {
+        appointmentId: appointment.id,
+        recipientUserId: appointment.patientProfile.userId,
+        eventType: pending
+          ? AppointmentStatus.REJECTED
+          : AppointmentStatus.CANCELLED_BY_STUDENT,
+        createdAt: now,
       },
     });
   }
@@ -199,6 +219,7 @@ export async function listStudentAvailability(studentProfileId: string, from: Da
   await prisma.$transaction(async (transaction) => {
     const series = await transaction.studentAvailabilitySeries.findMany({
       where: { studentProfileId, status: StudentAvailabilitySeriesStatus.ACTIVE },
+      orderBy: { id: "asc" },
       include: { offerings: true },
     });
     for (const item of series) {
@@ -304,7 +325,11 @@ export async function updateAvailability(
       const slot = await transaction.studentAvailabilitySlot.findFirst({
         where: { id: slotId, studentProfileId },
         include: {
-          appointments: { where: { status: { in: activeAppointmentStatuses } } },
+          series: true,
+          appointments: {
+            where: { status: { in: activeAppointmentStatuses } },
+            include: { patientProfile: { select: { userId: true } } },
+          },
           offerings: { where: { removedAt: null } },
         },
       });
@@ -319,6 +344,134 @@ export async function updateAvailability(
       const availabilityDurationMinutes = Math.round(
         (input.endsAt.getTime() - input.startsAt.getTime()) / 60_000,
       );
+
+      if (input.scope === "SERIES") {
+        if (!slot.series || !input.rule) {
+          throw new AvailabilityDomainError(
+            "SERIES_NOT_FOUND",
+            "Apariția selectată nu mai aparține unei serii active.",
+          );
+        }
+        if (slot.series.revision !== input.expectedSeriesRevision) {
+          throw new AvailabilityDomainError("STALE_VERSION", "Seria s-a modificat. Reîncarcă pagina.");
+        }
+        const localStart = bucharestPartsForInstant(input.startsAt);
+        const submittedMinuteOfDay = localStart.hour * 60 + localStart.minute;
+        if (
+          input.rule.startsOn !== localDateForInstant(input.startsAt) ||
+          input.rule.startMinuteOfDay !== submittedMinuteOfDay ||
+          input.rule.durationMinutes !== availabilityDurationMinutes
+        ) {
+          throw new AvailabilityDomainError(
+            "INVALID_INTERVAL",
+            "Regula seriei nu corespunde datei și intervalului selectat.",
+          );
+        }
+        await validateConfiguration(
+          transaction,
+          studentProfileId,
+          input.studentLocationId,
+          input.offerings,
+          input.rule.durationMinutes,
+        );
+
+        const affected = await transaction.studentAvailabilitySlot.findMany({
+          where: {
+            seriesId: slot.series.id,
+            status: StudentAvailabilitySlotStatus.ACTIVE,
+            ...(slot.sequenceNumber !== null
+              ? { sequenceNumber: { gte: slot.sequenceNumber } }
+              : { startsAt: { gte: slot.startsAt } }),
+          },
+          include: {
+            appointments: {
+              include: { patientProfile: { select: { userId: true } } },
+            },
+          },
+        });
+        const activeAppointments = affected.flatMap((item) =>
+          item.appointments.filter((appointment) =>
+            activeAppointmentStatuses.includes(appointment.status),
+          ),
+        );
+        await resolveActiveAppointments(
+          transaction,
+          activeAppointments,
+          input.appointmentReason,
+          actorUserId,
+          now,
+        );
+
+        const retainedIds = affected
+          .filter((item) => item.appointments.length > 0)
+          .map((item) => item.id);
+        const removableIds = affected
+          .filter((item) => item.appointments.length === 0)
+          .map((item) => item.id);
+        if (retainedIds.length > 0) {
+          await transaction.studentAvailabilitySlot.updateMany({
+            where: { id: { in: retainedIds } },
+            data: {
+              status: StudentAvailabilitySlotStatus.CANCELLED,
+              cancelledAt: now,
+              isException: true,
+              version: { increment: 1 },
+            },
+          });
+        }
+        if (removableIds.length > 0) {
+          await transaction.studentAvailabilitySlot.deleteMany({
+            where: { id: { in: removableIds } },
+          });
+        }
+        await transaction.studentAvailabilitySeries.update({
+          where: { id: slot.series.id, revision: slot.series.revision },
+          data: {
+            status: StudentAvailabilitySeriesStatus.CANCELLED,
+            revision: { increment: 1 },
+          },
+        });
+
+        const createdSeries = await transaction.studentAvailabilitySeries.create({
+          data: {
+            studentProfileId,
+            studentLocationId: input.studentLocationId,
+            startsOn: localDateToPrismaDate(input.rule.startsOn)!,
+            startMinuteOfDay: input.rule.startMinuteOfDay,
+            weekdays: input.rule.weekdays,
+            intervalWeeks: input.rule.intervalWeeks,
+            durationMinutes: input.rule.durationMinutes,
+            endMode: input.rule.endMode,
+            endsOn: input.rule.endsOn ? localDateToPrismaDate(input.rule.endsOn) : null,
+            occurrenceCount: input.rule.occurrenceCount,
+          },
+          select: { id: true },
+        });
+        await transaction.studentAvailabilitySeriesOffering.createMany({
+          data: input.offerings.map((item) => ({
+            seriesId: createdSeries.id,
+            studentProfileId,
+            ...item,
+          })),
+        });
+        const replacement = await transaction.studentAvailabilitySeries.findUniqueOrThrow({
+          where: { id: createdSeries.id },
+          include: { offerings: true },
+        });
+        const materialized = await materializeSeriesThrough(
+          transaction,
+          replacement,
+          defaultMaterializationDate(),
+        );
+        if (!materialized.occurrences.some((item) => item.startsAt > now)) {
+          throw new AvailabilityDomainError(
+            "SLOT_ALREADY_STARTED",
+            "Seria trebuie să conțină cel puțin o apariție viitoare.",
+          );
+        }
+        return replacement;
+      }
+
       await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings, availabilityDurationMinutes);
       await resolveActiveAppointments(transaction, slot.appointments, input.appointmentReason, actorUserId, now);
 
@@ -387,9 +540,17 @@ export async function cancelAvailability(
       : { id: slot.id, status: StudentAvailabilitySlotStatus.ACTIVE };
     const affected = await transaction.studentAvailabilitySlot.findMany({
       where,
-      include: { appointments: { where: { status: { in: activeAppointmentStatuses } } } },
+      include: {
+        appointments: {
+          include: { patientProfile: { select: { userId: true } } },
+        },
+      },
     });
-    const appointments = affected.flatMap((item) => item.appointments);
+    const appointments = affected.flatMap((item) =>
+      item.appointments.filter((appointment) =>
+        activeAppointmentStatuses.includes(appointment.status),
+      ),
+    );
     await resolveActiveAppointments(transaction, appointments, input.appointmentReason, actorUserId, now);
 
     const occupiedIds = affected.filter((item) => item.appointments.length > 0).map((item) => item.id);

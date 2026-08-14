@@ -4,8 +4,9 @@ import { notFound } from "next/navigation";
 
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
+import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { ageOnDate } from "@/lib/availability/bucharest-time";
@@ -64,12 +65,9 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
   return (
     <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-5xl space-y-8">
-        <Link href={isOwner ? "/cont/profil-pacient" : "/cont/programari"} className="text-sm font-medium text-muted-foreground hover:text-foreground">
-          ← Înapoi
-        </Link>
+        <BackLink href={isOwner ? "/cont/profil-pacient" : "/cont/programari"}>Înapoi</BackLink>
         <header className="space-y-3">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Profil pacient</p>
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{patient.user.name}</h1>
             {age !== null ? <p className="mt-1 text-muted-foreground">{age} ani</p> : null}
           </div>
@@ -84,17 +82,10 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
           </section>
         ) : null}
 
-        <Card>
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
-            <div>
-              <p className="font-semibold">Reputație de programare</p>
-              <p className="text-sm text-muted-foreground">Sunt luate în calcul ultimele 10 programări confirmate.</p>
-            </div>
-            <span className="rounded-full border px-3 py-1 text-sm font-medium">
-              {formatLateCancellationReputation(lateCancellationsLast10)}
-            </span>
-          </CardContent>
-        </Card>
+        <SchedulingReputationCard
+          description="Sunt luate în calcul ultimele 10 programări confirmate."
+          value={formatLateCancellationReputation(lateCancellationsLast10)}
+        />
 
         <ProfileReviewList data={reviewData} title="Recenziile pacientului" />
       </div>

@@ -597,11 +597,6 @@ export function StudentCalendarPrototype() {
               scrollTimeReset={false}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Selectează un interval liber pentru a crea un slot. Poți muta numai
-            disponibilitățile fără cereri sau programări; durata rămâne cea a
-            tratamentului.
-          </p>
         </CardContent>
       </Card>
 

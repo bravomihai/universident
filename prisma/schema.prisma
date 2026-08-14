@@ -26,6 +26,7 @@ model User {
   studentProfile           StudentProfile?
   patientProfile           PatientProfile?
   appointmentStatusChanges Appointment[]       @relation("AppointmentStatusChangedBy")
+  appointmentNotifications AppointmentNotification[]
   reviewsAuthored          AppointmentReview[] @relation("AppointmentReviewAuthor")
   reviewsReceived          AppointmentReview[] @relation("AppointmentReviewTarget")
 
@@ -297,12 +298,28 @@ model Appointment {
   availabilityOffering StudentAvailabilitySlotOffering @relation(fields: [studentAvailabilitySlotOfferingId, studentAvailabilitySlotId], references: [id, slotId], onDelete: Restrict)
   statusChangedByUser  User?                           @relation("AppointmentStatusChangedBy", fields: [statusChangedByUserId], references: [id], onDelete: SetNull)
   reviews              AppointmentReview[]
+  notifications        AppointmentNotification[]
 
   @@index([patientProfileId, status, scheduledStartsAt])
   @@index([studentProfileId, status, scheduledStartsAt])
   @@index([studentAvailabilitySlotId, status])
   @@index([studentAvailabilitySlotOfferingId, status])
   @@map("appointment")
+}
+
+model AppointmentNotification {
+  id              String    @id @default(cuid())
+  appointmentId   String
+  recipientUserId String
+  eventType       String    @db.VarChar(64)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  recipient   User        @relation(fields: [recipientUserId], references: [id], onDelete: Restrict)
+
+  @@index([recipientUserId, createdAt])
+  @@index([appointmentId, recipientUserId])
+  @@map("appointment_notification")
 }
 
 model AppointmentReview {

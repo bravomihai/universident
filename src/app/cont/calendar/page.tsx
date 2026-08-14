@@ -1,9 +1,9 @@
 import { CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { StudentCalendar } from "@/components/student-calendar/student-calendar";
+import { BackLink } from "@/components/ui/back-link";
 import { prisma } from "@/lib/prisma";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
@@ -28,12 +28,7 @@ export default async function StudentCalendarPage() {
     <main className="flex flex-1 justify-center px-3 py-8 sm:px-6 sm:py-12">
       <div className="w-full max-w-[90rem] space-y-6">
         <header className="space-y-4">
-          <Link
-            href="/cont"
-            className="inline-flex rounded-md text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          >
-            ← Înapoi la cont
-          </Link>
+          <BackLink href="/cont">Înapoi la cont</BackLink>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">
@@ -48,7 +43,6 @@ export default async function StudentCalendarPage() {
                 Creează sloturi unice sau recurente și gestionează cererile pacienților.
               </p>
             </div>
-            <span className="w-fit rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">Europe/Bucharest</span>
           </div>
         </header>
 
