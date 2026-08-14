@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
+import { orderAppointmentsForRole } from "@/lib/appointments/appointment-presentation";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
@@ -33,6 +34,10 @@ export default async function StudentProfilePage() {
             bio: true,
         },
     }), listAppointmentsForUser(session.user.id, UserRole.STUDENT)]);
+    const appointmentPreview = orderAppointmentsForRole(
+        appointmentData.appointments,
+        "STUDENT",
+    ).slice(0, 5);
 
     return (
         <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -79,7 +84,7 @@ export default async function StudentProfilePage() {
                         <div><h2 id="student-profile-appointments" className="text-xl font-semibold">Programările tale</h2><p className="text-sm text-muted-foreground">Cererile pacienților apar numai în contul tău privat.</p></div>
                         <Link href="/cont/programari" className="text-sm font-medium hover:underline">Vezi toate</Link>
                     </div>
-                    <AppointmentList appointments={appointmentData.appointments.slice(0, 5)} role="STUDENT" compact />
+                    <AppointmentList appointments={appointmentPreview} role="STUDENT" compact />
                 </section>
             </div>
         </main>

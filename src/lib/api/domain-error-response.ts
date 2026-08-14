@@ -6,6 +6,8 @@ export function domainErrorResponse(error: unknown, fallback: string) {
     const conflictCodes = new Set([
       "SLOT_UNAVAILABLE",
       "PATIENT_TIME_CONFLICT",
+      "REVIEW_ALREADY_SUBMITTED",
+      "REVIEW_REQUIRED",
       "STALE_VERSION",
       "CONFLICT",
     ]);

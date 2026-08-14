@@ -52,6 +52,38 @@ export function parseExpectedVersion(value: unknown) {
   return { ok: true, data: value } as const;
 }
 
+function parseReviewRating(value: unknown): ParseResult<number> {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 5) {
+    return { ok: false, error: "Alege un rating între 1 și 5 stele." };
+  }
+  return { ok: true, data: value };
+}
+
+function parseReviewComment(value: unknown): ParseResult<string | null> {
+  if (value === undefined || value === null || value === "") {
+    return { ok: true, data: null };
+  }
+  if (typeof value !== "string") {
+    return { ok: false, error: "Comentariul recenziei trebuie să fie text." };
+  }
+  const comment = value.trim();
+  if (comment.length > 1000) {
+    return { ok: false, error: "Comentariul poate avea cel mult 1.000 de caractere." };
+  }
+  return { ok: true, data: comment || null };
+}
+
+export function parseAppointmentReviewInput(value: unknown) {
+  if (!isRecord(value)) {
+    return { ok: false, error: "Datele trimise nu sunt valide." } as const;
+  }
+  const rating = parseReviewRating(value.rating);
+  if (!rating.ok) return rating;
+  const comment = parseReviewComment(value.comment);
+  if (!comment.ok) return comment;
+  return { ok: true, data: { rating: rating.data, comment: comment.data } } as const;
+}
+
 export function parseCreateAppointmentInput(value: unknown) {
   if (!isRecord(value)) {
     return { ok: false, error: "Datele trimise nu sunt valide." } as const;
@@ -97,12 +129,22 @@ export function parseAppointmentActionInput(value: unknown) {
     if (!parsedReason.ok) return parsedReason;
     reason = parsedReason.data;
   }
+  let rating: number | null = null;
+  let comment: string | null = null;
+  if (value.action === "COMPLETE" || value.action === "NO_SHOW") {
+    const review = parseAppointmentReviewInput(value);
+    if (!review.ok) return review;
+    rating = review.data.rating;
+    comment = review.data.comment;
+  }
   return {
     ok: true,
     data: {
       action: value.action as "CONFIRM" | "REJECT" | "CANCEL" | "COMPLETE" | "NO_SHOW",
       expectedVersion: expectedVersion.data,
       reason,
+      rating,
+      comment,
     },
   } as const;
 }

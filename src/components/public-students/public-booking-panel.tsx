@@ -46,14 +46,17 @@ function bookingEvent(slot: PublicSlot, selected: boolean): EventInput {
     title: slot.treatmentLocation.studentTreatment.treatment.name,
     start: slot.startsAt,
     end: slot.endsAt,
-    classNames: ["calendar-event-available", selected ? "calendar-event-selected" : ""],
-    extendedProps: { slot },
+    classNames: selected
+      ? ["calendar-event-available", "calendar-event-selected"]
+      : ["calendar-event-available"],
+    extendedProps: { slot, selected },
   };
 }
 
 function BookingEventContent({ event, timeText }: EventContentArg) {
   const slot = event.extendedProps.slot as PublicSlot | undefined;
   if (!slot) return <span className="p-1 text-xs">{timeText}</span>;
+  const selected = event.extendedProps.selected === true;
   return (
     <div className="min-w-0 p-1 leading-tight" data-booking-slot-id={slot.id}>
       <p className="truncate text-[11px] font-semibold sm:text-xs">
@@ -63,6 +66,11 @@ function BookingEventContent({ event, timeText }: EventContentArg) {
         {slot.treatmentLocation.studentLocation.name}
       </p>
       <p className="truncate text-[10px] opacity-75">{timeText}</p>
+      {selected ? (
+        <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wide">
+          Selectat
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -301,11 +309,16 @@ export function PublicBookingPanel({
       {selectedSlot && !createdSlug ? (
         <Card className="border-primary/40">
           <CardContent className="space-y-4 p-5">
-            <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
               <p className="font-semibold">{selectedSlot.treatmentLocation.studentTreatment.treatment.name}</p>
               <p className="text-sm text-muted-foreground">{formatAppointmentInterval(selectedSlot.startsAt, selectedSlot.endsAt)}</p>
               <p className="text-sm text-muted-foreground">{selectedSlot.treatmentLocation.studentLocation.name} · {selectedSlot.treatmentLocation.studentLocation.city.name}</p>
               <p className="text-sm text-muted-foreground">{selectedSlot.treatmentLocation.studentLocation.address}</p>
+              </div>
+              <span className="w-fit rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                Selectat
+              </span>
             </div>
             {patientState === "ready" ? (
               <>

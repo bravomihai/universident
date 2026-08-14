@@ -116,7 +116,11 @@ function slotClassName(slot: CalendarSlot) {
   if (slot.status === "CANCELLED") return "calendar-event-cancelled";
   const appointment = slot.appointments[0];
   if (appointment?.status === "PENDING") return "calendar-event-pending";
-  if (appointment?.status === "CONFIRMED") return "calendar-event-confirmed";
+  if (appointment?.status === "CONFIRMED") {
+    return new Date(slot.endsAt) <= new Date()
+      ? "calendar-event-action-required"
+      : "calendar-event-confirmed";
+  }
   if (slot.isException) return "calendar-event-exception";
   return "calendar-event-available";
 }
@@ -124,6 +128,9 @@ function slotClassName(slot: CalendarSlot) {
 function slotStatus(slot: CalendarSlot) {
   if (slot.status === "CANCELLED") return "Apariție anulată";
   const appointment = slot.appointments[0];
+  if (appointment?.status === "CONFIRMED" && new Date(slot.endsAt) <= new Date()) {
+    return "Necesită închidere";
+  }
   if (appointment) return appointmentStatusLabels[appointment.status] ?? appointment.status;
   return slot.isException ? "Excepție mutată" : "Disponibil";
 }
@@ -506,7 +513,12 @@ export function StudentCalendar() {
             {selectedSlot.appointments[0] ? (
               <div className="rounded-xl border bg-muted/20 p-3 text-sm">
                 <p className="font-medium">{selectedSlot.appointments[0].patientNameSnapshot}, {selectedSlot.appointments[0].patientAgeAtAppointment} ani</p>
-                {selectedSlot.appointments[0].patientNote ? <p className="mt-1 whitespace-pre-line text-muted-foreground">{selectedSlot.appointments[0].patientNote}</p> : null}
+                {selectedSlot.appointments[0].patientNote ? (
+                  <div className="mt-2 rounded-lg border bg-background/70 px-3 py-2.5">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Mesajul pacientului</p>
+                    <p className="mt-1 whitespace-pre-line font-semibold text-foreground">{selectedSlot.appointments[0].patientNote}</p>
+                  </div>
+                ) : null}
                 <div className="mt-3">
                   <AppointmentActions
                     appointmentSlug={selectedSlot.appointments[0].routeSlug}
@@ -514,6 +526,8 @@ export function StudentCalendar() {
                     status={selectedSlot.appointments[0].status}
                     role="STUDENT"
                     startsAt={selectedSlot.appointments[0].scheduledStartsAt}
+                    endsAt={selectedSlot.endsAt}
+                    reviewedByActor={false}
                     onSuccess={() => void load()}
                   />
                 </div>

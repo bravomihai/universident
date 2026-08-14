@@ -1,11 +1,13 @@
 "use client";
 
+import { Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-type Action = "CONFIRM" | "REJECT" | "CANCEL" | "COMPLETE" | "NO_SHOW";
+type Action = "CONFIRM" | "REJECT" | "CANCEL" | "COMPLETE" | "NO_SHOW" | "REVIEW";
 
 export function AppointmentActions({
   appointmentSlug,
@@ -13,6 +15,8 @@ export function AppointmentActions({
   status,
   role,
   startsAt,
+  endsAt,
+  reviewedByActor,
   onSuccess,
 }: {
   appointmentSlug: string;
@@ -20,12 +24,24 @@ export function AppointmentActions({
   status: string;
   role: "PATIENT" | "STUDENT";
   startsAt: string;
+  endsAt: string;
+  reviewedByActor: boolean;
   onSuccess?: () => void;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<Action | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const started = new Date(startsAt) <= new Date();
+  const [rating, setRating] = useState<number | null>(null);
+  const [comment, setComment] = useState("");
+  const now = new Date();
+  const started = new Date(startsAt) <= now;
+  const ended = new Date(endsAt) <= now;
+
+  const patientCanCancel = role === "PATIENT" && !started && (status === "PENDING" || status === "CONFIRMED");
+  const studentPending = role === "STUDENT" && !started && status === "PENDING";
+  const studentCanCancel = role === "STUDENT" && !started && status === "CONFIRMED";
+  const studentCanFinish = role === "STUDENT" && ended && status === "CONFIRMED";
+  const reviewNeeded = (status === "COMPLETED" || status === "NO_SHOW") && !reviewedByActor;
 
   async function act(action: Action) {
     let reason: string | null = null;
@@ -36,16 +52,40 @@ export function AppointmentActions({
         return;
       }
     }
+    if ((action === "COMPLETE" || action === "NO_SHOW" || action === "REVIEW") && rating === null) {
+      setError("Alege un rating între 1 și 5 stele.");
+      return;
+    }
+
     setPending(action);
     setError(null);
     try {
-      const response = await fetch(`/api/programari/${encodeURIComponent(appointmentSlug)}/actiuni`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, expectedVersion: version, reason }),
-      });
+      const reviewOnly = action === "REVIEW";
+      const response = await fetch(
+        reviewOnly
+          ? `/api/programari/${encodeURIComponent(appointmentSlug)}/recenzie`
+          : `/api/programari/${encodeURIComponent(appointmentSlug)}/actiuni`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            reviewOnly
+              ? { rating, comment }
+              : {
+                  action,
+                  expectedVersion: version,
+                  reason,
+                  ...(action === "COMPLETE" || action === "NO_SHOW"
+                    ? { rating, comment }
+                    : {}),
+                },
+          ),
+        },
+      );
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Programarea nu a putut fi actualizată.");
+      setRating(null);
+      setComment("");
       onSuccess?.();
       router.refresh();
     } catch (caught) {
@@ -55,20 +95,58 @@ export function AppointmentActions({
     }
   }
 
-  const patientCanCancel = role === "PATIENT" && !started && (status === "PENDING" || status === "CONFIRMED");
-  const studentPending = role === "STUDENT" && !started && status === "PENDING";
-  const studentCanCancel = role === "STUDENT" && !started && status === "CONFIRMED";
-  const studentCanFinish = role === "STUDENT" && started && status === "CONFIRMED";
+  const reviewFields = studentCanFinish || reviewNeeded ? (
+    <div className="space-y-3 rounded-xl border border-orange-400/60 bg-orange-500/10 p-3">
+      <div>
+        <p className="font-medium">
+          {studentCanFinish ? "Închide programarea și evaluează pacientul" : `Evaluează ${role === "PATIENT" ? "studentul" : "pacientul"}`}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Ratingul este obligatoriu. Comentariul este opțional, iar recenziile devin vizibile după ce răspund amândoi.
+        </p>
+      </div>
+      <fieldset>
+        <legend className="sr-only">Rating</legend>
+        <div className="flex gap-1" aria-label="Rating de la 1 la 5 stele">
+          {[1, 2, 3, 4, 5].map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-label={`${value} ${value === 1 ? "stea" : "stele"}`}
+              aria-pressed={rating === value}
+              className="rounded-md p-1 text-orange-500 outline-none transition hover:scale-105 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              onClick={() => setRating(value)}
+            >
+              <Star className={cn("size-6", rating !== null && value <= rating && "fill-current")} />
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <label className="block space-y-1 text-sm">
+        <span className="font-medium">Comentariu opțional</span>
+        <textarea
+          value={comment}
+          maxLength={1000}
+          rows={3}
+          onChange={(event) => setComment(event.target.value)}
+          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          placeholder="Scrie pe scurt cum a decurs experiența."
+        />
+      </label>
+    </div>
+  ) : null;
 
-  if (!patientCanCancel && !studentPending && !studentCanCancel && !studentCanFinish) return null;
+  if (!patientCanCancel && !studentPending && !studentCanCancel && !studentCanFinish && !reviewNeeded) return null;
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {reviewFields}
       <div className="flex flex-wrap gap-2">
         {studentPending ? <Button disabled={pending !== null} onClick={() => void act("CONFIRM")}>Confirmă</Button> : null}
         {studentPending ? <Button variant="destructive" disabled={pending !== null} onClick={() => void act("REJECT")}>Respinge</Button> : null}
         {patientCanCancel || studentCanCancel ? <Button variant="destructive" disabled={pending !== null} onClick={() => void act("CANCEL")}>Anulează</Button> : null}
-        {studentCanFinish ? <Button disabled={pending !== null} onClick={() => void act("COMPLETE")}>Finalizată</Button> : null}
-        {studentCanFinish ? <Button variant="outline" disabled={pending !== null} onClick={() => void act("NO_SHOW")}>Neprezentare</Button> : null}
+        {studentCanFinish ? <Button disabled={pending !== null} onClick={() => void act("COMPLETE")}>Pacientul a venit</Button> : null}
+        {studentCanFinish ? <Button variant="outline" disabled={pending !== null} onClick={() => void act("NO_SHOW")}>Nu s-a prezentat</Button> : null}
+        {reviewNeeded ? <Button disabled={pending !== null} onClick={() => void act("REVIEW")}>Trimite recenzia</Button> : null}
       </div>
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
     </div>

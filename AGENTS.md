@@ -40,12 +40,16 @@ npx prisma db seed
 - A patient can request a slot until its start time. At the start time an unconfirmed request becomes `EXPIRED`.
 - Confirming one request atomically marks the patient's other overlapping pending requests as `SUPERSEDED`.
 - A slot can have only one active (`PENDING` or `CONFIRMED`) appointment.
-- Patients can cancel only before the start time. Students use `COMPLETED` or `NO_SHOW` after the start time.
+- Patients can cancel only before the start time. Students use `COMPLETED` or `NO_SHOW` after the scheduled end time.
 - Patient cancellation, student rejection, student cancellation, and pending withdrawal require a trimmed reason of 20–500 characters.
-- A patient cancellation is late only when the appointment was confirmed and is cancelled less than two hours before its start. Track both rolling-12-month and lifetime counts; do not apply an automatic penalty yet.
+- A patient cancellation is late only when the appointment was confirmed and is cancelled less than two hours before its start. The application-wide reputation benchmark is the number of late cancellations among the patient's 10 most recent confirmed appointments; do not expose rolling-period or lifetime counters and do not apply an automatic penalty yet.
 - Moving or cancelling an occupied availability occurrence must atomically reject its pending request or cancel its confirmed appointment with a required reason. Never move the patient's appointment to the new time.
 - Appointments retain their scheduled time, names, treatment, location, address, supervisor, age, and note snapshots even when the underlying availability or professional resources later change.
 - Use serializable transactions and optimistic `version`/`revision` checks for scheduling writes. Database constraints are the final defense against slot and time overlaps.
+- After the scheduled end, a confirmed appointment remains active and highlighted until the student records `COMPLETED` or `NO_SHOW` together with a required 1–5 rating; the review comment is optional.
+- A completed or no-show appointment remains active and highlighted separately for each participant until that participant submits a 1–5 rating. Archive state is therefore derived per role.
+- A patient with an outstanding review cannot create a new appointment request. A student with an overdue confirmed appointment or missing review cannot confirm a new request. Never block one participant on the other participant's unfinished review.
+- Reviews are blind: keep both unpublished until patient and student have submitted, then publish both atomically.
 
 ## Patient data and privacy
 
@@ -65,7 +69,7 @@ npx prisma db seed
 
 ## Future features
 
-- Completed appointments are designed to support one patient-to-student and one student-to-patient review. The schema exists, but review submission and publication policy are not implemented yet.
+- Public review summaries and moderation are not implemented yet. Private appointment review submission and blind publication are part of the current workflow.
 - Chat is not part of the current MVP. If added, scope it to an appointment and do not expose private account data.
 
 ## Change quality

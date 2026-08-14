@@ -213,6 +213,9 @@
   }
 
   .student-calendar .calendar-event-selected {
+    border-color: var(--primary) !important;
+    background: color-mix(in oklch, var(--primary) 45%, var(--card)) !important;
+    color: var(--foreground) !important;
     box-shadow:
       0 0 0 2px var(--background),
       0 0 0 4px var(--primary) !important;
@@ -232,6 +235,13 @@
     border-color: color-mix(in oklch, #3b82f6 70%, var(--border)) !important;
     background: color-mix(in oklch, #3b82f6 30%, var(--card)) !important;
     color: var(--foreground) !important;
+  }
+
+  .student-calendar .calendar-event-action-required {
+    border-color: color-mix(in oklch, #f97316 82%, var(--border)) !important;
+    background: color-mix(in oklch, #f97316 34%, var(--card)) !important;
+    color: var(--foreground) !important;
+    box-shadow: inset 3px 0 0 #f97316;
   }
 
   .student-calendar .calendar-event-exception {

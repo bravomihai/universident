@@ -25,6 +25,7 @@ import {
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
+import { orderAppointmentsForRole } from "@/lib/appointments/appointment-presentation";
 import { prisma } from "@/lib/prisma";
 import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
 
@@ -118,6 +119,10 @@ export default async function AccountPage() {
     session.user.role === UserRole.PATIENT || session.user.role === UserRole.STUDENT
       ? await listAppointmentsForUser(session.user.id, session.user.role)
       : null;
+  const appointmentRole = isStudent ? "STUDENT" : "PATIENT";
+  const appointmentPreview = appointmentData
+    ? orderAppointmentsForRole(appointmentData.appointments, appointmentRole).slice(0, 3)
+    : [];
 
   const studentData = isStudent
     ? await (async () => {
@@ -395,13 +400,13 @@ export default async function AccountPage() {
               <Button asChild variant="outline" size="sm"><Link href="/cont/programari">Vezi toate programările</Link></Button>
             </div>
             <AppointmentList
-              appointments={appointmentData.appointments.slice(0, 3)}
-              role={isStudent ? "STUDENT" : "PATIENT"}
+              appointments={appointmentPreview}
+              role={appointmentRole}
               compact
             />
             {!isStudent && appointmentData.reputation ? (
               <p className="text-xs text-muted-foreground">
-                Reputație: {appointmentData.reputation.lateCancellations12Months} anulări confirmate cu mai puțin de 2 ore în ultimele 12 luni.
+                Reputație: {appointmentData.reputation.lateCancellationsLast10} anulări târzii în ultimele 10 programări.
               </p>
             ) : null}
           </section>

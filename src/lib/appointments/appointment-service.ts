@@ -1,7 +1,12 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { AppointmentStatus, UserRole } from "@/generated/prisma/enums";
+import {
+  AppointmentReviewAuthorRole,
+  AppointmentStatus,
+  UserRole,
+} from "@/generated/prisma/enums";
 import type {
   parseAppointmentActionInput,
+  parseAppointmentReviewInput,
   parseCreateAppointmentInput,
 } from "@/lib/appointments/appointment-input";
 import {
@@ -24,6 +29,9 @@ export type AppointmentDomainErrorCode =
   | "ALREADY_STARTED"
   | "NOT_STARTED"
   | "PATIENT_TIME_CONFLICT"
+  | "REVIEW_REQUIRED"
+  | "REVIEW_ALREADY_SUBMITTED"
+  | "REVIEW_NOT_AVAILABLE"
   | "STALE_VERSION";
 
 export class AppointmentDomainError extends Error {
@@ -59,7 +67,44 @@ const appointmentInclude = {
       },
     },
   },
+  reviews: {
+    select: {
+      authorRole: true,
+      submittedAt: true,
+    },
+  },
 } satisfies Prisma.AppointmentInclude;
+
+function privateAppointmentInclude(userId: string) {
+  return {
+    ...appointmentInclude,
+    reviews: {
+      where: { authorUserId: userId },
+      select: {
+        authorRole: true,
+        rating: true,
+        comment: true,
+        submittedAt: true,
+        publishedAt: true,
+      },
+    },
+  } satisfies Prisma.AppointmentInclude;
+}
+
+async function publishAppointmentReviews(
+  transaction: Prisma.TransactionClient,
+  appointmentId: string,
+  now: Date,
+) {
+  const submitted = await transaction.appointmentReview.count({
+    where: { appointmentId },
+  });
+  if (submitted < 2) return;
+  await transaction.appointmentReview.updateMany({
+    where: { appointmentId, publishedAt: null },
+    data: { publishedAt: now },
+  });
+}
 
 export async function expirePendingAppointments(
   transaction: Prisma.TransactionClient,
@@ -173,6 +218,20 @@ export async function createAppointmentRequest(
           patientUser,
           input.dateOfBirth,
         );
+        const reviewRequired = await transaction.appointment.findFirst({
+          where: {
+            patientProfileId: patient.id,
+            status: { in: [AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW] },
+            reviews: { none: { authorRole: AppointmentReviewAuthorRole.PATIENT } },
+          },
+          select: { routeSlug: true },
+        });
+        if (reviewRequired) {
+          throw new AppointmentDomainError(
+            "REVIEW_REQUIRED",
+            "Lasă recenzia pentru programarea anterioară înainte de a trimite o cerere nouă.",
+          );
+        }
         const age = ageOnDate(patient.dateOfBirth!, slot.startsAt);
         if (age < 18 || age > 130) {
           throw new AppointmentDomainError(
@@ -229,30 +288,31 @@ export async function listAppointmentsForUser(userId: string, role: UserRole) {
         where: { userId },
         select: { id: true, profileSlug: true, dateOfBirth: true },
       });
-      if (!patient) return { appointments: [], patientProfile: null, reputation: { lateCancellations12Months: 0, lateCancellationsLifetime: 0 } };
-      const rollingStart = new Date();
-      rollingStart.setUTCFullYear(rollingStart.getUTCFullYear() - 1);
-      const [appointments, lateCancellations12Months, lateCancellationsLifetime] = await Promise.all([
+      if (!patient) return { appointments: [], patientProfile: null, reputation: { lateCancellationsLast10: 0 } };
+      const [appointments, recentConfirmedAppointments] = await Promise.all([
         transaction.appointment.findMany({
           where: { patientProfileId: patient.id },
           orderBy: { scheduledStartsAt: "desc" },
-          include: appointmentInclude,
+          include: privateAppointmentInclude(userId),
         }),
-        transaction.appointment.count({
-          where: { patientProfileId: patient.id, isLateCancellation: true, cancelledAt: { gte: rollingStart } },
-        }),
-        transaction.appointment.count({
-          where: { patientProfileId: patient.id, isLateCancellation: true },
+        transaction.appointment.findMany({
+          where: { patientProfileId: patient.id, confirmedAt: { not: null } },
+          orderBy: { scheduledStartsAt: "desc" },
+          take: 10,
+          select: { isLateCancellation: true },
         }),
       ]);
-      return { appointments, patientProfile: patient, reputation: { lateCancellations12Months, lateCancellationsLifetime } };
+      const lateCancellationsLast10 = recentConfirmedAppointments.filter(
+        (appointment) => appointment.isLateCancellation,
+      ).length;
+      return { appointments, patientProfile: patient, reputation: { lateCancellationsLast10 } };
     }
     const student = await transaction.studentProfile.findUnique({ where: { userId }, select: { id: true } });
     if (!student) return { appointments: [], patientProfile: null, reputation: null };
     const appointments = await transaction.appointment.findMany({
       where: { studentProfileId: student.id },
       orderBy: { scheduledStartsAt: "desc" },
-      include: appointmentInclude,
+      include: privateAppointmentInclude(userId),
     });
     return { appointments, patientProfile: null, reputation: null };
   });
@@ -271,7 +331,7 @@ export async function getAppointmentForUser(
         ? { patientProfile: { userId } }
         : { studentProfile: { userId } }),
     },
-    include: appointmentInclude,
+    include: privateAppointmentInclude(userId),
   });
 }
 
@@ -313,6 +373,29 @@ export async function actOnAppointment(
             throw new AppointmentDomainError("ACTION_NOT_ALLOWED", "Cererea nu poate fi confirmată.");
           }
           if (!beforeStart) throw new AppointmentDomainError("ALREADY_STARTED", "Ora programării a trecut.");
+          const unfinishedAppointment = await transaction.appointment.findFirst({
+            where: {
+              id: { not: appointment.id },
+              studentProfileId: appointment.studentProfileId,
+              OR: [
+                {
+                  status: AppointmentStatus.CONFIRMED,
+                  scheduledEndsAt: { lte: now },
+                },
+                {
+                  status: { in: [AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW] },
+                  reviews: { none: { authorRole: AppointmentReviewAuthorRole.STUDENT } },
+                },
+              ],
+            },
+            select: { routeSlug: true },
+          });
+          if (unfinishedAppointment) {
+            throw new AppointmentDomainError(
+              "REVIEW_REQUIRED",
+              "Închide programarea anterioară și lasă recenzia înainte de a accepta o cerere nouă.",
+            );
+          }
           const overlap = await transaction.appointment.findFirst({
             where: {
               id: { not: appointment.id },
@@ -363,7 +446,12 @@ export async function actOnAppointment(
           if (!isStudent || appointment.status !== AppointmentStatus.CONFIRMED) {
             throw new AppointmentDomainError("ACTION_NOT_ALLOWED", "Rezultatul nu poate fi înregistrat.");
           }
-          if (beforeStart) throw new AppointmentDomainError("NOT_STARTED", "Rezultatul poate fi înregistrat după ora de început.");
+          if (now < appointment.scheduledEndsAt) {
+            throw new AppointmentDomainError(
+              "NOT_STARTED",
+              "Rezultatul poate fi înregistrat după ora de final a programării.",
+            );
+          }
           status = input.action === "COMPLETE" ? AppointmentStatus.COMPLETED : AppointmentStatus.NO_SHOW;
           data = status === AppointmentStatus.COMPLETED ? { completedAt: now } : { noShowAt: now };
         }
@@ -379,6 +467,20 @@ export async function actOnAppointment(
           },
           include: appointmentInclude,
         });
+
+        if (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.NO_SHOW) {
+          await transaction.appointmentReview.create({
+            data: {
+              appointmentId: appointment.id,
+              authorUserId: actor.id,
+              targetUserId: appointment.patientProfile.userId,
+              authorRole: AppointmentReviewAuthorRole.STUDENT,
+              rating: input.rating!,
+              comment: input.comment,
+            },
+          });
+          await publishAppointmentReviews(transaction, appointment.id, now);
+        }
 
         if (status === AppointmentStatus.CONFIRMED) {
           await transaction.appointment.updateMany({
@@ -399,7 +501,13 @@ export async function actOnAppointment(
             },
           });
         }
-        return updated;
+        if (status !== AppointmentStatus.COMPLETED && status !== AppointmentStatus.NO_SHOW) {
+          return updated;
+        }
+        return transaction.appointment.findUniqueOrThrow({
+          where: { id: appointment.id },
+          include: appointmentInclude,
+        });
       },
       { isolationLevel: "Serializable" },
     );
@@ -408,6 +516,66 @@ export async function actOnAppointment(
       throw new AppointmentDomainError(
         "PATIENT_TIME_CONFLICT",
         "Pacientul are deja o programare confirmată care se suprapune.",
+      );
+    }
+    throw error;
+  }
+}
+
+export async function reviewAppointment(
+  routeSlug: string,
+  actor: { id: string; role: UserRole },
+  input: Parsed<typeof parseAppointmentReviewInput>,
+) {
+  try {
+    return await prisma.$transaction(
+      async (transaction) => {
+        await expirePendingAppointments(transaction);
+        const appointment = await transaction.appointment.findUnique({
+          where: { routeSlug },
+          include: { patientProfile: true, studentProfile: true },
+        });
+        if (!appointment) {
+          throw new AppointmentDomainError("APPOINTMENT_NOT_FOUND", "Programarea nu a fost găsită.");
+        }
+        const isPatient = actor.role === UserRole.PATIENT && appointment.patientProfile.userId === actor.id;
+        const isStudent = actor.role === UserRole.STUDENT && appointment.studentProfile.userId === actor.id;
+        if (!isPatient && !isStudent) {
+          throw new AppointmentDomainError("APPOINTMENT_NOT_FOUND", "Programarea nu a fost găsită.");
+        }
+        if (appointment.status !== AppointmentStatus.COMPLETED && appointment.status !== AppointmentStatus.NO_SHOW) {
+          throw new AppointmentDomainError(
+            "REVIEW_NOT_AVAILABLE",
+            "Recenzia poate fi trimisă după ce studentul închide programarea.",
+          );
+        }
+        const authorRole = isPatient
+          ? AppointmentReviewAuthorRole.PATIENT
+          : AppointmentReviewAuthorRole.STUDENT;
+        const targetUserId = isPatient
+          ? appointment.studentProfile.userId
+          : appointment.patientProfile.userId;
+        const now = new Date();
+        const review = await transaction.appointmentReview.create({
+          data: {
+            appointmentId: appointment.id,
+            authorUserId: actor.id,
+            targetUserId,
+            authorRole,
+            rating: input.rating,
+            comment: input.comment,
+          },
+        });
+        await publishAppointmentReviews(transaction, appointment.id, now);
+        return review;
+      },
+      { isolationLevel: "Serializable" },
+    );
+  } catch (error) {
+    if (isUniqueConflict(error)) {
+      throw new AppointmentDomainError(
+        "REVIEW_ALREADY_SUBMITTED",
+        "Ai trimis deja recenzia pentru această programare.",
       );
     }
     throw error;
