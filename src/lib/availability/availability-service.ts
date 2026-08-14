@@ -79,6 +79,7 @@ async function validateConfiguration(
   studentProfileId: string,
   studentLocationId: string,
   offerings: OfferingInput[],
+  availabilityDurationMinutes: number,
 ) {
   const [location, treatments, supervisors] = await Promise.all([
     transaction.studentLocation.findFirst({
@@ -92,7 +93,7 @@ async function validateConfiguration(
         deletedAt: null,
         treatment: { isActive: true },
       },
-      select: { id: true },
+      select: { id: true, durationMinutes: true, treatment: { select: { name: true } } },
     }),
     transaction.studentSupervisor.findMany({
       where: {
@@ -111,6 +112,15 @@ async function validateConfiguration(
     throw new AvailabilityDomainError(
       "RESOURCE_NOT_FOUND",
       "Locația, tratamentele sau supervizorii selectați nu mai sunt disponibili.",
+    );
+  }
+  const treatmentThatDoesNotFit = treatments.find(
+    (treatment) => treatment.durationMinutes > availabilityDurationMinutes,
+  );
+  if (treatmentThatDoesNotFit) {
+    throw new AvailabilityDomainError(
+      "INVALID_INTERVAL",
+      `Tratamentul „${treatmentThatDoesNotFit.treatment.name}” durează ${treatmentThatDoesNotFit.durationMinutes} de minute și nu încape în intervalul de ${availabilityDurationMinutes} de minute.`,
     );
   }
 }
@@ -213,7 +223,10 @@ export async function createAvailability(
 ) {
   try {
     return await prisma.$transaction(async (transaction) => {
-      await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings);
+      const availabilityDurationMinutes = input.kind === "SINGLE"
+        ? Math.round((input.endsAt.getTime() - input.startsAt.getTime()) / 60_000)
+        : input.rule.durationMinutes;
+      await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings, availabilityDurationMinutes);
       if (input.kind === "SINGLE") {
         assertFuture(input.startsAt);
         const slot = await transaction.studentAvailabilitySlot.create({
@@ -303,7 +316,10 @@ export async function updateAvailability(
         throw new AvailabilityDomainError("SLOT_ALREADY_STARTED", "Intervalul nu mai poate fi editat.");
       }
       const now = new Date();
-      await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings);
+      const availabilityDurationMinutes = Math.round(
+        (input.endsAt.getTime() - input.startsAt.getTime()) / 60_000,
+      );
+      await validateConfiguration(transaction, studentProfileId, input.studentLocationId, input.offerings, availabilityDurationMinutes);
       await resolveActiveAppointments(transaction, slot.appointments, input.appointmentReason, actorUserId, now);
 
       if (slot.appointments.length === 0) {

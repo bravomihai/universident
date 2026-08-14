@@ -40,6 +40,7 @@ npx prisma db seed
 - A patient can request a slot until its start time. At the start time an unconfirmed request becomes `EXPIRED`.
 - Confirming one request atomically marks the patient's other overlapping pending requests as `SUPERSEDED`.
 - A student availability occurrence is a multi-hour block at exactly one location. It exposes one or more offerings, each pairing one student treatment with one supervisor.
+- A treatment can be attached to an occurrence only when its configured duration fits completely inside the occurrence. Disable and explain treatments that are too long in the editor, and enforce the same rule server-side.
 - `PENDING` and `CONFIRMED` appointments consume only their selected subinterval inside the block. Active appointment subintervals for the same student must never overlap.
 - The selected subinterval length comes from `StudentTreatment.durationMinutes`; the client never supplies a duration or end time.
 - Public search eligibility is based on real future calendar capacity for the exact treatment/location combination after active appointments are subtracted. A student with no contiguous interval long enough for the treatment must not appear in that search result.
