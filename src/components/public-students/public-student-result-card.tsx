@@ -51,7 +51,7 @@ export function PublicStudentResultCard({
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
-              <PublicStudentAvatar name={student.name} image={student.image} />
+              <PublicStudentAvatar name={student.name} />
               <div className="min-w-0 space-y-1">
                 <h2 className="break-words text-lg font-semibold leading-tight">
                   {student.name}

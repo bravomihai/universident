@@ -12,6 +12,7 @@ import type {
   parseAppointmentReviewInput,
   parseCreateAppointmentInput,
 } from "@/lib/appointments/appointment-input";
+import { appointmentNotificationAcknowledgementWhere } from "@/lib/appointments/appointment-notification";
 import { appointmentReviewIsAllowed } from "@/lib/appointments/appointment-presentation";
 import {
   createAppointmentRouteSlug,
@@ -93,17 +94,6 @@ const appointmentInclude = {
           },
         },
       },
-    },
-  },
-  availabilitySlot: {
-    include: {
-      studentLocation: { include: { city: true } },
-    },
-  },
-  availabilityOffering: {
-    include: {
-      studentTreatment: { include: { treatment: true } },
-      supervisor: true,
     },
   },
   reviews: {
@@ -261,16 +251,6 @@ export function appointmentConsumesCapacityWhere(now: Date): Prisma.AppointmentW
       },
     ],
   };
-}
-
-export function expirePendingAppointmentsInBackgroundScope(
-  now = new Date(),
-  scope: Parameters<typeof expirePendingAppointments>[2] = {},
-) {
-  return runSerializableTransaction(
-    prisma,
-    (transaction) => expirePendingAppointments(transaction, now, scope),
-  );
 }
 
 async function getOrCreatePatientProfile(
@@ -580,24 +560,14 @@ export async function createAppointmentRequest(
 export async function listAppointmentsForUser(
   userId: string,
   role: UserRole,
-  options: { consumeNotifications?: boolean } = {},
 ) {
-  const unreadNotifications = await runSerializableTransaction(prisma, async (transaction) => {
-    await expirePendingAppointments(transaction);
-    const notifications = await transaction.appointmentNotification.findMany({
-      where: { recipientUserId: userId },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        appointmentId: true,
-      },
-    });
-    if (options.consumeNotifications && notifications.length > 0) {
-      await transaction.appointmentNotification.deleteMany({
-        where: { id: { in: notifications.map((notification) => notification.id) } },
-      });
-    }
-    return notifications;
+  const unreadNotifications = await prisma.appointmentNotification.findMany({
+    where: { recipientUserId: userId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      appointmentId: true,
+    },
   });
 
   const unreadAppointmentIds = Array.from(
@@ -611,6 +581,9 @@ export async function listAppointmentsForUser(
     : [];
   const notificationData = {
     unreadNotificationCount: unreadNotifications.length,
+    unreadNotificationIds: unreadNotifications.map(
+      (notification) => notification.id,
+    ),
     unreadAppointmentSlugs: unreadAppointments.map(
       (appointment) => appointment.routeSlug,
     ),
@@ -695,7 +668,6 @@ export async function getAppointmentForUser(
   userId: string,
   role: UserRole,
 ) {
-  await runSerializableTransaction(prisma, (transaction) => expirePendingAppointments(transaction));
   return prisma.appointment.findFirst({
     where: {
       routeSlug,
@@ -704,6 +676,19 @@ export async function getAppointmentForUser(
         : { studentProfile: { userId } }),
     },
     include: privateAppointmentInclude(userId),
+  });
+}
+
+export async function acknowledgeAppointmentNotifications(
+  recipientUserId: string,
+  notificationIds: string[],
+) {
+  if (notificationIds.length === 0) return { count: 0 };
+  return prisma.appointmentNotification.deleteMany({
+    where: appointmentNotificationAcknowledgementWhere(
+      recipientUserId,
+      notificationIds,
+    ),
   });
 }
 

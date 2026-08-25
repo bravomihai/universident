@@ -24,7 +24,10 @@ export async function POST(request: Request, context: Context) {
   try {
     const { studentSlug } = await context.params;
     const appointment = await createAppointmentRequest(authorization.user, studentSlug, parsed.data);
-    return Response.json({ appointment }, { status: 201 });
+    return Response.json(
+      { appointment: { routeSlug: appointment.routeSlug } },
+      { status: 201 },
+    );
   } catch (error) {
     return domainErrorResponse(error, "Cererea de programare nu a putut fi trimisă.");
   }

@@ -542,7 +542,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     );
   });
 
-  await suite.test("expired pending requests release public capacity", async () => {
+  await suite.test("expired pending requests release capacity without GET cleanup", async () => {
     await resetDatabase();
     const fixture = await createFixture();
     const patient = await createPatient("expired");
@@ -566,7 +566,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     );
     assert.ok(availability && availability.length > 0);
     const stored = await prisma.appointment.findUniqueOrThrow({ where: { id: pending.id } });
-    assert.equal(stored.status, AppointmentStatus.EXPIRED);
+    assert.equal(stored.status, AppointmentStatus.PENDING);
   });
 
   await suite.test("archive waits for materialization and treatment duration cannot invalidate active calendars", async () => {

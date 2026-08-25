@@ -53,7 +53,6 @@ export default async function StudentBookingPage({ params }: Props) {
         <header className="flex flex-col gap-5 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center">
           <PublicStudentAvatar
             name={profile.name}
-            image={profile.image}
             className="size-16 text-lg"
           />
           <div className="min-w-0 flex-1 space-y-2">

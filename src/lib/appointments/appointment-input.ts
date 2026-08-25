@@ -19,6 +19,27 @@ export function parseIdentifier(value: unknown, label = "Identificatorul") {
   return { ok: true, data: identifier } as const;
 }
 
+export function parseAppointmentNotificationAcknowledgementInput(value: unknown) {
+  if (!isRecord(value) || !Array.isArray(value.notificationIds)) {
+    return { ok: false, error: "Datele trimise nu sunt valide." } as const;
+  }
+  if (value.notificationIds.length > 1000) {
+    return { ok: false, error: "Sunt prea multe notificări de confirmat." } as const;
+  }
+
+  const notificationIds: string[] = [];
+  for (const valueId of value.notificationIds) {
+    const notificationId = parseIdentifier(valueId, "Notificarea");
+    if (!notificationId.ok) return notificationId;
+    notificationIds.push(notificationId.data);
+  }
+
+  return {
+    ok: true,
+    data: { notificationIds: Array.from(new Set(notificationIds)) },
+  } as const;
+}
+
 export function parseStatusReason(value: unknown): ParseResult<string> {
   if (typeof value !== "string") {
     return { ok: false, error: "Motivul este obligatoriu." };

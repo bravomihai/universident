@@ -26,10 +26,7 @@ import {
   ensureStudentSeriesMaterializedThrough,
   materializeSeriesThrough,
 } from "@/lib/availability/materializer";
-import {
-  appointmentConsumesCapacityWhere,
-  expirePendingAppointmentsInBackgroundScope,
-} from "@/lib/appointments/appointment-service";
+import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment-service";
 import { prisma } from "@/lib/prisma";
 import {
   availabilityRootLockKey,
@@ -273,7 +270,6 @@ export async function listStudentAvailability(
     throw new AvailabilityDomainError("INVALID_INTERVAL", range.error);
   }
   await ensureStudentSeriesMaterializedThrough(studentProfileId, to, now);
-  await expirePendingAppointmentsInBackgroundScope(now, { studentProfileId });
   return prisma.studentAvailabilitySlot.findMany({
     where: {
       studentProfileId,

@@ -1,7 +1,4 @@
-import {
-  appointmentConsumesCapacityWhere,
-  expirePendingAppointmentsInBackgroundScope,
-} from "@/lib/appointments/appointment-service";
+import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment-service";
 import { ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { prisma } from "@/lib/prisma";
@@ -21,14 +18,6 @@ export async function listPublicStudentAvailability(
   });
   if (!student) return null;
   await ensureStudentSeriesMaterializedThrough(student.id, to, now);
-  try {
-    await expirePendingAppointmentsInBackgroundScope(now, { studentProfileId: student.id });
-  } catch (error) {
-    console.error("Student pending-expiry cleanup failed", {
-      studentProfileId: student.id,
-      code: error && typeof error === "object" && "code" in error ? error.code : "UNKNOWN",
-    });
-  }
   return prisma.$transaction(async (transaction) => {
 
     const blocks = await transaction.studentAvailabilitySlot.findMany({
@@ -144,7 +133,10 @@ export async function listPublicStudentAvailability(
             name: block.studentLocation.name,
             address: block.studentLocation.address,
             routeKey: block.studentLocation.routeKey,
-            city: block.studentLocation.city,
+            city: {
+              name: block.studentLocation.city.name,
+              slug: block.studentLocation.city.slug,
+            },
           },
           supervisor: {
             fullName: offering.supervisor.fullName,

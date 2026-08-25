@@ -5,10 +5,7 @@ import { UserRole } from "@/generated/prisma/enums";
 import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
 import { ensureActiveSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
-import {
-  appointmentConsumesCapacityWhere,
-  expirePendingAppointmentsInBackgroundScope,
-} from "@/lib/appointments/appointment-service";
+import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment-service";
 import { prisma } from "@/lib/prisma";
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
@@ -32,7 +29,6 @@ export type PublicStudentTreatmentDto = {
 };
 export type PublicStudentSummaryDto = {
   name: string;
-  image: string | null;
   publicSlug: string;
   university: string;
   studyYear: number;
@@ -44,7 +40,6 @@ export type PublicStudentSummaryDto = {
 };
 export type PublicStudentProfileDto = {
   name: string;
-  image: string | null;
   publicSlug: string;
   university: string;
   studyYear: number;
@@ -76,13 +71,6 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
     { treatmentSlug, citySlug, excludedUserId },
     now,
   );
-  try {
-    await expirePendingAppointmentsInBackgroundScope(now);
-  } catch (error) {
-    console.error("Public pending-expiry cleanup failed", {
-      code: error && typeof error === "object" && "code" in error ? error.code : "UNKNOWN",
-    });
-  }
   const blocks = await prisma.studentAvailabilitySlot.findMany({
     where: {
       status: "ACTIVE",
@@ -94,7 +82,16 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { slug: treatmentSlug, isActive: true } }, supervisor: { deletedAt: null } } },
     },
     include: {
-      studentProfile: { include: { user: true } },
+      studentProfile: {
+        select: {
+          id: true,
+          publicSlug: true,
+          university: true,
+          studyYear: true,
+          bio: true,
+          user: { select: { name: true } },
+        },
+      },
       studentLocation: { include: { city: true } },
       offerings: { where: { removedAt: null }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
       appointments: { where: appointmentConsumesCapacityWhere(now), select: { scheduledStartsAt: true, scheduledEndsAt: true } },
@@ -124,7 +121,6 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       tieBreaker: `${block.studentLocation.routeKey}:${offering.id}`,
       value: {
         name: block.studentProfile.user.name,
-        image: block.studentProfile.user.image,
         publicSlug: block.studentProfile.publicSlug,
         university: block.studentProfile.university,
         studyYear: block.studentProfile.studyYear,
@@ -158,7 +154,7 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
   const profile = await prisma.studentProfile.findFirst({
     where: { ...publicProfileWhere, publicSlug },
     include: {
-      user: true,
+      user: { select: { id: true, name: true } },
       availabilitySlots: {
         where: {
           status: "ACTIVE",
@@ -188,5 +184,5 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
     }
   }
   const reviewData = await getPublishedProfileReviews(profile.user.id, "STUDENT");
-  return { name: profile.user.name, image: profile.user.image, publicSlug: profile.publicSlug, university: profile.university, studyYear: profile.studyYear, bio: profile.bio, treatments: [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "ro")), reviewData } satisfies PublicStudentProfileDto;
+  return { name: profile.user.name, publicSlug: profile.publicSlug, university: profile.university, studyYear: profile.studyYear, bio: profile.bio, treatments: [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "ro")), reviewData } satisfies PublicStudentProfileDto;
 });

@@ -29,7 +29,14 @@ export async function POST(request: Request, context: Context) {
       authorization.user,
       parsed.data,
     );
-    return Response.json({ review }, { status: 201 });
+    return Response.json({
+      review: {
+        rating: review.rating,
+        comment: review.comment,
+        submittedAt: review.submittedAt,
+        publishedAt: review.publishedAt,
+      },
+    }, { status: 201 });
   } catch (error) {
     return domainErrorResponse(error, "Recenzia nu a putut fi trimisă.");
   }

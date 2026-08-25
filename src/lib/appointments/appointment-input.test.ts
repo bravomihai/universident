@@ -3,9 +3,36 @@ import test from "node:test";
 
 import {
   parseAppointmentActionInput,
+  parseAppointmentNotificationAcknowledgementInput,
   parseCreateAppointmentInput,
   parseAppointmentReviewInput,
 } from "@/lib/appointments/appointment-input";
+
+test("notification acknowledgement accepts bounded IDs and removes duplicates", () => {
+  assert.deepEqual(
+    parseAppointmentNotificationAcknowledgementInput({
+      notificationIds: ["notification-1", "notification-1", " notification-2 "],
+    }),
+    {
+      ok: true,
+      data: { notificationIds: ["notification-1", "notification-2"] },
+    },
+  );
+  assert.equal(
+    parseAppointmentNotificationAcknowledgementInput({ notificationIds: "notification-1" }).ok,
+    false,
+  );
+  assert.equal(
+    parseAppointmentNotificationAcknowledgementInput({ notificationIds: [""] }).ok,
+    false,
+  );
+  assert.equal(
+    parseAppointmentNotificationAcknowledgementInput({
+      notificationIds: Array.from({ length: 1001 }, (_, index) => `notification-${index}`),
+    }).ok,
+    false,
+  );
+});
 
 test("booking requires a bounded idempotency key and a canonical start", () => {
   const base = {
