@@ -1,10 +1,14 @@
 import "server-only";
 
 import { cache } from "react";
-import { AppointmentStatus, UserRole } from "@/generated/prisma/enums";
+import { UserRole } from "@/generated/prisma/enums";
 import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
 import { ensureActiveSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
+import {
+  appointmentConsumesCapacityWhere,
+  expirePendingAppointmentsInBackgroundScope,
+} from "@/lib/appointments/appointment-service";
 import { prisma } from "@/lib/prisma";
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
@@ -67,15 +71,22 @@ const publicProfileWhere = {
 
 export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page, excludedUserId }: { treatmentSlug: string; citySlug: string; page: number; excludedUserId?: string }) => {
   const now = new Date();
-  await prisma.$transaction(async (transaction) => {
-    await ensureActiveSeriesMaterializedThrough(
-      transaction,
-      publicBookingWindowEnd(now),
-    );
-  });
+  await ensureActiveSeriesMaterializedThrough(
+    publicBookingWindowEnd(now),
+    { treatmentSlug, citySlug, excludedUserId },
+    now,
+  );
+  try {
+    await expirePendingAppointmentsInBackgroundScope(now);
+  } catch (error) {
+    console.error("Public pending-expiry cleanup failed", {
+      code: error && typeof error === "object" && "code" in error ? error.code : "UNKNOWN",
+    });
+  }
   const blocks = await prisma.studentAvailabilitySlot.findMany({
     where: {
       status: "ACTIVE",
+      OR: [{ seriesId: null }, { series: { status: "ACTIVE" } }],
       startsAt: { lt: publicBookingWindowEnd(now) },
       endsAt: { gt: now },
       studentProfile: { ...publicProfileWhere, ...(excludedUserId ? { userId: { not: excludedUserId } } : {}) },
@@ -86,7 +97,7 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       studentProfile: { include: { user: true } },
       studentLocation: { include: { city: true } },
       offerings: { where: { removedAt: null }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
-      appointments: { where: { status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } }, select: { scheduledStartsAt: true, scheduledEndsAt: true } },
+      appointments: { where: appointmentConsumesCapacityWhere(now), select: { scheduledStartsAt: true, scheduledEndsAt: true } },
     },
     orderBy: [{ startsAt: "asc" }, { id: "asc" }],
   });
@@ -149,7 +160,12 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
     include: {
       user: true,
       availabilitySlots: {
-        where: { status: "ACTIVE", endsAt: { gt: new Date() }, studentLocation: { deletedAt: null } },
+        where: {
+          status: "ACTIVE",
+          endsAt: { gt: new Date() },
+          studentLocation: { deletedAt: null },
+          OR: [{ seriesId: null }, { series: { status: "ACTIVE" } }],
+        },
         include: {
           studentLocation: { include: { city: true } },
           offerings: { where: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },

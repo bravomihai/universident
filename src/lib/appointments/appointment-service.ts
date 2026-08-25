@@ -1,7 +1,10 @@
+import { createHash } from "node:crypto";
+
 import type { Prisma } from "@/generated/prisma/client";
 import {
   AppointmentReviewAuthorRole,
   AppointmentStatus,
+  StudentAvailabilitySeriesStatus,
   UserRole,
 } from "@/generated/prisma/enums";
 import type {
@@ -18,6 +21,12 @@ import { ageOnDate } from "@/lib/availability/bucharest-time";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { parsePatientProfileInput } from "@/lib/patient/patient-profile-input";
 import { prisma } from "@/lib/prisma";
+import {
+  findAndLockAvailabilityRoot,
+  lockSchedulingKeys,
+  patientBookingLockKey,
+} from "@/lib/scheduling/locks";
+import { runSerializableTransaction } from "@/lib/scheduling/transaction";
 
 type SuccessData<T> = T extends { ok: true; data: infer Data } ? Data : never;
 type Parsed<T extends (value: unknown) => unknown> = SuccessData<ReturnType<T>>;
@@ -34,6 +43,8 @@ export type AppointmentDomainErrorCode =
   | "REVIEW_REQUIRED"
   | "REVIEW_ALREADY_SUBMITTED"
   | "REVIEW_NOT_AVAILABLE"
+  | "PENDING_LIMIT_REACHED"
+  | "IDEMPOTENCY_CONFLICT"
   | "STALE_VERSION";
 
 export class AppointmentDomainError extends Error {
@@ -44,6 +55,10 @@ export class AppointmentDomainError extends Error {
     super(message);
   }
 }
+
+export const MAX_FUTURE_PENDING_APPOINTMENTS = 3;
+export const PENDING_REQUEST_LIFETIME_MS = 24 * 60 * 60_000;
+export const MAX_PENDING_EXPIRATIONS_PER_OPERATION = 100;
 
 const appointmentInclude = {
   patientProfile: {
@@ -146,12 +161,25 @@ async function createAppointmentNotifications(
 export async function expirePendingAppointments(
   transaction: Prisma.TransactionClient,
   now = new Date(),
+  scope: {
+    patientProfileId?: string;
+    studentProfileId?: string;
+    availabilitySlotId?: string;
+    limit?: number;
+  } = {},
 ) {
   const expiring = await transaction.appointment.findMany({
     where: {
       status: AppointmentStatus.PENDING,
-      scheduledStartsAt: { lte: now },
+      pendingExpiresAt: { lte: now },
+      ...(scope.patientProfileId ? { patientProfileId: scope.patientProfileId } : {}),
+      ...(scope.studentProfileId ? { studentProfileId: scope.studentProfileId } : {}),
+      ...(scope.availabilitySlotId
+        ? { studentAvailabilitySlotId: scope.availabilitySlotId }
+        : {}),
     },
+    orderBy: { pendingExpiresAt: "asc" },
+    take: Math.min(scope.limit ?? MAX_PENDING_EXPIRATIONS_PER_OPERATION, MAX_PENDING_EXPIRATIONS_PER_OPERATION),
     select: {
       id: true,
       patientProfileId: true,
@@ -183,11 +211,12 @@ export async function expirePendingAppointments(
     where: {
       id: { in: expiring.map((appointment) => appointment.id) },
       status: AppointmentStatus.PENDING,
+      pendingExpiresAt: { lte: now },
     },
     data: {
       status: AppointmentStatus.EXPIRED,
-      statusReason: "Cererea a expirat la ora programată înainte de confirmare.",
-      statusReasonCode: "START_REACHED",
+      statusReason: "Cererea a expirat după 24 de ore sau la ora programată, oricare a venit prima.",
+      statusReasonCode: "PENDING_DEADLINE_REACHED",
       statusChangedAt: now,
       expiredAt: now,
       version: { increment: 1 },
@@ -220,6 +249,28 @@ export async function expirePendingAppointments(
       }),
   );
   return { count: expired.length };
+}
+
+export function appointmentConsumesCapacityWhere(now: Date): Prisma.AppointmentWhereInput {
+  return {
+    OR: [
+      { status: AppointmentStatus.CONFIRMED },
+      {
+        status: AppointmentStatus.PENDING,
+        pendingExpiresAt: { gt: now },
+      },
+    ],
+  };
+}
+
+export function expirePendingAppointmentsInBackgroundScope(
+  now = new Date(),
+  scope: Parameters<typeof expirePendingAppointments>[2] = {},
+) {
+  return runSerializableTransaction(
+    prisma,
+    (transaction) => expirePendingAppointments(transaction, now, scope),
+  );
 }
 
 async function getOrCreatePatientProfile(
@@ -259,6 +310,13 @@ function isUniqueConflict(error: unknown) {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === "P2002");
 }
 
+function isIdempotencyUniqueConflict(error: unknown) {
+  if (!isUniqueConflict(error)) return false;
+  const serialized = JSON.stringify(error);
+  return serialized.includes("idempotencyKeyHash") ||
+    serialized.includes("appointment_idempotency_key_hash_key");
+}
+
 function isPatientOverlap(error: unknown) {
   const message = error && typeof error === "object" && "message" in error
     ? String(error.message)
@@ -273,15 +331,101 @@ function isStudentActiveOverlap(error: unknown) {
   return message.includes("appointment_student_active_time_excl");
 }
 
+function sha256(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function idempotencyHashes(
+  patientUserId: string,
+  studentSlug: string,
+  input: Parsed<typeof parseCreateAppointmentInput>,
+) {
+  return {
+    keyHash: sha256(JSON.stringify([patientUserId, input.idempotencyKey])),
+    requestHash: sha256(JSON.stringify([
+      studentSlug,
+      input.slotId,
+      input.offeringId,
+      input.startsAt.toISOString(),
+      input.patientNote,
+      input.dateOfBirth,
+    ])),
+  };
+}
+
 export async function createAppointmentRequest(
   patientUser: { id: string; name: string },
   studentSlug: string,
   input: Parsed<typeof parseCreateAppointmentInput>,
+  options: {
+    now?: Date;
+    afterPatientLock?: () => Promise<void>;
+    afterRootLock?: () => Promise<void>;
+  } = {},
 ) {
+  const hashes = idempotencyHashes(patientUser.id, studentSlug, input);
   try {
-    return await prisma.$transaction(
+    return await runSerializableTransaction(
+      prisma,
       async (transaction) => {
-        await expirePendingAppointments(transaction);
+        const now = options.now ?? new Date();
+        await lockSchedulingKeys(transaction, [patientBookingLockKey(patientUser.id)]);
+        await options.afterPatientLock?.();
+        const patient = await getOrCreatePatientProfile(
+          transaction,
+          patientUser,
+          input.dateOfBirth,
+        );
+        const existingIdempotent = await transaction.appointment.findUnique({
+          where: { idempotencyKeyHash: hashes.keyHash },
+          select: {
+            id: true,
+            patientProfileId: true,
+            idempotencyRequestHash: true,
+          },
+        });
+        if (existingIdempotent) {
+          if (
+            existingIdempotent.patientProfileId !== patient.id ||
+            existingIdempotent.idempotencyRequestHash !== hashes.requestHash
+          ) {
+            throw new AppointmentDomainError(
+              "IDEMPOTENCY_CONFLICT",
+              "Cheia cererii a fost deja folosită pentru altă programare.",
+            );
+          }
+          return transaction.appointment.findUniqueOrThrow({
+            where: { id: existingIdempotent.id },
+            include: appointmentInclude,
+          });
+        }
+
+        await expirePendingAppointments(transaction, now, { patientProfileId: patient.id });
+        const pendingCount = await transaction.appointment.count({
+          where: {
+            patientProfileId: patient.id,
+            status: AppointmentStatus.PENDING,
+            pendingExpiresAt: { gt: now },
+          },
+        });
+        if (pendingCount >= MAX_FUTURE_PENDING_APPOINTMENTS) {
+          throw new AppointmentDomainError(
+            "PENDING_LIMIT_REACHED",
+            "Poți avea cel mult 3 cereri viitoare în așteptare.",
+          );
+        }
+
+        const root = await findAndLockAvailabilityRoot(transaction, input.slotId);
+        if (!root) {
+          throw new AppointmentDomainError(
+            "SLOT_UNAVAILABLE",
+            "Slotul nu mai este disponibil. Alege alt interval.",
+          );
+        }
+        await options.afterRootLock?.();
+        await expirePendingAppointments(transaction, now, {
+          availabilitySlotId: input.slotId,
+        });
         const slot = await transaction.studentAvailabilitySlot.findFirst({
           where: {
             id: input.slotId,
@@ -290,6 +434,10 @@ export async function createAppointmentRequest(
             endsAt: { gt: input.startsAt },
             studentProfile: { publicSlug: studentSlug, isPublished: true },
             studentLocation: { deletedAt: null, city: { isActive: true } },
+            OR: [
+              { seriesId: null },
+              { series: { status: StudentAvailabilitySeriesStatus.ACTIVE } },
+            ],
           },
           include: {
             studentProfile: { include: { user: true } },
@@ -302,7 +450,7 @@ export async function createAppointmentRequest(
               },
             },
             appointments: {
-              where: { status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } },
+              where: appointmentConsumesCapacityWhere(now),
               select: { scheduledStartsAt: true, scheduledEndsAt: true },
             },
           },
@@ -347,11 +495,6 @@ export async function createAppointmentRequest(
             "Ora nu mai este disponibilă. Alege alt interval din calendar.",
           );
         }
-        const patient = await getOrCreatePatientProfile(
-          transaction,
-          patientUser,
-          input.dateOfBirth,
-        );
         const reviewRequired = await transaction.appointment.findFirst({
           where: {
             patientProfileId: patient.id,
@@ -397,6 +540,12 @@ export async function createAppointmentRequest(
               offering.supervisor.fullName,
             ].filter(Boolean).join(" "),
             statusChangedByUserId: patientUser.id,
+            pendingExpiresAt: new Date(Math.min(
+              now.getTime() + PENDING_REQUEST_LIFETIME_MS,
+              selected.startsAt.getTime(),
+            )),
+            idempotencyKeyHash: hashes.keyHash,
+            idempotencyRequestHash: hashes.requestHash,
           },
           include: appointmentInclude,
         });
@@ -405,18 +554,23 @@ export async function createAppointmentRequest(
             appointmentId: appointment.id,
             recipientUserId: slot.studentProfile.user.id,
             eventType: "REQUEST_CREATED",
-            createdAt: new Date(),
+            createdAt: now,
           },
         ]);
         return appointment;
       },
-      { isolationLevel: "Serializable" },
     );
   } catch (error) {
     if (isUniqueConflict(error) || isStudentActiveOverlap(error)) {
+      if (isIdempotencyUniqueConflict(error)) {
+        throw new AppointmentDomainError(
+          "IDEMPOTENCY_CONFLICT",
+          "Cheia cererii a fost deja folosită pentru altă programare.",
+        );
+      }
       throw new AppointmentDomainError(
         "SLOT_UNAVAILABLE",
-        "Alt pacient a trimis deja o cerere pentru acest slot.",
+        "Slotul nu mai este disponibil. Reîncarcă intervalele și încearcă din nou.",
       );
     }
     throw error;
@@ -428,7 +582,7 @@ export async function listAppointmentsForUser(
   role: UserRole,
   options: { consumeNotifications?: boolean } = {},
 ) {
-  const unreadNotifications = await prisma.$transaction(async (transaction) => {
+  const unreadNotifications = await runSerializableTransaction(prisma, async (transaction) => {
     await expirePendingAppointments(transaction);
     const notifications = await transaction.appointmentNotification.findMany({
       where: { recipientUserId: userId },
@@ -541,7 +695,7 @@ export async function getAppointmentForUser(
   userId: string,
   role: UserRole,
 ) {
-  await prisma.$transaction((transaction) => expirePendingAppointments(transaction));
+  await runSerializableTransaction(prisma, (transaction) => expirePendingAppointments(transaction));
   return prisma.appointment.findFirst({
     where: {
       routeSlug,
@@ -559,7 +713,8 @@ export async function actOnAppointment(
   input: Parsed<typeof parseAppointmentActionInput>,
 ) {
   try {
-    return await prisma.$transaction(
+    return await runSerializableTransaction(
+      prisma,
       async (transaction) => {
         await transaction.$executeRaw`SET CONSTRAINTS ALL DEFERRED`;
         await expirePendingAppointments(transaction);
@@ -778,7 +933,6 @@ export async function actOnAppointment(
           include: appointmentInclude,
         });
       },
-      { isolationLevel: "Serializable" },
     );
   } catch (error) {
     if (isPatientOverlap(error)) {
@@ -797,7 +951,8 @@ export async function reviewAppointment(
   input: Parsed<typeof parseAppointmentReviewInput>,
 ) {
   try {
-    return await prisma.$transaction(
+    return await runSerializableTransaction(
+      prisma,
       async (transaction) => {
         await expirePendingAppointments(transaction);
         const appointment = await transaction.appointment.findUnique({
@@ -841,7 +996,6 @@ export async function reviewAppointment(
         await publishAppointmentReviews(transaction, appointment.id, now);
         return review;
       },
-      { isolationLevel: "Serializable" },
     );
   } catch (error) {
     if (isUniqueConflict(error)) {

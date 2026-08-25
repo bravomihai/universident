@@ -16,6 +16,7 @@ export async function GET(request: Request, context: Context) {
     Number.isNaN(from.getTime()) ||
     Number.isNaN(to.getTime()) ||
     to <= from ||
+    from < new Date(now.getTime() - 86_400_000) ||
     to > bookingWindowEnd ||
     from >= bookingWindowEnd
   ) {

@@ -2,6 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { studentLocationSelect } from "@/lib/student-locations/student-location-data";
 import { parseUpdateStudentLocationInput } from "@/lib/student-locations/student-location-input";
 import { authorizeStudentLocationRequest } from "@/lib/student-locations/student-location-request";
+import {
+  archiveStudentSchedulingResource,
+  ResourceArchiveDomainError,
+} from "@/lib/availability/resource-archive-service";
+import { SchedulingTemporarilyUnavailableError } from "@/lib/scheduling/transaction";
 
 type Context = { params: Promise<{ id: string }> };
 
@@ -25,11 +30,26 @@ export async function DELETE(request: Request, context: Context) {
   const auth = await authorizeStudentLocationRequest(request, { verifyOrigin: true });
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
-  const existing = await prisma.studentLocation.findFirst({ where: { id, studentProfileId: auth.studentProfileId, deletedAt: null } });
-  if (!existing) return Response.json({ error: "Locația nu a fost găsită." }, { status: 404 });
-  const futureUse = await prisma.studentAvailabilitySlot.count({ where: { studentLocationId: id, status: "ACTIVE", startsAt: { gt: new Date() } } });
-  if (futureUse) return Response.json({ error: "Elimină mai întâi aparițiile viitoare de la această locație." }, { status: 409 });
-  const archivedAt = new Date();
-  await prisma.studentLocation.update({ where: { id }, data: { deletedAt: archivedAt } });
-  return Response.json({ archivedLocationId: id, archivedAt });
+  try {
+    const result = await archiveStudentSchedulingResource(
+      "location",
+      auth.studentProfileId,
+      id,
+    );
+    return Response.json({ archivedLocationId: id, archivedAt: result.archivedAt });
+  } catch (error) {
+    if (error instanceof ResourceArchiveDomainError) {
+      return Response.json(
+        { error: error.code === "NOT_FOUND" ? "Locația nu a fost găsită." : error.message },
+        { status: error.code === "NOT_FOUND" ? 404 : 409 },
+      );
+    }
+    if (error instanceof SchedulingTemporarilyUnavailableError) {
+      return Response.json(
+        { error: error.message, code: error.code },
+        { status: 503, headers: { "Retry-After": "1" } },
+      );
+    }
+    throw error;
+  }
 }

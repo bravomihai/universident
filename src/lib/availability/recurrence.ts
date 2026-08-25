@@ -2,9 +2,12 @@ import { StudentAvailabilityWeekday } from "@/generated/prisma/enums";
 import {
   addLocalDays,
   compareLocalDates,
-  localDateForInstant,
   utcInstantForBucharestLocal,
 } from "@/lib/availability/bucharest-time";
+import {
+  MAX_GENERATED_OCCURRENCES_PER_OPERATION,
+  MAX_LOCAL_DATES_PROCESSED_PER_OPERATION,
+} from "@/lib/availability/limits";
 
 export type AvailabilityRule = {
   startsOn: string;
@@ -22,6 +25,21 @@ export type GeneratedOccurrence = {
   localDate: string;
   startsAt: Date;
   endsAt: Date;
+};
+
+export class OccurrenceGenerationLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OccurrenceGenerationLimitError";
+  }
+}
+
+type GenerateOccurrenceOptions = {
+  fromLocalDate?: string;
+  initialSequenceNumber?: number;
+  maxOccurrences?: number;
+  maxProcessedDates?: number;
+  minimumElapsedDurationMinutes?: number;
 };
 
 const weekdayByJsDay: StudentAvailabilityWeekday[] = [
@@ -59,14 +77,28 @@ function daysBetween(first: string, second: string) {
 export function generateOccurrences(
   rule: AvailabilityRule,
   throughLocalDate: string,
+  options: GenerateOccurrenceOptions = {},
 ) {
   const occurrences: GeneratedOccurrence[] = [];
   const selectedWeekdays = new Set(rule.weekdays);
   const anchorMonday = mondayForLocalDate(rule.startsOn);
-  let cursor = rule.startsOn;
-  let sequenceNumber = 0;
+  let cursor = options.fromLocalDate && compareLocalDates(options.fromLocalDate, rule.startsOn) > 0
+    ? options.fromLocalDate
+    : rule.startsOn;
+  let sequenceNumber = options.initialSequenceNumber ?? 0;
+  let processedDates = 0;
+  const maxOccurrences = options.maxOccurrences ?? MAX_GENERATED_OCCURRENCES_PER_OPERATION;
+  const maxProcessedDates = options.maxProcessedDates ?? MAX_LOCAL_DATES_PROCESSED_PER_OPERATION;
+
+  if (rule.startMinuteOfDay + rule.durationMinutes >= 1440) {
+    throw new OccurrenceGenerationLimitError("Regula recurentă depășește limita zilei locale.");
+  }
 
   while (compareLocalDates(cursor, throughLocalDate) <= 0) {
+    processedDates += 1;
+    if (processedDates > maxProcessedDates) {
+      throw new OccurrenceGenerationLimitError("Regula recurentă procesează prea multe date într-o singură operație.");
+    }
     if (rule.endMode === "UNTIL" && rule.endsOn && compareLocalDates(cursor, rule.endsOn) > 0) {
       break;
     }
@@ -85,16 +117,25 @@ export function generateOccurrences(
       selectedWeekdays.has(weekdayForLocalDate(cursor))
     ) {
       const startsAt = utcInstantForBucharestLocal(cursor, rule.startMinuteOfDay);
-      if (!startsAt) {
-        throw new Error(`INVALID_LOCAL_TIME:${cursor}`);
+      const endsAt = utcInstantForBucharestLocal(
+        cursor,
+        rule.startMinuteOfDay + rule.durationMinutes,
+      );
+      // The deterministic DST policy omits a local gap. Ambiguous local times
+      // are resolved by utcInstantForBucharestLocal to the earlier instant.
+      if (
+        startsAt &&
+        endsAt &&
+        endsAt > startsAt &&
+        endsAt.getTime() - startsAt.getTime() >=
+          (options.minimumElapsedDurationMinutes ?? 0) * 60_000
+      ) {
+        if (occurrences.length >= maxOccurrences) {
+          throw new OccurrenceGenerationLimitError("Regula recurentă generează prea multe apariții într-o singură operație.");
+        }
+        sequenceNumber += 1;
+        occurrences.push({ sequenceNumber, localDate: cursor, startsAt, endsAt });
       }
-      sequenceNumber += 1;
-      occurrences.push({
-        sequenceNumber,
-        localDate: cursor,
-        startsAt,
-        endsAt: new Date(startsAt.getTime() + rule.durationMinutes * 60_000),
-      });
     }
 
     cursor = addLocalDays(cursor, 1);
@@ -102,8 +143,3 @@ export function generateOccurrences(
 
   return occurrences;
 }
-
-export function defaultMaterializationDate(now = new Date()) {
-  return addLocalDays(localDateForInstant(now), 180);
-}
-

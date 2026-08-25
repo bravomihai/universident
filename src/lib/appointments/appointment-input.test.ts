@@ -3,8 +3,23 @@ import test from "node:test";
 
 import {
   parseAppointmentActionInput,
+  parseCreateAppointmentInput,
   parseAppointmentReviewInput,
 } from "@/lib/appointments/appointment-input";
+
+test("booking requires a bounded idempotency key and a canonical start", () => {
+  const base = {
+    slotId: "slot-1",
+    offeringId: "offering-1",
+    startsAt: "2026-08-17T06:00:00.000Z",
+    idempotencyKey: "12345678-1234-4234-8234-123456789012",
+  };
+  assert.equal(parseCreateAppointmentInput(base).ok, true);
+  assert.equal(parseCreateAppointmentInput({ ...base, idempotencyKey: "short" }).ok, false);
+  assert.equal(parseCreateAppointmentInput({ ...base, idempotencyKey: "x".repeat(65) }).ok, false);
+  assert.equal(parseCreateAppointmentInput({ ...base, startsAt: "2026-08-17T06:00:01.000Z" }).ok, false);
+  assert.equal(parseCreateAppointmentInput({ ...base, startsAt: "2026-08-17T06:07:00.000Z" }).ok, false);
+});
 
 test("review requires an integer rating between one and five", () => {
   assert.equal(parseAppointmentReviewInput({ rating: 0 }).ok, false);

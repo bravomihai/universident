@@ -1,6 +1,8 @@
-import { AppointmentStatus, StudentAvailabilitySeriesStatus } from "@/generated/prisma/enums";
-import { localDateForInstant } from "@/lib/availability/bucharest-time";
-import { materializeSeriesThrough } from "@/lib/availability/materializer";
+import {
+  appointmentConsumesCapacityWhere,
+  expirePendingAppointmentsInBackgroundScope,
+} from "@/lib/appointments/appointment-service";
+import { ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { prisma } from "@/lib/prisma";
 
@@ -12,25 +14,28 @@ export async function listPublicStudentAvailability(
   to: Date,
 ) {
   if (to <= from || to.getTime() - from.getTime() > 120 * 86_400_000) return null;
-  return prisma.$transaction(async (transaction) => {
-    const student = await transaction.studentProfile.findFirst({
+  const now = new Date();
+  const student = await prisma.studentProfile.findFirst({
       where: { publicSlug, isPublished: true },
       select: { id: true },
+  });
+  if (!student) return null;
+  await ensureStudentSeriesMaterializedThrough(student.id, to, now);
+  try {
+    await expirePendingAppointmentsInBackgroundScope(now, { studentProfileId: student.id });
+  } catch (error) {
+    console.error("Student pending-expiry cleanup failed", {
+      studentProfileId: student.id,
+      code: error && typeof error === "object" && "code" in error ? error.code : "UNKNOWN",
     });
-    if (!student) return null;
-    const series = await transaction.studentAvailabilitySeries.findMany({
-      where: { studentProfileId: student.id, status: StudentAvailabilitySeriesStatus.ACTIVE },
-      orderBy: { id: "asc" },
-      include: { offerings: true },
-    });
-    for (const item of series) {
-      await materializeSeriesThrough(transaction, item, localDateForInstant(to));
-    }
+  }
+  return prisma.$transaction(async (transaction) => {
 
     const blocks = await transaction.studentAvailabilitySlot.findMany({
       where: {
         studentProfileId: student.id,
         status: "ACTIVE",
+        OR: [{ seriesId: null }, { series: { status: "ACTIVE" } }],
         startsAt: { lt: to },
         endsAt: { gt: from },
         studentLocation: {
@@ -56,7 +61,7 @@ export async function listPublicStudentAvailability(
           include: { studentTreatment: { include: { treatment: true } }, supervisor: true },
         },
         appointments: {
-          where: { status: { in: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] } },
+          where: appointmentConsumesCapacityWhere(now),
           select: { scheduledStartsAt: true, scheduledEndsAt: true },
         },
       },
@@ -82,7 +87,7 @@ export async function listPublicStudentAvailability(
           })),
         }];
       }),
-      new Date(Math.max(Date.now(), from.getTime())),
+      new Date(Math.max(now.getTime(), from.getTime())),
     );
 
     const displaySlots: Array<{

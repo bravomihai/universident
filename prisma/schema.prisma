@@ -277,6 +277,9 @@ model Appointment {
   locationAddressSnapshot           String            @db.VarChar(240)
   supervisorNameSnapshot            String            @db.VarChar(200)
   status                            AppointmentStatus @default(PENDING)
+  pendingExpiresAt                  DateTime?         @db.Timestamptz(3)
+  idempotencyKeyHash                String?           @unique @db.Char(64)
+  idempotencyRequestHash            String?           @db.Char(64)
   version                           Int               @default(1)
   statusReason                      String?           @db.VarChar(500)
   statusReasonCode                  String?           @db.VarChar(64)
@@ -301,6 +304,8 @@ model Appointment {
   notifications        AppointmentNotification[]
 
   @@index([patientProfileId, status, scheduledStartsAt])
+  @@index([status, pendingExpiresAt], map: "appointment_status_pending_expiry_idx")
+  @@index([patientProfileId, status, pendingExpiresAt], map: "appointment_patient_status_pending_expiry_idx")
   @@index([studentProfileId, status, scheduledStartsAt])
   @@index([studentAvailabilitySlotId, status])
   @@index([studentAvailabilitySlotOfferingId, status])

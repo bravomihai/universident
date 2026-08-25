@@ -23,7 +23,7 @@ export async function PATCH(request: Request, context: Context) {
   if (!authorization.ok) return authorization.response;
   let body: unknown;
   try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
-  const parsed = parseUpdateAvailabilityInput(body);
+  const parsed = parseUpdateAvailabilityInput(body, new Date());
   if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   try {
     const { slotId } = await context.params;

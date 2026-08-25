@@ -104,6 +104,11 @@ export function bucharestPartsForInstant(instant: Date) {
   };
 }
 
+export function minuteOfDayForBucharestInstant(instant: Date) {
+  const parts = bucharestPartsForInstant(instant);
+  return parts.hour * 60 + parts.minute;
+}
+
 export function utcInstantForBucharestLocal(
   localDate: string,
   minuteOfDay: number,
@@ -124,13 +129,10 @@ export function utcInstantForBucharestLocal(
     0,
     0,
   );
-  let candidate = desiredAsUtc;
-
-  // Intl exposes the target-zone wall clock. Iterating the observed offset is
-  // deterministic and the final round-trip rejects DST gaps instead of
-  // silently changing the requested local time.
-  for (let iteration = 0; iteration < 4; iteration += 1) {
-    const observed = bucharestPartsForInstant(new Date(candidate));
+  const offsets = new Set<number>();
+  for (let sampleHours = -36; sampleHours <= 36; sampleHours += 6) {
+    const sample = desiredAsUtc + sampleHours * 60 * 60_000;
+    const observed = bucharestPartsForInstant(new Date(sample));
     const observedAsUtc = Date.UTC(
       observed.year,
       observed.month - 1,
@@ -140,23 +142,27 @@ export function utcInstantForBucharestLocal(
       observed.second,
       0,
     );
-    const adjustment = desiredAsUtc - observedAsUtc;
-    candidate += adjustment;
-    if (adjustment === 0) break;
+    offsets.add(observedAsUtc - sample);
   }
 
-  const roundTrip = bucharestPartsForInstant(new Date(candidate));
-  if (
-    roundTrip.year !== parsed.year ||
-    roundTrip.month !== parsed.month ||
-    roundTrip.day !== parsed.day ||
-    roundTrip.hour !== hour ||
-    roundTrip.minute !== minute
-  ) {
-    return null;
-  }
+  const candidates = [...offsets]
+    .map((offset) => desiredAsUtc - offset)
+    .filter((candidate) => {
+      const roundTrip = bucharestPartsForInstant(new Date(candidate));
+      return (
+        roundTrip.year === parsed.year &&
+        roundTrip.month === parsed.month &&
+        roundTrip.day === parsed.day &&
+        roundTrip.hour === hour &&
+        roundTrip.minute === minute &&
+        roundTrip.second === 0
+      );
+    })
+    .sort((first, second) => first - second);
 
-  return new Date(candidate);
+  // A DST gap has no candidate. During the autumn overlap there are two;
+  // choosing the first instant keeps create, preview and materialization deterministic.
+  return candidates.length > 0 ? new Date(candidates[0]) : null;
 }
 
 export function ageOnDate(dateOfBirth: Date, onDate: Date) {
@@ -177,4 +183,3 @@ export function ageOnDate(dateOfBirth: Date, onDate: Date) {
   }
   return age;
 }
-

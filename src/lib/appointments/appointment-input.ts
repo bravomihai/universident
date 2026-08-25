@@ -2,6 +2,8 @@ export type ParseResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
 
+const idempotencyKeyPattern = /^[A-Za-z0-9_-]{16,64}$/;
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -102,6 +104,19 @@ export function parseCreateAppointmentInput(value: unknown) {
   if (Number.isNaN(startsAt.getTime()) || !value.startsAt.includes("T")) {
     return { ok: false, error: "Ora selectată nu este validă." } as const;
   }
+  if (
+    startsAt.getUTCSeconds() !== 0 ||
+    startsAt.getUTCMilliseconds() !== 0 ||
+    startsAt.getUTCMinutes() % 15 !== 0
+  ) {
+    return { ok: false, error: "Ora selectată trebuie să fie pe grila de 15 minute." } as const;
+  }
+  if (
+    typeof value.idempotencyKey !== "string" ||
+    !idempotencyKeyPattern.test(value.idempotencyKey)
+  ) {
+    return { ok: false, error: "Cheia cererii nu este validă." } as const;
+  }
   const patientNote = parsePatientNote(value.patientNote);
   if (!patientNote.ok) return patientNote;
 
@@ -118,6 +133,7 @@ export function parseCreateAppointmentInput(value: unknown) {
       slotId: slotId.data,
       offeringId: offeringId.data,
       startsAt,
+      idempotencyKey: value.idempotencyKey,
       patientNote: patientNote.data,
       dateOfBirth,
     },

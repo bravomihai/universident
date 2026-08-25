@@ -18,6 +18,13 @@ function createPrismaClient(): PrismaClient {
 
   return new PrismaClient({
     adapter,
+    omit: {
+      appointment: {
+        idempotencyKeyHash: true,
+        idempotencyRequestHash: true,
+        pendingExpiresAt: true,
+      },
+    },
   });
 }
 

@@ -27,7 +27,7 @@ export async function GET(request: Request) {
   }
   try {
     const [slots, catalog] = await Promise.all([
-      listStudentAvailability(student.id, from, to),
+      listStudentAvailability(student.id, from, to, now),
       getStudentAvailabilityCatalog(student.id),
     ]);
     return Response.json({ slots, catalog });
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   if (!student) return Response.json({ error: "Completează profilul profesional." }, { status: 404 });
   let body: unknown;
   try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
-  const parsed = parseCreateAvailabilityInput(body);
+  const parsed = parseCreateAvailabilityInput(body, new Date());
   if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   try {
     const availability = await createAvailability(student.id, parsed.data);

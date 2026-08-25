@@ -6,6 +6,7 @@ import {
   createStudentTreatment,
   StudentTreatmentDomainError,
 } from "@/lib/student-treatments/student-treatment-service";
+import { SchedulingTemporarilyUnavailableError } from "@/lib/scheduling/transaction";
 
 function isPrismaUniqueConstraintError(error: unknown) {
   return (
@@ -17,6 +18,12 @@ function isPrismaUniqueConstraintError(error: unknown) {
 }
 
 function treatmentErrorResponse(error: unknown) {
+  if (error instanceof SchedulingTemporarilyUnavailableError) {
+    return Response.json(
+      { error: error.message, code: error.code },
+      { status: 503, headers: { "Retry-After": "1" } },
+    );
+  }
   if (error instanceof StudentTreatmentDomainError) {
     const status =
       error.code === "TREATMENT_ALREADY_ADDED" ||

@@ -58,7 +58,88 @@ test("supports multiple weekdays and a biweekly anchor", () => {
   );
 });
 
-test("rejects a nonexistent Bucharest local time", () => {
+test("returns no instant for a nonexistent Bucharest local time", () => {
   assert.equal(utcInstantForBucharestLocal("2026-03-29", 3 * 60 + 30), null);
 });
 
+test("omits the spring DST gap and continues the series", () => {
+  const occurrences = generateOccurrences(
+    {
+      startsOn: "2026-03-22",
+      startMinuteOfDay: 3 * 60 + 30,
+      weekdays: [StudentAvailabilityWeekday.SUNDAY],
+      intervalWeeks: 1,
+      durationMinutes: 15,
+      endMode: "COUNT",
+      endsOn: null,
+      occurrenceCount: 3,
+    },
+    "2026-04-12",
+  );
+
+  assert.deepEqual(
+    occurrences.map((occurrence) => occurrence.localDate),
+    ["2026-03-22", "2026-04-05", "2026-04-12"],
+  );
+});
+
+test("chooses the earlier instant during the autumn DST overlap", () => {
+  const instant = utcInstantForBucharestLocal("2026-10-25", 3 * 60 + 30);
+  assert.equal(instant?.toISOString(), "2026-10-25T00:30:00.000Z");
+});
+
+test("converts recurring end wall-clock separately across DST", () => {
+  const [spring] = generateOccurrences(
+    {
+      startsOn: "2026-03-29",
+      startMinuteOfDay: 60,
+      weekdays: [StudentAvailabilityWeekday.SUNDAY],
+      intervalWeeks: 1,
+      durationMinutes: 180,
+      endMode: "COUNT",
+      endsOn: null,
+      occurrenceCount: 1,
+    },
+    "2026-03-29",
+  );
+  assert.equal(bucharestPartsForInstant(spring.endsAt).hour, 4);
+});
+
+test("can omit a DST occurrence when its elapsed capacity cannot fit the offering", () => {
+  const occurrences = generateOccurrences(
+    {
+      startsOn: "2026-03-29",
+      startMinuteOfDay: 60,
+      weekdays: [StudentAvailabilityWeekday.SUNDAY],
+      intervalWeeks: 1,
+      durationMinutes: 180,
+      endMode: "COUNT",
+      endsOn: null,
+      occurrenceCount: 1,
+    },
+    "2026-04-05",
+    { minimumElapsedDurationMinutes: 180 },
+  );
+  assert.equal(occurrences.length, 1);
+  assert.equal(occurrences[0].localDate, "2026-04-05");
+});
+
+test("enforces an independent hard cap for generated occurrences", () => {
+  assert.throws(
+    () => generateOccurrences(
+      {
+        startsOn: "2026-01-01",
+        startMinuteOfDay: 9 * 60,
+        weekdays: Object.values(StudentAvailabilityWeekday),
+        intervalWeeks: 1,
+        durationMinutes: 15,
+        endMode: "NEVER",
+        endsOn: null,
+        occurrenceCount: null,
+      },
+      "2026-01-31",
+      { maxOccurrences: 3 },
+    ),
+    /prea multe apariții/,
+  );
+});

@@ -5,6 +5,7 @@ import {
 } from "@/lib/student-treatments/student-treatment-service";
 import { parseUpdateStudentTreatmentInput } from "@/lib/student-treatments/student-treatment-input";
 import { authorizeStudentTreatmentRequest } from "@/lib/student-treatments/student-treatment-request";
+import { SchedulingTemporarilyUnavailableError } from "@/lib/scheduling/transaction";
 
 type StudentTreatmentRouteContext = {
   params: Promise<{
@@ -13,6 +14,12 @@ type StudentTreatmentRouteContext = {
 };
 
 function treatmentMutationErrorResponse(error: unknown) {
+  if (error instanceof SchedulingTemporarilyUnavailableError) {
+    return Response.json(
+      { error: error.message, code: error.code },
+      { status: 503, headers: { "Retry-After": "1" } },
+    );
+  }
   if (error instanceof StudentTreatmentDomainError) {
     if (error.code === "TREATMENT_NOT_FOUND") {
       return Response.json(
@@ -21,7 +28,11 @@ function treatmentMutationErrorResponse(error: unknown) {
       );
     }
 
-    const status = error.code === "TREATMENT_ARCHIVED" || error.code === "RESOURCE_IN_CALENDAR" ? 409 : 400;
+    const status = error.code === "TREATMENT_ARCHIVED" ||
+      error.code === "RESOURCE_IN_CALENDAR" ||
+      error.code === "RESOURCE_LIMIT_EXCEEDED"
+      ? 409
+      : 400;
 
     return Response.json(
       { error: error.message },

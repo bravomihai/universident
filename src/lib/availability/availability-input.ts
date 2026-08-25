@@ -2,7 +2,14 @@ import {
   StudentAvailabilityEndMode,
   StudentAvailabilityWeekday,
 } from "@/generated/prisma/enums";
-import { localDateForInstant, parseLocalDate } from "@/lib/availability/bucharest-time";
+import {
+  bucharestPartsForInstant,
+  compareLocalDates,
+  localDateForInstant,
+  minuteOfDayForBucharestInstant,
+  parseLocalDate,
+} from "@/lib/availability/bucharest-time";
+import { rollingMaterializationThrough } from "@/lib/availability/limits";
 import type { AvailabilityRule } from "@/lib/availability/recurrence";
 import {
   isRecord,
@@ -21,12 +28,51 @@ function parseIsoInstant(value: unknown) {
   if (Number.isNaN(date.getTime()) || !value.includes("T")) {
     return { ok: false, error: "Data și ora nu sunt valide." } as const;
   }
+  const local = bucharestPartsForInstant(date);
+  if (
+    date.getUTCMilliseconds() !== 0 ||
+    local.second !== 0 ||
+    local.minute % 15 !== 0
+  ) {
+    return {
+      ok: false,
+      error: "Ora trebuie să fie pe grila de 15 minute, fără secunde sau milisecunde.",
+    } as const;
+  }
   return { ok: true, data: date } as const;
 }
 
 function requireSameBucharestDay(startsAt: Date, endsAt: Date) {
   if (localDateForInstant(startsAt) !== localDateForInstant(endsAt)) {
     return { ok: false, error: "Intervalul trebuie să se încheie în aceeași zi." } as const;
+  }
+  return { ok: true } as const;
+}
+
+function parseExactInterval(startsAt: Date, endsAt: Date) {
+  const sameDay = requireSameBucharestDay(startsAt, endsAt);
+  if (!sameDay.ok) return sameDay;
+  const startMinute = minuteOfDayForBucharestInstant(startsAt);
+  const endMinute = minuteOfDayForBucharestInstant(endsAt);
+  if (endMinute <= startMinute || endMinute >= 1440) {
+    return { ok: false, error: "Intervalul trebuie să fie strict pozitiv și să rămână în aceeași zi." } as const;
+  }
+  const durationMilliseconds = endsAt.getTime() - startsAt.getTime();
+  if (durationMilliseconds <= 0 || durationMilliseconds % 60_000 !== 0) {
+    return { ok: false, error: "Durata intervalului trebuie să fie exactă, fără secunde sau milisecunde." } as const;
+  }
+  const duration = parseDuration(endMinute - startMinute);
+  if (!duration.ok) return duration;
+  return { ok: true, data: duration.data } as const;
+}
+
+function requireSchedulingHorizon(localDate: string, now: Date) {
+  const today = localDateForInstant(now);
+  if (
+    compareLocalDates(localDate, today) < 0 ||
+    compareLocalDates(localDate, rollingMaterializationThrough(now)) > 0
+  ) {
+    return { ok: false, error: "Disponibilitatea trebuie să fie în următoarele 180 de zile." } as const;
   }
   return { ok: true } as const;
 }
@@ -82,22 +128,25 @@ function parseConfiguration(value: Record<string, unknown>) {
   } as const;
 }
 
-function parseRule(value: unknown) {
+function parseRule(value: unknown, now: Date) {
   if (!isRecord(value)) return { ok: false, error: "Regula de repetare nu este validă." } as const;
   if (typeof value.startsOn !== "string" || !parseLocalDate(value.startsOn)) {
     return { ok: false, error: "Data de început nu este validă." } as const;
   }
+  const horizon = requireSchedulingHorizon(value.startsOn, now);
+  if (!horizon.ok) return horizon;
   if (
     typeof value.startMinuteOfDay !== "number" ||
     !Number.isInteger(value.startMinuteOfDay) ||
     value.startMinuteOfDay < 0 ||
-    value.startMinuteOfDay > 1439
+    value.startMinuteOfDay > 1439 ||
+    value.startMinuteOfDay % 15 !== 0
   ) {
     return { ok: false, error: "Ora de început nu este validă." } as const;
   }
   const duration = parseDuration(value.durationMinutes);
   if (!duration.ok) return duration;
-  if (value.startMinuteOfDay + duration.data > 1440) {
+  if (value.startMinuteOfDay + duration.data >= 1440) {
     return { ok: false, error: "Intervalul repetat trebuie să se încheie în aceeași zi." } as const;
   }
   if (!Array.isArray(value.weekdays) || value.weekdays.length < 1) {
@@ -118,6 +167,12 @@ function parseRule(value: unknown) {
   }
 
   const endMode = value.endMode as StudentAvailabilityEndMode;
+  if (endMode === StudentAvailabilityEndMode.NEVER) {
+    return {
+      ok: false,
+      error: "Seria trebuie să aibă un număr de apariții sau o dată de terminare.",
+    } as const;
+  }
   let endsOn: string | null = null;
   let occurrenceCount: number | null = null;
   if (endMode === StudentAvailabilityEndMode.UNTIL) {
@@ -152,7 +207,7 @@ function parseRule(value: unknown) {
   } as const;
 }
 
-export function parseCreateAvailabilityInput(value: unknown) {
+export function parseCreateAvailabilityInput(value: unknown, now = new Date()) {
   if (!isRecord(value)) return { ok: false, error: "Datele trimise nu sunt valide." } as const;
   const configuration = parseConfiguration(value);
   if (!configuration.ok) return configuration;
@@ -162,9 +217,9 @@ export function parseCreateAvailabilityInput(value: unknown) {
     if (!startsAt.ok) return startsAt;
     const endsAt = parseIsoInstant(value.endsAt);
     if (!endsAt.ok) return endsAt;
-    const sameDay = requireSameBucharestDay(startsAt.data, endsAt.data);
-    if (!sameDay.ok) return sameDay;
-    const duration = parseDuration(Math.round((endsAt.data.getTime() - startsAt.data.getTime()) / 60_000));
+    const horizon = requireSchedulingHorizon(localDateForInstant(startsAt.data), now);
+    if (!horizon.ok) return horizon;
+    const duration = parseExactInterval(startsAt.data, endsAt.data);
     if (!duration.ok) return duration;
     return {
       ok: true,
@@ -173,14 +228,14 @@ export function parseCreateAvailabilityInput(value: unknown) {
   }
 
   if (value.kind === "RECURRING") {
-    const rule = parseRule(value.rule);
+    const rule = parseRule(value.rule, now);
     if (!rule.ok) return rule;
     return { ok: true, data: { kind: "RECURRING" as const, ...configuration.data, rule: rule.data } } as const;
   }
   return { ok: false, error: "Tipul disponibilității nu este valid." } as const;
 }
 
-export function parseUpdateAvailabilityInput(value: unknown) {
+export function parseUpdateAvailabilityInput(value: unknown, now = new Date()) {
   if (!isRecord(value)) return { ok: false, error: "Datele trimise nu sunt valide." } as const;
   const scope = value.scope === undefined ? "OCCURRENCE" : value.scope;
   if (scope !== "OCCURRENCE" && scope !== "SERIES") {
@@ -192,9 +247,9 @@ export function parseUpdateAvailabilityInput(value: unknown) {
   if (!startsAt.ok) return startsAt;
   const endsAt = parseIsoInstant(value.endsAt);
   if (!endsAt.ok) return endsAt;
-  const sameDay = requireSameBucharestDay(startsAt.data, endsAt.data);
-  if (!sameDay.ok) return sameDay;
-  const duration = parseDuration(Math.round((endsAt.data.getTime() - startsAt.data.getTime()) / 60_000));
+  const horizon = requireSchedulingHorizon(localDateForInstant(startsAt.data), now);
+  if (!horizon.ok) return horizon;
+  const duration = parseExactInterval(startsAt.data, endsAt.data);
   if (!duration.ok) return duration;
   const version = parseExpectedVersion(value.expectedVersion);
   if (!version.ok) return version;
@@ -209,7 +264,7 @@ export function parseUpdateAvailabilityInput(value: unknown) {
       return { ok: false, error: "Revizia seriei nu este validă." } as const;
     }
     expectedSeriesRevision = value.expectedSeriesRevision;
-    const parsedRule = parseRule(value.rule);
+    const parsedRule = parseRule(value.rule, now);
     if (!parsedRule.ok) return parsedRule;
     rule = parsedRule.data;
   }
