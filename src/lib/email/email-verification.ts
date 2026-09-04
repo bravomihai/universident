@@ -29,12 +29,12 @@ function createVerificationEmailText({
   return [
     `Salut, ${name}!`,
     "",
-    "Confirmă adresa de email pentru a continua folosirea contului Universident:",
+    "Confirmă această adresă de email pentru contul Universident:",
     verificationUrl,
     "",
     "Linkul este valabil timp de o oră.",
     "",
-    "Dacă nu ai creat acest cont, poți ignora mesajul.",
+    "Dacă nu ai solicitat această verificare, poți ignora mesajul.",
   ].join("\n");
 }
 
@@ -60,7 +60,7 @@ function createVerificationEmailHtml({
           Verifică adresa de email
         </h1>
         <p style="margin:0 0 24px;color:#52525b;font-size:16px;line-height:1.6;">
-          Confirmă adresa de email pentru a continua folosirea contului Universident.
+          Confirmă această adresă de email pentru contul Universident.
         </p>
         <p style="margin:0 0 24px;">
           <a href="${safeVerificationUrl}" style="display:inline-block;border-radius:10px;background:#18181b;color:#ffffff;padding:12px 18px;text-decoration:none;font-weight:600;">
@@ -71,7 +71,7 @@ function createVerificationEmailHtml({
           Linkul este valabil timp de o oră.
         </p>
         <p style="margin:0;color:#71717a;font-size:13px;line-height:1.6;">
-          Dacă nu ai creat acest cont, poți ignora mesajul.
+          Dacă nu ai solicitat această verificare, poți ignora mesajul.
         </p>
       </div>
     </div>

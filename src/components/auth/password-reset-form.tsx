@@ -6,7 +6,7 @@ import { type SubmitEvent, useEffect, useRef, useState } from "react";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { refreshAuthSession } from "@/lib/auth-client";
 
 const invalidTokenMessage =
@@ -177,10 +177,9 @@ export function PasswordResetForm({ token }: PasswordResetFormProps) {
           htmlFor="new-password"
           label="Parolă nouă"
         >
-          <Input
+          <PasswordInput
             id="new-password"
             name="newPassword"
-            type="password"
             autoComplete="new-password"
             minLength={8}
             maxLength={128}
@@ -192,10 +191,9 @@ export function PasswordResetForm({ token }: PasswordResetFormProps) {
           htmlFor="confirm-new-password"
           label="Confirmă parola"
         >
-          <Input
+          <PasswordInput
             id="confirm-new-password"
             name="confirmPassword"
-            type="password"
             autoComplete="new-password"
             minLength={8}
             maxLength={128}

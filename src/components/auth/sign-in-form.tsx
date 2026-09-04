@@ -6,8 +6,9 @@ import { type SubmitEvent, useState } from "react";
 
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
-import { authClient } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { authClient } from "@/lib/auth-client";
 
 export function SignInForm() {
   const router = useRouter();
@@ -75,10 +76,9 @@ export function SignInForm() {
       </AuthFormField>
 
       <AuthFormField htmlFor="password" label="Parolă">
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
         />

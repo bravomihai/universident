@@ -7,8 +7,9 @@ import { AccountTypeSwitcher } from "@/components/auth/account-type-switcher";
 import { AuthFormCard } from "@/components/auth/auth-form-card";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
-import { authClient } from "@/lib/auth-client";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { authClient } from "@/lib/auth-client";
 
 type SignUpFormProps = {
   accountType?: "patient" | "student";
@@ -20,6 +21,7 @@ export function SignUpForm({
   const router = useRouter();
 
   const [isPending, setIsPending] = useState(false);
+  const [passwordMatch, setPasswordMatch] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [selectedAccountType, setSelectedAccountType] = useState<
@@ -31,14 +33,24 @@ export function SignUpForm({
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setIsPending(true);
-    setErrorMessage(null);
-
     const formData = new FormData(event.currentTarget);
 
     const name = String(formData.get("name") ?? "");
     const email = String(formData.get("email") ?? "");
     const password = String(formData.get("password") ?? "");
+    const confirmPassword = String(
+      formData.get("confirmPassword") ?? "",
+    );
+
+    if (password !== confirmPassword) {
+      setPasswordMatch(false);
+      setErrorMessage(null);
+      return;
+    }
+
+    setPasswordMatch(true);
+    setIsPending(true);
+    setErrorMessage(null);
 
     try {
       const { error } = await authClient.signUp.email(
@@ -122,15 +134,43 @@ export function SignUpForm({
           </AuthFormField>
 
           <AuthFormField htmlFor="password" label="Parolă">
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="new-password"
               minLength={8}
+              maxLength={128}
               required
             />
           </AuthFormField>
+
+          <AuthFormField
+            htmlFor="confirm-password"
+            label="Confirmă parola"
+          >
+            <PasswordInput
+              id="confirm-password"
+              name="confirmPassword"
+              autoComplete="new-password"
+              minLength={8}
+              maxLength={128}
+              aria-describedby={
+                passwordMatch ? undefined : "confirm-password-error"
+              }
+              aria-invalid={!passwordMatch}
+              required
+            />
+          </AuthFormField>
+
+          {!passwordMatch ? (
+            <p
+              id="confirm-password-error"
+              role="alert"
+              className="text-sm text-destructive"
+            >
+              Parolele nu coincid.
+            </p>
+          ) : null}
 
           {errorMessage ? (
             <p role="alert" className="text-sm text-destructive">

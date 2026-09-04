@@ -27,10 +27,26 @@ export const auth = betterAuth({
         window: 60,
         max: 10,
       },
+      "/change-password": {
+        window: 10 * 60,
+        max: 5,
+      },
+      "/verify-password": {
+        window: 10 * 60,
+        max: 5,
+      },
+      "/change-email": {
+        window: 10 * 60,
+        max: 3,
+      },
     },
   },
 
   user: {
+    changeEmail: {
+      enabled: true,
+      updateEmailWithoutVerification: false,
+    },
     additionalFields: {
       role: {
         type: ["PATIENT", "STUDENT", "ADMIN"],

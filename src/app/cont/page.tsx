@@ -4,6 +4,7 @@ import {
   GraduationCap,
   MapPin,
   Stethoscope,
+  User,
   UserRound,
   UsersRound,
   type LucideIcon,
@@ -12,7 +13,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { AccountDetailsCard } from "@/components/account/account-details-card";
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -72,14 +72,12 @@ function DashboardLinkCard({
       className={clickableCardLinkClassName}
     >
       <Card
-        className={`${clickableCardClassName} ${
-          emphasized ? "bg-primary/[0.04] ring-primary/30" : ""
-        }`}
+        className={`${clickableCardClassName} ${emphasized ? "bg-primary/[0.04] ring-primary/30" : ""
+          }`}
       >
         <CardContent
-          className={`relative flex h-full flex-col gap-4 p-5 ${
-            actionOnDesktop ? "sm:pr-56" : ""
-          }`}
+          className={`relative flex h-full flex-col gap-4 p-5 ${actionOnDesktop ? "sm:pr-56" : ""
+            }`}
         >
           <div className="flex items-start gap-3">
             <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
@@ -91,11 +89,10 @@ function DashboardLinkCard({
             </div>
             {status ? (
               <span
-                className={`ml-auto shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${
-                  statusVariant === "success"
-                    ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                    : "bg-muted/30"
-                }`}
+                className={`ml-auto shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${statusVariant === "success"
+                  ? "border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : "bg-muted/30"
+                  }`}
               >
                 {status}
               </span>
@@ -105,11 +102,10 @@ function DashboardLinkCard({
           <div className="text-sm">{children}</div>
 
           <span
-            className={`mt-auto inline-flex items-center gap-1 text-sm font-medium ${
-              actionOnDesktop
-                ? "sm:absolute sm:right-5 sm:top-1/2 sm:mt-0 sm:-translate-y-1/2"
-                : ""
-            }`}
+            className={`mt-auto inline-flex items-center gap-1 text-sm font-medium ${actionOnDesktop
+              ? "sm:absolute sm:right-5 sm:top-1/2 sm:mt-0 sm:-translate-y-1/2"
+              : ""
+              }`}
           >
             {action}
             <span
@@ -151,66 +147,66 @@ export default async function AccountPage() {
 
   const studentData = isStudent
     ? await (async () => {
-        const profile = await prisma.studentProfile.findUnique({
-          where: { userId: session.user.id },
-          select: {
-            id: true,
-            university: true,
-            studyYear: true,
-            bio: true,
-          },
-        });
+      const profile = await prisma.studentProfile.findUnique({
+        where: { userId: session.user.id },
+        select: {
+          id: true,
+          university: true,
+          studyYear: true,
+          bio: true,
+        },
+      });
 
-        if (!profile) {
-          return {
-            profile: null,
-            activeTreatments: 0,
-            activeLocations: 0,
-            activeSupervisors: 0,
-            archivedTreatments: 0,
-            archivedLocations: 0,
-            archivedSupervisors: 0,
-          };
-        }
-
-        const activeTreatments = await prisma.studentTreatment.count({
-          where: {
-            studentProfileId: profile.id,
-            deletedAt: null,
-          },
-        });
-        const activeLocations = await prisma.studentLocation.count({
-          where: {
-            studentProfileId: profile.id,
-            deletedAt: null,
-          },
-        });
-        const activeSupervisors = await prisma.studentSupervisor.count({
-          where: {
-            studentProfileId: profile.id,
-            deletedAt: null,
-          },
-        });
-        const archivedTreatments = await prisma.studentTreatment.count({
-          where: { studentProfileId: profile.id, deletedAt: { not: null } },
-        });
-        const archivedLocations = await prisma.studentLocation.count({
-          where: { studentProfileId: profile.id, deletedAt: { not: null } },
-        });
-        const archivedSupervisors = await prisma.studentSupervisor.count({
-          where: { studentProfileId: profile.id, deletedAt: { not: null } },
-        });
-
+      if (!profile) {
         return {
-          profile,
-          activeTreatments,
-          activeLocations,
-          activeSupervisors,
-          archivedTreatments,
-          archivedLocations,
-          archivedSupervisors,
+          profile: null,
+          activeTreatments: 0,
+          activeLocations: 0,
+          activeSupervisors: 0,
+          archivedTreatments: 0,
+          archivedLocations: 0,
+          archivedSupervisors: 0,
         };
-      })()
+      }
+
+      const activeTreatments = await prisma.studentTreatment.count({
+        where: {
+          studentProfileId: profile.id,
+          deletedAt: null,
+        },
+      });
+      const activeLocations = await prisma.studentLocation.count({
+        where: {
+          studentProfileId: profile.id,
+          deletedAt: null,
+        },
+      });
+      const activeSupervisors = await prisma.studentSupervisor.count({
+        where: {
+          studentProfileId: profile.id,
+          deletedAt: null,
+        },
+      });
+      const archivedTreatments = await prisma.studentTreatment.count({
+        where: { studentProfileId: profile.id, deletedAt: { not: null } },
+      });
+      const archivedLocations = await prisma.studentLocation.count({
+        where: { studentProfileId: profile.id, deletedAt: { not: null } },
+      });
+      const archivedSupervisors = await prisma.studentSupervisor.count({
+        where: { studentProfileId: profile.id, deletedAt: { not: null } },
+      });
+
+      return {
+        profile,
+        activeTreatments,
+        activeLocations,
+        activeSupervisors,
+        archivedTreatments,
+        archivedLocations,
+        archivedSupervisors,
+      };
+    })()
     : null;
 
   const profileCompletion = !studentData?.profile
@@ -279,27 +275,47 @@ export default async function AccountPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardContent className="h-full p-5">
-                {publication ? (
-                  <StudentPublicationControl
-                    className="h-full border-t-0 pt-0"
-                    initialState={{
-                      isPublished: publication.isPublished,
-                      isPubliclyVisible: publication.isPubliclyVisible,
-                      canPublish: publication.canPublish,
-                      publicPath: publication.publicSlug
-                        ? `/studenti/${publication.publicSlug}`
-                        : null,
-                      missingRequirements: publication.missingRequirements,
-                    }}
-                  />
-                ) : null}
+                  {publication ? (
+                    <StudentPublicationControl
+                      className="h-full border-t-0 pt-0"
+                      initialState={{
+                        isPublished: publication.isPublished,
+                        isPubliclyVisible: publication.isPubliclyVisible,
+                        canPublish: publication.canPublish,
+                        publicPath: publication.publicSlug
+                          ? `/studenti/${publication.publicSlug}`
+                          : null,
+                        missingRequirements: publication.missingRequirements,
+                      }}
+                    />
+                  ) : null}
                 </CardContent>
               </Card>
 
-              <AccountDetailsCard
-                email={session.user.email}
-                roleLabel={roleLabels[session.user.role]}
-              />
+              <DashboardLinkCard
+                href="/cont/securitate"
+                icon={UserRound}
+                title="Securitatea contului"
+                description="Gestionează datele de autentificare și securitatea contului."
+                action="Gestionează securitatea"
+              >
+                <dl className="grid gap">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Email</dt>
+                    <dd className="truncate font-medium" title={session.user.email}>
+                      {session.user.email}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Rol</dt>
+                    <dd className="font-medium">
+                      {roleLabels[session.user.role]}
+                    </dd>
+                  </div>
+                </dl>
+              </DashboardLinkCard>
+
             </div>
           </section>
         ) : null}
@@ -452,10 +468,29 @@ export default async function AccountPage() {
               </div>
             </DashboardLinkCard>
 
-            <AccountDetailsCard
-              email={session.user.email}
-              roleLabel={roleLabels[session.user.role]}
-            />
+            <DashboardLinkCard
+              href="/cont/securitate"
+              icon={UserRound}
+              title="Securitatea contului"
+              description="Gestionează datele de autentificare și securitatea contului."
+              action="Gestionează securitatea"
+            >
+              <dl className="grid gap">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Email</dt>
+                  <dd className="truncate font-medium" title={session.user.email}>
+                    {session.user.email}
+                  </dd>
+                </div>
+
+                <div>
+                  <dt className="text-xs text-muted-foreground">Rol</dt>
+                  <dd className="font-medium">
+                    {roleLabels[session.user.role]}
+                  </dd>
+                </div>
+              </dl>
+            </DashboardLinkCard>
           </section>
         ) : null}
 

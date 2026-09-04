@@ -78,7 +78,9 @@ export async function POST(request: Request) {
 
   if (
     pathname === "/api/auth/request-password-reset" ||
-    pathname === "/api/auth/reset-password"
+    pathname === "/api/auth/reset-password" ||
+    pathname === "/api/auth/change-email" ||
+    pathname === "/api/auth/verify-password"
   ) {
     return Response.json(
       { error: "Ruta nu este disponibilă." },
