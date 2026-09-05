@@ -4,7 +4,6 @@ import {
   GraduationCap,
   MapPin,
   Stethoscope,
-  User,
   UserRound,
   UsersRound,
   type LucideIcon,
@@ -13,6 +12,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -25,6 +25,7 @@ import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
 import { formatUnreadAppointmentNotifications } from "@/lib/appointments/appointment-notification-label";
 import { prisma } from "@/lib/prisma";
+import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
 import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
 
 export const metadata: Metadata = {
@@ -154,6 +155,7 @@ export default async function AccountPage() {
           university: true,
           studyYear: true,
           bio: true,
+          profileImage: { select: { id: true, updatedAt: true } },
         },
       });
 
@@ -212,6 +214,7 @@ export default async function AccountPage() {
   const profileCompletion = !studentData?.profile
     ? "Profil necompletat"
     : "Profil complet";
+  const profileImageUrl = studentProfileImageUrl(studentData?.profile?.profileImage);
   const publication = isStudent
     ? await getStudentPublicationReadiness(session.user.id)
     : null;
@@ -221,9 +224,17 @@ export default async function AccountPage() {
       <div className="w-full max-w-6xl space-y-4">
         <header className="space-y-2 pb-4">
           <div className="flex items-center gap-3">
-            <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
-              <UserRound className="size-5" aria-hidden="true" />
-            </span>
+            {isStudent ? (
+              <PublicStudentAvatar
+                name={session.user.name}
+                imageUrl={profileImageUrl}
+                className="size-10 text-sm"
+              />
+            ) : (
+              <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
+                <UserRound className="size-5" aria-hidden="true" />
+              </span>
+            )}
             <h1 className="text-3xl font-semibold tracking-tight">
               Bun venit, {session.user.name}
             </h1>
@@ -247,9 +258,13 @@ export default async function AccountPage() {
               }
             >
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                <div className="min-w-0 space-y-2">
-                  <p className="font-semibold">{session.user.name}</p>
-                  <div className="min-w-0">
+                <div className="flex min-w-0 items-start gap-3">
+                  <PublicStudentAvatar
+                    name={session.user.name}
+                    imageUrl={profileImageUrl}
+                  />
+                  <div className="min-w-0 space-y-2">
+                    <p className="font-semibold">{session.user.name}</p>
                     <p className="min-w-0 flex-1 text-sm text-muted-foreground">
                       {studentData.profile
                         ? compactBio(studentData.profile.bio)

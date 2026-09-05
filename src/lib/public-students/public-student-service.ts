@@ -9,6 +9,7 @@ import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment
 import { prisma } from "@/lib/prisma";
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
+import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
 
 export const PUBLIC_STUDENTS_PAGE_SIZE = 12;
 export type PublicCatalogOption = { name: string; slug: string };
@@ -29,6 +30,7 @@ export type PublicStudentTreatmentDto = {
 };
 export type PublicStudentSummaryDto = {
   name: string;
+  imageUrl: string | null;
   publicSlug: string;
   university: string;
   studyYear: number;
@@ -40,6 +42,7 @@ export type PublicStudentSummaryDto = {
 };
 export type PublicStudentProfileDto = {
   name: string;
+  imageUrl: string | null;
   publicSlug: string;
   university: string;
   studyYear: number;
@@ -89,6 +92,8 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
           university: true,
           studyYear: true,
           bio: true,
+          lastRefreshedAt: true,
+          profileImage: { select: { id: true, updatedAt: true } },
           user: { select: { name: true } },
         },
       },
@@ -116,11 +121,13 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
     candidates.push({
       studentProfileId: block.studentProfile.id,
       studentName: block.studentProfile.user.name,
+      profileRefreshedAt: block.studentProfile.lastRefreshedAt,
       locationKey: block.studentLocationId,
       firstAvailableAt: choices[0].startsAt,
       tieBreaker: `${block.studentLocation.routeKey}:${offering.id}`,
       value: {
         name: block.studentProfile.user.name,
+        imageUrl: studentProfileImageUrl(block.studentProfile.profileImage),
         publicSlug: block.studentProfile.publicSlug,
         university: block.studentProfile.university,
         studyYear: block.studentProfile.studyYear,
@@ -155,6 +162,7 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
     where: { ...publicProfileWhere, publicSlug },
     include: {
       user: { select: { id: true, name: true } },
+      profileImage: { select: { id: true, updatedAt: true } },
       availabilitySlots: {
         where: {
           status: "ACTIVE",
@@ -184,5 +192,5 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
     }
   }
   const reviewData = await getPublishedProfileReviews(profile.user.id, "STUDENT");
-  return { name: profile.user.name, publicSlug: profile.publicSlug, university: profile.university, studyYear: profile.studyYear, bio: profile.bio, treatments: [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "ro")), reviewData } satisfies PublicStudentProfileDto;
+  return { name: profile.user.name, imageUrl: studentProfileImageUrl(profile.profileImage), publicSlug: profile.publicSlug, university: profile.university, studyYear: profile.studyYear, bio: profile.bio, treatments: [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "ro")), reviewData } satisfies PublicStudentProfileDto;
 });

@@ -1,6 +1,7 @@
 export type PublicStudentSearchCandidate<T> = {
   studentProfileId: string;
   studentName: string;
+  profileRefreshedAt: Date | null;
   locationKey: string;
   firstAvailableAt: Date;
   tieBreaker: string;
@@ -52,6 +53,17 @@ export function rankUniquePublicStudents<T>(
 
   return [...byStudent.entries()]
     .sort(([firstId, first], [secondId, second]) => {
+      const firstRefresh = first.earliest.profileRefreshedAt;
+      const secondRefresh = second.earliest.profileRefreshedAt;
+
+      if (firstRefresh && !secondRefresh) return -1;
+      if (!firstRefresh && secondRefresh) return 1;
+      if (firstRefresh && secondRefresh) {
+        const refreshDifference =
+          secondRefresh.getTime() - firstRefresh.getTime();
+        if (refreshDifference !== 0) return refreshDifference;
+      }
+
       const timeDifference =
         first.earliest.firstAvailableAt.getTime() -
         second.earliest.firstAvailableAt.getTime();

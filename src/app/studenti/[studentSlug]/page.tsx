@@ -98,6 +98,7 @@ export default async function PublicStudentProfilePage({
         <header className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <PublicStudentAvatar
             name={profile.name}
+            imageUrl={profile.imageUrl}
             className="size-20 text-xl"
           />
           <div className="min-w-0 space-y-2">

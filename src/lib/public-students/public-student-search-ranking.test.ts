@@ -3,11 +3,12 @@ import test from "node:test";
 
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 
-test("students appear once and are ordered by their earliest real availability", () => {
+test("students appear once and are ordered by their latest profile refresh", () => {
   const ranked = rankUniquePublicStudents([
     {
       studentProfileId: "student-one",
       studentName: "Student unu",
+      profileRefreshedAt: new Date("2026-08-14T08:00:00.000Z"),
       locationKey: "location-late",
       firstAvailableAt: new Date("2026-08-16T10:00:00.000Z"),
       tieBreaker: "location-late",
@@ -16,6 +17,7 @@ test("students appear once and are ordered by their earliest real availability",
     {
       studentProfileId: "student-two",
       studentName: "Student doi",
+      profileRefreshedAt: new Date("2026-08-15T08:00:00.000Z"),
       locationKey: "location-only",
       firstAvailableAt: new Date("2026-08-15T10:00:00.000Z"),
       tieBreaker: "location-only",
@@ -24,6 +26,7 @@ test("students appear once and are ordered by their earliest real availability",
     {
       studentProfileId: "student-one",
       studentName: "Student unu",
+      profileRefreshedAt: new Date("2026-08-14T08:00:00.000Z"),
       locationKey: "location-early",
       firstAvailableAt: new Date("2026-08-14T10:00:00.000Z"),
       tieBreaker: "location-early",
@@ -32,6 +35,7 @@ test("students appear once and are ordered by their earliest real availability",
     {
       studentProfileId: "student-one",
       studentName: "Student unu",
+      profileRefreshedAt: new Date("2026-08-14T08:00:00.000Z"),
       locationKey: "location-early",
       firstAvailableAt: new Date("2026-08-17T10:00:00.000Z"),
       tieBreaker: "location-early-later-block",
@@ -45,8 +49,8 @@ test("students appear once and are ordered by their earliest real availability",
       locationCount: item.locationCount,
     })),
     [
-      { value: "student-one-early", locationCount: 2 },
       { value: "student-two", locationCount: 1 },
+      { value: "student-one-early", locationCount: 2 },
     ],
   );
 });

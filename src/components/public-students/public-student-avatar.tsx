@@ -1,7 +1,13 @@
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+
 import { cn } from "@/lib/utils";
 
 type PublicStudentAvatarProps = {
   name: string;
+  imageUrl?: string | null;
   className?: string;
 };
 
@@ -18,8 +24,11 @@ function initialsForName(name: string) {
 
 export function PublicStudentAvatar({
   name,
+  imageUrl,
   className,
 }: PublicStudentAvatarProps) {
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+
   return (
     <span
       className={cn(
@@ -28,7 +37,19 @@ export function PublicStudentAvatar({
       )}
       aria-hidden="true"
     >
-      {initialsForName(name)}
+      {imageUrl && failedImageUrl !== imageUrl ? (
+        <Image
+          src={imageUrl}
+          alt=""
+          fill
+          sizes="80px"
+          unoptimized
+          className="object-cover"
+          onError={() => setFailedImageUrl(imageUrl)}
+        />
+      ) : (
+        initialsForName(name)
+      )}
     </span>
   );
 }

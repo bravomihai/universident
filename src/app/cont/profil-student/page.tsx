@@ -2,6 +2,8 @@ import { GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
+import { StudentProfileImageForm } from "@/components/student/student-profile-image-form";
+import { StudentProfileRefreshControl } from "@/components/student/student-profile-refresh-control";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
 import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
@@ -19,6 +21,7 @@ import { formatStudentCancellationReputation } from "@/lib/appointments/student-
 import { prisma } from "@/lib/prisma";
 import { getPublishedProfileReviews } from "@/lib/reviews/profile-review-service";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
+import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
 
 export const metadata: Metadata = {
     title: "Profil profesional",
@@ -45,6 +48,11 @@ export default async function StudentProfilePage() {
                 university: true,
                 studyYear: true,
                 bio: true,
+                isPublished: true,
+                lastRefreshedAt: true,
+                profileImage: {
+                    select: { id: true, updatedAt: true },
+                },
             },
         }),
         getPublishedProfileReviews(session.user.id, "STUDENT"),
@@ -69,6 +77,8 @@ export default async function StudentProfilePage() {
                 normalizedProfileUniversity,
         )?.slug ?? legacyUniversitySlugs[normalizedProfileUniversity] ?? null
         : null;
+    const initialImageUrl = studentProfileImageUrl(profile?.profileImage);
+    const initialNow = new Date().toISOString();
 
     return (
         <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -94,6 +104,25 @@ export default async function StudentProfilePage() {
 
                 <Card>
                     <CardHeader>
+                        <CardTitle>Fotografie de profil</CardTitle>
+                        <CardDescription>
+                            Fotografia apare în rezultate și pe profilul tău
+                            public. Dacă nu adaugi una, vor fi afișate
+                            inițialele numelui.
+                        </CardDescription>
+                    </CardHeader>
+
+                    <CardContent>
+                        <StudentProfileImageForm
+                            name={session.user.name}
+                            hasProfile={Boolean(profile)}
+                            initialImageUrl={initialImageUrl}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
                         <CardTitle>Informații profesionale</CardTitle>
 
                         <CardDescription>
@@ -115,6 +144,27 @@ export default async function StudentProfilePage() {
                                     : null
                             }
                             universities={universities}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Poziția în rezultate</CardTitle>
+                        <CardDescription>
+                            Actualizează manual profilul pentru a indica
+                            pacienților că informațiile sunt încă actuale.
+                        </CardDescription>
+                    </CardHeader>
+
+                    <CardContent>
+                        <StudentProfileRefreshControl
+                            hasProfile={Boolean(profile)}
+                            isPublished={profile?.isPublished ?? false}
+                            initialLastRefreshedAt={
+                                profile?.lastRefreshedAt?.toISOString() ?? null
+                            }
+                            initialNow={initialNow}
                         />
                     </CardContent>
                 </Card>
