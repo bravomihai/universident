@@ -12,7 +12,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
+import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -24,6 +24,7 @@ import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
 import { formatUnreadAppointmentNotifications } from "@/lib/appointments/appointment-notification-label";
+import { patientProfileImageUrl } from "@/lib/patient/patient-profile-image";
 import { prisma } from "@/lib/prisma";
 import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
 import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
@@ -141,6 +142,7 @@ function compactBio(bio: string | null) {
 export default async function AccountPage() {
   const session = await requireAccountPageSession();
   const isStudent = session.user.role === UserRole.STUDENT;
+  const isPatient = session.user.role === UserRole.PATIENT;
   const appointmentData =
     session.user.role === UserRole.PATIENT || session.user.role === UserRole.STUDENT
       ? await listAppointmentsForUser(session.user.id, session.user.role)
@@ -214,7 +216,15 @@ export default async function AccountPage() {
   const profileCompletion = !studentData?.profile
     ? "Profil necompletat"
     : "Profil complet";
-  const profileImageUrl = studentProfileImageUrl(studentData?.profile?.profileImage);
+  const patientImage = isPatient
+    ? await prisma.patientProfileImage.findFirst({
+        where: { patientProfile: { userId: session.user.id } },
+        select: { id: true, updatedAt: true },
+      })
+    : null;
+  const profileImageUrl = isStudent
+    ? studentProfileImageUrl(studentData?.profile?.profileImage)
+    : patientProfileImageUrl(patientImage);
   const publication = isStudent
     ? await getStudentPublicationReadiness(session.user.id)
     : null;
@@ -224,8 +234,8 @@ export default async function AccountPage() {
       <div className="w-full max-w-6xl space-y-4">
         <header className="space-y-2 pb-4">
           <div className="flex items-center gap-3">
-            {isStudent ? (
-              <PublicStudentAvatar
+            {isStudent || isPatient ? (
+              <ProfileAvatar
                 name={session.user.name}
                 imageUrl={profileImageUrl}
                 className="size-10 text-sm"
@@ -259,7 +269,7 @@ export default async function AccountPage() {
             >
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                 <div className="flex min-w-0 items-start gap-3">
-                  <PublicStudentAvatar
+                  <ProfileAvatar
                     name={session.user.name}
                     imageUrl={profileImageUrl}
                   />
@@ -473,13 +483,16 @@ export default async function AccountPage() {
                   : "default"
               }
             >
-              <div className="space-y-2">
-                <p className="font-semibold">{session.user.name}</p>
-                <p className="text-muted-foreground">
-                  {appointmentData.patientProfile?.bio?.trim()
-                    ? compactBio(appointmentData.patientProfile.bio)
-                    : "Poți adăuga o descriere opțională pentru studenții cu care ai o programare."}
-                </p>
+              <div className="flex min-w-0 items-start gap-3">
+                <ProfileAvatar name={session.user.name} imageUrl={profileImageUrl} />
+                <div className="min-w-0 space-y-2">
+                  <p className="font-semibold">{session.user.name}</p>
+                  <p className="text-muted-foreground">
+                    {appointmentData.patientProfile?.bio?.trim()
+                      ? compactBio(appointmentData.patientProfile.bio)
+                      : "Poți adăuga o descriere opțională pentru studenții cu care ai o programare."}
+                  </p>
+                </div>
               </div>
             </DashboardLinkCard>
 

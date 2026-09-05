@@ -7,9 +7,12 @@ import { RatingSummaryLink } from "@/components/reviews/rating-summary";
 import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
+import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { ageOnDate } from "@/lib/availability/bucharest-time";
+import { patientProfileAccessWhere } from "@/lib/patient/patient-profile-access";
+import { patientProfileImageUrl } from "@/lib/patient/patient-profile-image";
 import { prisma } from "@/lib/prisma";
 import { formatLateCancellationReputation } from "@/lib/appointments/patient-reputation-label";
 import { getPublishedProfileReviews } from "@/lib/reviews/profile-review-service";
@@ -20,33 +23,23 @@ type Props = { params: Promise<{ patientSlug: string }> };
 export default async function PatientReviewsProfilePage({ params }: Props) {
   const session = await requireAccountPageSession();
   const { patientSlug } = await params;
-  const patient = await prisma.patientProfile.findUnique({
-    where: { profileSlug: patientSlug },
+  const patient = await prisma.patientProfile.findFirst({
+    where: {
+      profileSlug: patientSlug,
+      ...patientProfileAccessWhere(session.user),
+    },
     select: {
       id: true,
       profileSlug: true,
       dateOfBirth: true,
       bio: true,
+      profileImage: { select: { id: true, updatedAt: true } },
       user: { select: { id: true, name: true } },
     },
   });
   if (!patient) notFound();
 
   const isOwner = session.user.role === UserRole.PATIENT && patient.user.id === session.user.id;
-  let canView = isOwner;
-  if (session.user.role === UserRole.STUDENT) {
-    const student = await prisma.studentProfile.findUnique({
-      where: { userId: session.user.id },
-      select: { id: true },
-    });
-    if (student) {
-      canView = Boolean(await prisma.appointment.findFirst({
-        where: { patientProfileId: patient.id, studentProfileId: student.id },
-        select: { id: true },
-      }));
-    }
-  }
-  if (!canView) notFound();
 
   const [reviewData, recentConfirmedAppointments] = await Promise.all([
     getPublishedProfileReviews(patient.user.id, "PATIENT"),
@@ -67,9 +60,16 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
       <div className="w-full max-w-5xl space-y-8">
         <BackLink href={isOwner ? "/cont/profil-pacient" : "/cont/programari"}>Înapoi</BackLink>
         <header className="space-y-3">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{patient.user.name}</h1>
-            {age !== null ? <p className="mt-1 text-muted-foreground">{age} ani</p> : null}
+          <div className="flex items-center gap-4">
+            <ProfileAvatar
+              name={patient.user.name}
+              imageUrl={patientProfileImageUrl(patient.profileImage)}
+              className="size-20 text-xl"
+            />
+            <div className="min-w-0">
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{patient.user.name}</h1>
+              {age !== null ? <p className="mt-1 text-muted-foreground">{age} ani</p> : null}
+            </div>
           </div>
           <RatingSummaryLink summary={reviewData.summary} href="#recenzii" />
           {isOwner ? <Button asChild variant="outline" size="sm"><Link href="/cont/profil-pacient">Editează profilul</Link></Button> : null}
