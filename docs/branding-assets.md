@@ -15,7 +15,7 @@ Cele șase PNG-uri au fundal cu transparență reală și aceeași geometrie în
 
 ## Culori și font
 
-- Light: albastru `#2563EB`, navy `#10233F`, fundal de prezentare `#E3EFFF`.
+- Light: dintele și paginile cărții albastru deschis `#60A5FA`, cotorul și textul navy `#10233F`, fundal de prezentare `#E3EFFF`.
 - Dark: albastru `#60A5FA`, alb rece `#E8EEF7`, fundal de prezentare `#08111F`.
 - Wordmark: Figtree Semibold (600), fontul folosit în site.
 - Slogan: Figtree Regular (400), „Unde învățarea devine grijă.”
@@ -28,7 +28,15 @@ Simbolul trimis de utilizator (dinte deasupra unei cărți deschise) a fost folo
 
 Verificările tehnice acoperă dimensiunile, formatul RGBA, transparența reală, culorile pixelilor opaci și egalitatea măștilor alfa între teme.
 
-### Promptul masterului selectat
+### Revizia 2 — aceeași culoare a dintelui în ambele teme
+
+La cererea utilizatorului, numai dintele din cele trei fișiere light a fost recolorat din `#2563EB` în `#60A5FA`, identic cu dintele dark. Aceasta este o operație tehnică deterministă, autorizată, fără o nouă generare ImageGen sau un nou prompt. Paginile cărții, baza navy, textul, dimensiunile și canalul alfa sunt neschimbate. Toți pixelii din afara măștii dintelui sunt identici cu originalul; cele trei fișiere dark au fost copiate fără modificări.
+
+### Revizia 3 — dintele și paginile light blue în ambele teme
+
+Paginile cărții din cele trei fișiere light au fost recolorate tehnic din `#2563EB` în `#60A5FA`. Dintele și paginile au acum exact aceeași culoare și geometrie în ambele teme. Cotorul, textul, dimensiunile și transparența rămân neschimbate. Variantele dark sunt identice cu cele originale. Nu s-a folosit o nouă generare sau un nou prompt.
+
+### Promptul masterului original (înainte de reviziile tehnice)
 
 ```text
 Use case: logo-brand.
