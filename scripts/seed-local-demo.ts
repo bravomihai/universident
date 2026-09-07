@@ -1,4 +1,5 @@
 import "dotenv/config";
+import type { Prisma } from "../src/generated/prisma/client";
 
 import {
   AppointmentReviewAuthorRole,
@@ -14,6 +15,11 @@ import {
   utcInstantForBucharestLocal,
 } from "../src/lib/availability/bucharest-time";
 import { prisma } from "../src/lib/prisma";
+import { PROFILE_REFRESH_COOLDOWN_MS } from "../src/lib/student-profile/profile-refresh";
+import { assertLocalDemoDatabase, parseLocalDemoOptions } from "./lib/local-demo-options";
+import { placeLocalDemoSlots } from "./lib/local-demo-schedule";
+import { buildDemoDirectory, isDemoDirectoryStudent, type DemoDirectoryPlan } from "./lib/local-demo-directory";
+import { validateDemoDirectory, writeDemoDirectory } from "./lib/local-demo-directory-store";
 
 const DEMO_PREFIX = "demo-ui-";
 
@@ -79,24 +85,6 @@ type AppointmentDefinition = {
   isLateCancellation?: boolean;
 };
 
-function assertLocalDatabase() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL nu este definit.");
-  }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Seed-ul demo nu poate rula cu NODE_ENV=production.");
-  }
-
-  const parsed = new URL(databaseUrl);
-  const localHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
-  if (!localHosts.has(parsed.hostname)) {
-    throw new Error(
-      `Seed-ul demo refuză baza non-locală de pe hostul „${parsed.hostname}”.`,
-    );
-  }
-}
-
 function requiredPrismaDate(value: string) {
   const result = localDateToPrismaDate(value);
   if (!result) throw new Error(`Data locală „${value}” este invalidă.`);
@@ -125,14 +113,52 @@ function demoId(kind: string, key: string) {
   return `${DEMO_PREFIX}${kind}-${key}`;
 }
 
+function printDirectorySummary(directory: DemoDirectoryPlan) {
+  const cityCount = new Set(directory.locations.map((location) => location.cityId)).size;
+  console.log(`${directory.profiles.length} profiluri fictive publicate, ${directory.locations.length} locații și ${directory.slots.length} intervale viitoare, în ${cityCount} orașe.`);
+  console.log(`Distribuția pentru căutare (doar cele ${directory.profiles.length} de profiluri demo):`);
+  console.table(directory.coverage.map((row) => ({ oraș: row.city, tratament: row.treatment, profiluri: row.profiles })));
+}
+
 async function main() {
-  assertLocalDatabase();
+  const options = parseLocalDemoOptions(process.argv.slice(2));
+  assertLocalDemoDatabase(process.env.DATABASE_URL, process.env.NODE_ENV);
+
+  const [catalogTreatments, catalogCities, catalogUniversities] = await Promise.all([
+    prisma.treatment.findMany({ where: { isActive: true } }),
+    prisma.city.findMany({ where: { isActive: true } }),
+    prisma.university.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { shortName: "asc" }],
+    }),
+  ]);
+  const now = new Date();
+  const directory = buildDemoDirectory({
+    cities: catalogCities, treatments: catalogTreatments, universities: catalogUniversities,
+  }, now);
+
+  if (options.directoryOnly) {
+    await validateDemoDirectory(prisma, directory);
+    printDirectorySummary(directory);
+    if (options.dryRun) {
+      console.log("Verificare încheiată fără scrieri. Modul directory-only nu modifică scenariile sau conturile existente din afara setului de profiluri fictive.");
+      return;
+    }
+    await prisma.$transaction(async (transaction) => {
+      const existing = await validateDemoDirectory(transaction, directory);
+      await writeDemoDirectory(transaction, directory, existing, now);
+    }, { isolationLevel: "Serializable", maxWait: 10_000, timeout: 120_000 });
+    console.log(`Cele ${directory.profiles.length} de profiluri Demo sunt pregătite. Nu au parole și nu au fost trimise emailuri. Detalii: scripts/DEMO-TESTING.md.`);
+    return;
+  }
 
   const users = await prisma.user.findMany({
     select: {
       id: true,
       name: true,
+      email: true,
       role: true,
+      emailVerified: true,
       patientProfile: {
         select: {
           id: true,
@@ -154,26 +180,23 @@ async function main() {
     },
   });
 
-  const patientUsers = users.filter((user) => user.role === UserRole.PATIENT);
-  const studentUsers = users.filter((user) => user.role === UserRole.STUDENT);
-  if (users.length !== 2 || patientUsers.length !== 1 || studentUsers.length !== 1) {
+  const patientUsers = users.filter((user) => user.role === UserRole.PATIENT &&
+    (!options.patientEmail || user.email.toLowerCase() === options.patientEmail));
+  const studentUsers = users.filter((user) => user.role === UserRole.STUDENT && !isDemoDirectoryStudent(user) &&
+    (!options.studentEmail || user.email.toLowerCase() === options.studentEmail));
+  if (patientUsers.length !== 1 || studentUsers.length !== 1) {
     throw new Error(
-      `Seed-ul demo cere exact două conturi existente: un pacient și un student. Acum sunt ${users.length} conturi (${patientUsers.length} pacienți, ${studentUsers.length} studenți).`,
+      `Selectează exact un pacient și un student existenți cu --patient-email=... și, dacă este nevoie, --student-email=... . Selecția curentă găsește ${patientUsers.length} pacienți și ${studentUsers.length} studenți.`,
     );
   }
 
   const patientUser = patientUsers[0];
   const studentUser = studentUsers[0];
-  const [catalogTreatments, city, defaultUniversity] = await Promise.all([
-    prisma.treatment.findMany({
-      where: { slug: { in: [...requiredTreatmentSlugs] }, isActive: true },
-    }),
-    prisma.city.findUnique({ where: { slug: "cluj-napoca" } }),
-    prisma.university.findFirst({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { shortName: "asc" }],
-    }),
-  ]);
+  if (!patientUser.emailVerified || !studentUser.emailVerified) {
+    throw new Error("Verifică emailul celor două conturi prin aplicație înainte de a popula datele demo.");
+  }
+  const city = catalogCities.find((candidate) => candidate.slug === "cluj-napoca");
+  const defaultUniversity = catalogUniversities[0];
   const missingTreatments = requiredTreatmentSlugs.filter(
     (slug) => !catalogTreatments.some((treatment) => treatment.slug === slug),
   );
@@ -183,7 +206,9 @@ async function main() {
     );
   }
 
-  const now = new Date();
+  const lastRefreshedAt = options.refresh === "cooldown"
+    ? now
+    : new Date(now.getTime() - PROFILE_REFRESH_COOLDOWN_MS - 60_000);
   const today = localDateForInstant(now);
   const defaultBirthDate = requiredPrismaDate("1992-04-18");
   const existingBirthDate = patientUser.patientProfile?.dateOfBirth;
@@ -472,8 +497,93 @@ async function main() {
     },
   ];
 
+  const selectedAppointments = appointmentDefinitions.filter(
+    (definition) => options.scenario === "full" ||
+      !["confirmed-overdue", "completed-awaiting-patient"].includes(definition.key),
+  );
+  const scenarioSlots = slotDefinitions.filter(
+    (definition) => options.scenario === "full" ||
+      !["confirmed-overdue", "completed-awaiting-patient"].includes(definition.key),
+  );
+  const allDemoRouteSlugs = appointmentDefinitions.map((definition) =>
+    demoId("appointment", definition.key),
+  );
+  const allDemoSlotIds = demoSlotKeys.map((key) => demoId("slot", key));
+  const existingIntervals = studentUser.studentProfile
+    ? await prisma.studentAvailabilitySlot.findMany({
+        where: {
+          studentProfileId: studentUser.studentProfile.id,
+          id: { notIn: allDemoSlotIds },
+          status: StudentAvailabilitySlotStatus.ACTIVE,
+        },
+        select: { startsAt: true, endsAt: true },
+      })
+    : [];
+  const selectedSlots = placeLocalDemoSlots(scenarioSlots, today, existingIntervals);
+
+  async function validateExistingCalendar(
+    client: Pick<Prisma.TransactionClient, "appointment" | "studentAvailabilitySlot">,
+  ) {
+    const otherPairAppointments = await client.appointment.count({
+      where: {
+        routeSlug: { in: allDemoRouteSlugs },
+        OR: [
+          { patientProfile: { userId: { not: patientUser.id } } },
+          { studentProfile: { userId: { not: studentUser.id } } },
+        ],
+      },
+    });
+    if (otherPairAppointments > 0) {
+      throw new Error("Setul demo existent aparține altei perechi de conturi. Selectează aceeași pereche sau folosește o copie locală separată.");
+    }
+
+    // Do not move a fixture interval if an appointment created through the UI uses it.
+    const dependentAppointments = await client.appointment.count({
+      where: {
+        studentAvailabilitySlotId: { in: allDemoSlotIds },
+        routeSlug: { notIn: allDemoRouteSlugs },
+      },
+    });
+    if (dependentAppointments > 0) {
+      throw new Error(
+        "Există programări create manual pe intervalele demo. Seed-ul nu le resetează; folosește o copie locală separată pentru un nou set de scenarii.",
+      );
+    }
+
+    if (studentUser.studentProfile) {
+      const conflicts = await client.studentAvailabilitySlot.count({
+        where: {
+          studentProfileId: studentUser.studentProfile.id,
+          id: { notIn: allDemoSlotIds },
+          status: StudentAvailabilitySlotStatus.ACTIVE,
+          OR: selectedSlots.filter((slot) => !slot.isCancelled).map((slot) => ({
+            startsAt: { lt: requiredInstant(addLocalDays(today, slot.dayOffset), slot.endMinute) },
+            endsAt: { gt: requiredInstant(addLocalDays(today, slot.dayOffset), slot.startMinute) },
+          })),
+        },
+      });
+      if (conflicts > 0) {
+        throw new Error("Calendarul existent se suprapune cu intervalele demo. Seed-ul a fost oprit fără modificări.");
+      }
+    }
+  }
+
+  await validateExistingCalendar(prisma);
+  await validateDemoDirectory(prisma, directory);
+
+  console.log(`Scenariu: ${options.scenario}; actualizare profil: ${options.refresh}.`);
+  console.log(`${selectedAppointments.length} programări și ${selectedSlots.length} intervale demo, raportate la data ${today}.`);
+  printDirectorySummary(directory);
+  if (options.dryRun) {
+    console.log("Verificare încheiată fără scrieri. Conturile, parolele și fotografiile existente sunt păstrate.");
+    console.log("La populare se configurează profilurile și resursele demo și se resetează programările/recenziile/notificările acestui set demo.");
+    return;
+  }
+
   const result = await prisma.$transaction(
     async (transaction) => {
+      await validateExistingCalendar(transaction);
+      const existingDirectory = await validateDemoDirectory(transaction, directory);
       const patientProfile = await transaction.patientProfile.upsert({
         where: { userId: patientUser.id },
         update: {
@@ -500,6 +610,7 @@ async function main() {
             "Student la medicină dentară, atent la confortul pacientului și la explicarea fiecărei etape.",
           isPublished: true,
           publishedAt: studentUser.studentProfile?.publishedAt ?? now,
+          lastRefreshedAt,
         },
         create: {
           userId: studentUser.id,
@@ -509,6 +620,7 @@ async function main() {
           bio: "Student la medicină dentară, atent la confortul pacientului și la explicarea fiecărei etape.",
           isPublished: true,
           publishedAt: now,
+          lastRefreshedAt,
         },
       });
 
@@ -702,10 +814,11 @@ async function main() {
         },
       });
 
-      const demoRouteSlugs = appointmentDefinitions.map((definition) =>
-        demoId("appointment", definition.key),
-      );
+      const demoRouteSlugs = allDemoRouteSlugs;
       await transaction.appointmentNotification.deleteMany({
+        where: { appointment: { routeSlug: { in: demoRouteSlugs } } },
+      });
+      await transaction.appointmentReview.deleteMany({
         where: { appointment: { routeSlug: { in: demoRouteSlugs } } },
       });
       await transaction.appointment.updateMany({
@@ -723,6 +836,7 @@ async function main() {
       await transaction.studentAvailabilitySlot.updateMany({
         where: {
           studentProfileId: studentProfile.id,
+          id: { in: allDemoSlotIds },
           status: StudentAvailabilitySlotStatus.ACTIVE,
         },
         data: {
@@ -744,7 +858,7 @@ async function main() {
         string,
         { id: string; supervisorName: string }
       >();
-      for (const definition of slotDefinitions) {
+      for (const definition of selectedSlots) {
         const localDate = addLocalDays(today, definition.dayOffset);
         const startsAt = requiredInstant(localDate, definition.startMinute);
         const endsAt = requiredInstant(localDate, definition.endMinute);
@@ -839,7 +953,7 @@ async function main() {
         string,
         { id: string; scheduledEndsAt: Date }
       >();
-      for (const definition of appointmentDefinitions) {
+      for (const definition of selectedAppointments) {
         const slot = slots.get(definition.key);
         const studentTreatment = studentTreatments.get(definition.treatment);
         const offering = offerings.get(
@@ -848,7 +962,7 @@ async function main() {
         if (!slot || !studentTreatment || !offering) {
           throw new Error(`Lipsește slotul sau oferta pentru ${definition.key}.`);
         }
-        const slotDefinition = slotDefinitions.find(
+        const slotDefinition = selectedSlots.find(
           (item) => item.key === definition.key,
         );
         if (!slotDefinition) {
@@ -864,7 +978,7 @@ async function main() {
           studentTreatment.durationMinutes,
         );
         const confirmedAt = definition.confirmed
-          ? minusMinutes(scheduledStartsAt, 24 * 60)
+          ? new Date(Math.min(minusMinutes(scheduledStartsAt, 24 * 60).getTime(), minusMinutes(now, 30).getTime()))
           : null;
         const decisionAt =
           definition.status === AppointmentStatus.PENDING
@@ -890,7 +1004,17 @@ async function main() {
             : definition.changedBy === "STUDENT"
               ? studentUser.id
               : null;
+        const createdAt = definition.status === AppointmentStatus.PENDING
+          ? minusMinutes(now, 30)
+          : new Date(Math.min(
+              minusMinutes(scheduledStartsAt, 2 * 24 * 60).getTime(),
+              minusMinutes(now, 60).getTime(),
+            ));
         const appointmentData = {
+          createdAt,
+          pendingExpiresAt: definition.status === AppointmentStatus.PENDING
+            ? new Date(Math.min(scheduledStartsAt.getTime(), plusMinutes(createdAt, 24 * 60).getTime()))
+            : null,
           patientProfileId: patientProfile.id,
           studentProfileId: studentProfile.id,
           studentAvailabilitySlotId: slot.id,
@@ -936,7 +1060,6 @@ async function main() {
           create: {
             routeSlug: demoId("appointment", definition.key),
             ...appointmentData,
-            createdAt: minusMinutes(scheduledStartsAt, 2 * 24 * 60),
           },
         });
         appointments.set(definition.key, appointment);
@@ -993,6 +1116,7 @@ async function main() {
         },
       ] as const;
       for (const reviewSpec of publishedReviewSpecs) {
+        if (options.scenario === "booking" && reviewSpec.appointment === "completed-awaiting-patient") continue;
         const appointment = appointments.get(reviewSpec.appointment);
         if (!appointment) {
           throw new Error(`Lipsește programarea ${reviewSpec.appointment}.`);
@@ -1013,7 +1137,7 @@ async function main() {
             comment: reviewSpec.comment,
             submittedAt,
             publishedAt: reviewSpec.published
-              ? plusMinutes(submittedAt, 30)
+              ? plusMinutes(appointment.scheduledEndsAt, 75)
               : null,
           },
         });
@@ -1067,6 +1191,8 @@ async function main() {
         });
       }
 
+      await writeDemoDirectory(transaction, directory, existingDirectory, now);
+
       return {
         patientName: patientUser.name,
         studentName: studentUser.name,
@@ -1075,9 +1201,9 @@ async function main() {
         activeTreatmentCount: treatmentSpecs.filter((item) => !item.deletedAt)
           .length,
         activeSupervisorCount: supervisors.size,
-        activeCalendarCount: slotDefinitions.filter((item) => !item.isCancelled)
+        activeCalendarCount: selectedSlots.filter((item) => !item.isCancelled)
           .length,
-        hiddenCancelledCalendarCount: slotDefinitions.filter(
+        hiddenCancelledCalendarCount: selectedSlots.filter(
           (item) => item.isCancelled,
         ).length,
         unreadPatientNotifications: notificationSpecs.filter(
@@ -1088,7 +1214,7 @@ async function main() {
         ).length,
       };
     },
-    { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+    { isolationLevel: "Serializable", maxWait: 10_000, timeout: 120_000 },
   );
 
   console.log(
@@ -1103,6 +1229,11 @@ async function main() {
   console.log(
     `${result.unreadPatientNotifications} notificări necitite pentru pacient și ${result.unreadStudentNotifications} pentru student.`,
   );
+  console.log(`${directory.profiles.length} profiluri Demo și ${directory.slots.length} intervale pregătite pentru homepage și căutare. Conturile fictive nu au parole și nu primesc emailuri.`);
+  console.log(options.scenario === "full"
+    ? "Scenariul complet include o programare restantă și o recenzie de completat. Rezolvă-le din cont înainte de a testa cereri și confirmări noi."
+    : "Scenariul booking nu adaugă programări restante sau recenzii de completat; poți începe cu o cerere nouă.");
+  console.log("Catalog: /studenti?tratament=consultatie&oras=cluj-napoca. Detalii de testare: scripts/DEMO-TESTING.md.");
 }
 
 main()

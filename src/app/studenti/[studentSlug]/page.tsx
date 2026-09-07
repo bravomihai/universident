@@ -1,12 +1,17 @@
-import { Clock3, GraduationCap, MapPin, UserRound } from "lucide-react";
+import { Clock3, GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
+import { PublicStudentLocationCard } from "@/components/public-students/public-student-location-card";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
-import { RatingSummaryLink } from "@/components/reviews/rating-summary";
+import { RatingStars } from "@/components/reviews/rating-summary";
+import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BackLink } from "@/components/ui/back-link";
+import { formatStudentCancellationReputation } from "@/lib/appointments/student-reputation-label";
+import { publicStudentLocationKey } from "@/lib/public-students/public-student-location-key";
+import { publicStudentProfileBackLink } from "@/lib/public-students/public-student-profile-navigation";
 import { getPublicStudentProfile } from "@/lib/public-students/public-student-service";
 
 type PublicStudentProfilePageProps = {
@@ -29,16 +34,6 @@ function treatmentDescription(
   >["treatments"][number],
 ) {
   return treatment.studentDescription ?? treatment.catalogDescription;
-}
-
-function supervisorName(
-  supervisor: NonNullable<
-    Awaited<ReturnType<typeof getPublicStudentProfile>>
-  >["treatments"][number]["locations"][number]["supervisor"],
-) {
-  return [supervisor.academicTitle, supervisor.fullName]
-    .filter(Boolean)
-    .join(" ");
 }
 
 export async function generateMetadata({
@@ -73,12 +68,10 @@ export default async function PublicStudentProfilePage({
       treatment.slug === treatmentSlug &&
       treatment.locations.some((location) => location.city.slug === citySlug),
   );
-  const backHref = highlightedTreatment
-    ? `/studenti?${new URLSearchParams({
-        tratament: treatmentSlug,
-        oras: citySlug,
-      }).toString()}`
-    : "/studenti";
+  const backLink = publicStudentProfileBackLink(
+    query.sursa,
+    highlightedTreatment ? { treatmentSlug, citySlug } : undefined,
+  );
   const orderedTreatments = highlightedTreatment
     ? [
         highlightedTreatment,
@@ -89,10 +82,10 @@ export default async function PublicStudentProfilePage({
     : profile.treatments;
 
   return (
-    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-8">
-        <BackLink href={backHref}>
-          Înapoi la {highlightedTreatment ? "rezultate" : "căutare"}
+        <BackLink href={backLink.href}>
+          {backLink.label}
         </BackLink>
 
         <header className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -111,7 +104,7 @@ export default async function PublicStudentProfilePage({
                 {profile.university} · Anul {profile.studyYear}
               </span>
             </p>
-            <RatingSummaryLink summary={profile.reviewData.summary} href="#recenzii" />
+            <RatingStars {...profile.reviewData.summary} />
           </div>
         </header>
 
@@ -126,15 +119,21 @@ export default async function PublicStudentProfilePage({
           </section>
         ) : null}
 
+        <SchedulingReputationCard
+          count={profile.cancellationsLast10}
+          description="Reper calculat din ultimele 10 programări confirmate."
+          value={formatStudentCancellationReputation(profile.cancellationsLast10)}
+        />
+
         <ProfileReviewList data={profile.reviewData} title="Recenziile studentului" />
 
-        <section aria-labelledby="public-profile-treatments" className="space-y-5">
+        <section id="tratamente" aria-labelledby="public-profile-treatments" className="scroll-mt-24 space-y-5">
           <div>
             <h2 id="public-profile-treatments" className="text-2xl font-semibold tracking-tight">
               Tratamente și locații
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Fiecare locație include profesorul supervizor asociat.
+              Alege o locație pentru a vedea orele disponibile pentru tratament.
             </p>
           </div>
 
@@ -170,25 +169,14 @@ export default async function PublicStudentProfilePage({
 
                     <ul className="space-y-3">
                       {treatment.locations.map((location) => (
-                        <li
-                          key={`${location.city.slug}:${location.name}:${location.address}`}
-                          className="rounded-xl border bg-muted/15 p-4"
-                        >
-                          <p className="flex items-start gap-1.5 font-medium">
-                            <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <span>
-                              {location.name} · {location.city.name}
-                            </span>
-                          </p>
-                          <p className="mt-1 pl-5 text-sm text-muted-foreground">
-                            {location.address}
-                          </p>
-                          <p className="mt-3 flex items-start gap-1.5 border-t pt-3 text-sm text-muted-foreground">
-                            <UserRound className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <span>
-                              Profesor supervizor: {supervisorName(location.supervisor)}
-                            </span>
-                          </p>
+                        <li key={publicStudentLocationKey(location)}>
+                          <PublicStudentLocationCard
+                            studentSlug={profile.publicSlug}
+                            treatmentSlug={treatment.slug}
+                            treatmentName={treatment.name}
+                            location={location}
+                            profileSource={query.sursa === "acasa" ? "acasa" : undefined}
+                          />
                         </li>
                       ))}
                     </ul>
@@ -197,6 +185,11 @@ export default async function PublicStudentProfilePage({
               );
             })}
           </div>
+          {orderedTreatments.length === 0 ? (
+            <p className="rounded-xl border bg-card p-4 text-sm text-muted-foreground">
+              Nu există momentan tratamente cu ore libere în următoarele 60 de zile.
+            </p>
+          ) : null}
         </section>
 
       </div>

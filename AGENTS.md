@@ -25,7 +25,7 @@ npm run db:seed
 ```
 
 - The seed upserts the shared treatment, city, and Romanian dental-university catalogs. It must not create demo users or appointments.
-- `npm run demo:seed` is the separate local-only UI fixture. It requires exactly one existing patient and one existing student, replaces that student's active dummy calendar, and must keep refusing non-local or production databases.
+- `npm run demo:seed` is the separate local-only UI fixture. Its full mode selects one existing verified patient/student pair and resets only its keyed demo scenarios while preserving other activity. It also seeds 140 deterministic fictional student profiles: the original 100 across the city/treatment catalogs, plus 40 additional students for gingival treatment in Cluj-Napoca, all with recent refresh timestamps and future bookable calendar blocks. `--directory-only` seeds only these profiles, needs no existing account pair, and must not touch the original scenarios. Preserve both modes' read-only `--dry-run`, identity/ownership collision checks, manual-appointment/calendar protections, and refusal of non-local or production databases. Never add demo credentials or send emails.
 - Never reset or migrate a database before verifying that `DATABASE_URL` points to the intended local/non-production instance.
 - Every Prisma schema change requires a checked-in migration. Do not use `db push` as a substitute for migrations.
 
@@ -88,7 +88,7 @@ npm run db:seed
 - A completed appointment remains active and highlighted separately for each participant until that participant submits a 1–5 rating. A no-show is archived immediately for the patient, who cannot review it and receives no no-show notification; the student's required review is created atomically when the student records the no-show.
 - A patient with an outstanding review cannot create a new appointment request. A student with an overdue confirmed appointment or missing review cannot confirm a new request. Never block one participant on the other participant's unfinished review.
 - Reviews for completed appointments are blind: keep both unpublished until patient and student have submitted, then publish both atomically. For a no-show, publish the student's review of the patient immediately because no patient review is allowed.
-- Published patient-to-student reviews appear on the student's public professional profile. Published student-to-patient reviews appear on the protected patient profile; public student reviews must anonymize the patient author.
+- Published patient-to-student reviews show the author's current name and optional profile photo on the student's public professional profile. Published student-to-patient reviews show the student author's name and optional photo on the protected patient profile. Never expose a private patient profile slug or link in public review DTOs.
 - Keep Romanian count labels grammatically correct, including singular forms such as `o anulare târzie` and `o recenzie`.
 
 ## Patient data and privacy
@@ -100,6 +100,7 @@ npm run db:seed
 - Patient and student names are edited from their respective profile pages. Keep account email and role read-only in the account dashboard, and never regenerate an existing public or private profile slug after a name change.
 - Students receive only the patient's name, calculated age, optional bio, current note, published aggregate rating/reviews, aggregate late-cancellation reputation, and appointment history shared with that student.
 - A patient review profile is private. Expose its slug and contents only to the owning patient or to a signed-in student who has at least one appointment/request with that patient.
+- Review avatars are a narrow exception for author identity, not public access to patient profiles or their private image endpoint. Serve them only for published reviews visible on a public student profile or to an authorized profile viewer; do not cache them beyond withdrawal or deletion. Inform patients that published reviews include their name and optional photo.
 - Never expose the patient's email, exact date of birth, other providers' appointment details, or unrelated account data to a student.
 - Keep public, patient-private, and student-private response DTOs intentionally separate; do not return broad Prisma `include` graphs from APIs.
 
@@ -108,7 +109,8 @@ npm run db:seed
 - FullCalendar is the primary scheduling surface: `timeGridWeek` on larger screens and `timeGridDay` on phones.
 - Student events use consistent states: available (green), pending (amber), confirmed (blue), moved exception (violet), and selected (primary highlight). Cancelled occurrences are never rendered. Use a repeat icon for ordinary recurring occurrences and a pencil for an occurrence edited separately; do not use an undo-style arrow for either state.
 - Students create and edit availability in a modal dialog opened from a calendar selection or event click. The dialog configures location, treatment offerings, and a supervisor per treatment. Outside click and the explicit cancel action close without saving.
-- Patients enter booking through `/studenti/[studentSlug]/programare/[treatmentSlug]/[citySlug]`. The page combines that treatment's availability across the student's matching locations in the searched city, opens at the earliest valid occurrence, and links the aggregate rating to the professional profile; review cards remain on the profile, not on the booking page.
+- Patients enter booking through `/studenti/[studentSlug]/programare/[treatmentSlug]/[citySlug]`. Search combines matching locations in the city; profile location cards add `?locatie=<routeKey>` to restrict the same calendar to that treatment and location. Validate this optional filter server-side and keep it in availability requests. The calendar opens at the earliest valid occurrence and links the aggregate rating to the professional profile; review cards remain on the profile, not on the booking page.
+- Public professional profiles list only treatment–location–supervisor pairs with real bookable capacity in the same 60-day window and slicing pipeline as the patient calendar. Materialize recurring slots before checking capacity and subtract pending/confirmed occupied intervals; hide empty treatments instead of linking to unavailable combinations.
 - The patient calendar renders availability windows, not a stack of overlapping events for every possible start. Optimized windows normally expose one start; a grouped fallback window opens a dialog where the patient selects one of its valid starts and may add an optional note.
 - Calendar navigation uses `Azi`, `Mâine`, `Poimâine`, or a localized date/range between the arrows, never permits past navigation, and keeps the day/week selector on the right on phones.
 - If the patient's birth date is missing, complete that profile step before enabling a booking request.

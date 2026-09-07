@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
 import { StudentProfileImageForm } from "@/components/student/student-profile-image-form";
-import { StudentProfileRefreshControl } from "@/components/student/student-profile-refresh-control";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
 import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
@@ -48,8 +47,6 @@ export default async function StudentProfilePage() {
                 university: true,
                 studyYear: true,
                 bio: true,
-                isPublished: true,
-                lastRefreshedAt: true,
                 profileImage: {
                     select: { id: true, updatedAt: true },
                 },
@@ -78,10 +75,9 @@ export default async function StudentProfilePage() {
         )?.slug ?? legacyUniversitySlugs[normalizedProfileUniversity] ?? null
         : null;
     const initialImageUrl = studentProfileImageUrl(profile?.profileImage);
-    const initialNow = new Date().toISOString();
 
     return (
-        <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+        <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
             <div className="w-full max-w-6xl space-y-6">
                 <BackLink href="/cont">Înapoi la cont</BackLink>
 
@@ -148,28 +144,8 @@ export default async function StudentProfilePage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Poziția în rezultate</CardTitle>
-                        <CardDescription>
-                            Actualizează manual profilul pentru a indica
-                            pacienților că informațiile sunt încă actuale.
-                        </CardDescription>
-                    </CardHeader>
-
-                    <CardContent>
-                        <StudentProfileRefreshControl
-                            hasProfile={Boolean(profile)}
-                            isPublished={profile?.isPublished ?? false}
-                            initialLastRefreshedAt={
-                                profile?.lastRefreshedAt?.toISOString() ?? null
-                            }
-                            initialNow={initialNow}
-                        />
-                    </CardContent>
-                </Card>
-
                 <SchedulingReputationCard
+                    count={appointmentData.studentReputation?.cancellationsLast10 ?? 0}
                     description="Reper calculat din ultimele 10 programări confirmate."
                     value={formatStudentCancellationReputation(
                         appointmentData.studentReputation?.cancellationsLast10 ?? 0,

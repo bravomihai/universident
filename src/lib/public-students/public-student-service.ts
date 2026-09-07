@@ -3,10 +3,12 @@ import "server-only";
 import { cache } from "react";
 import { UserRole } from "@/generated/prisma/enums";
 import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
-import { ensureActiveSeriesMaterializedThrough } from "@/lib/availability/materializer";
+import { ensureActiveSeriesMaterializedThrough, ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment-service";
 import { prisma } from "@/lib/prisma";
+import { createPublicStudentProfile } from "@/lib/public-students/public-student-profile-dto";
+import { getBookablePublicTreatments } from "@/lib/public-students/public-bookable-treatments";
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
 import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
@@ -49,6 +51,7 @@ export type PublicStudentProfileDto = {
   bio: string | null;
   treatments: PublicStudentTreatmentDto[];
   reviewData: ProfileReviewData;
+  cancellationsLast10: number;
 };
 
 export const getPublicStudentCatalog = cache(async () => {
@@ -158,39 +161,48 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
 });
 
 export const getPublicStudentProfile = cache(async (publicSlug: string) => {
+  const now = new Date();
+  const through = publicBookingWindowEnd(now);
   const profile = await prisma.studentProfile.findFirst({
     where: { ...publicProfileWhere, publicSlug },
     include: {
       user: { select: { id: true, name: true } },
       profileImage: { select: { id: true, updatedAt: true } },
-      availabilitySlots: {
-        where: {
-          status: "ACTIVE",
-          endsAt: { gt: new Date() },
-          studentLocation: { deletedAt: null },
-          OR: [{ seriesId: null }, { series: { status: "ACTIVE" } }],
-        },
-        include: {
-          studentLocation: { include: { city: true } },
-          offerings: { where: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
-        },
+      appointments: {
+        where: { confirmedAt: { not: null } },
+        orderBy: { scheduledStartsAt: "desc" },
+        take: 10,
+        select: { status: true },
       },
     },
   });
   if (!profile?.publicSlug) return null;
-  const grouped = new Map<string, PublicStudentTreatmentDto>();
-  for (const slot of profile.availabilitySlots) for (const offering of slot.offerings) {
-    const source = offering.studentTreatment;
-    if (!source.treatment.isActive || !slot.studentLocation.city.isActive) continue;
-    let treatment = grouped.get(source.id);
-    if (!treatment) {
-      treatment = { name: source.treatment.name, slug: source.treatment.slug, catalogDescription: source.treatment.description, studentDescription: source.description, durationMinutes: source.durationMinutes, locations: [] };
-      grouped.set(source.id, treatment);
-    }
-    if (!treatment.locations.some((item) => item.routeKey === slot.studentLocation.routeKey && item.supervisor.fullName === offering.supervisor.fullName)) {
-      treatment.locations.push({ routeKey: slot.studentLocation.routeKey, name: slot.studentLocation.name, address: slot.studentLocation.address, city: { name: slot.studentLocation.city.name, slug: slot.studentLocation.city.slug }, supervisor: { fullName: offering.supervisor.fullName, academicTitle: offering.supervisor.academicTitle } });
-    }
-  }
-  const reviewData = await getPublishedProfileReviews(profile.user.id, "STUDENT");
-  return { name: profile.user.name, imageUrl: studentProfileImageUrl(profile.profileImage), publicSlug: profile.publicSlug, university: profile.university, studyYear: profile.studyYear, bio: profile.bio, treatments: [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "ro")), reviewData } satisfies PublicStudentProfileDto;
+  await ensureStudentSeriesMaterializedThrough(profile.id, through, now);
+  const [blocks, reviewData] = await Promise.all([
+    prisma.studentAvailabilitySlot.findMany({
+      where: {
+        studentProfileId: profile.id,
+        status: "ACTIVE",
+        startsAt: { lt: through },
+        endsAt: { gt: now },
+        studentLocation: { deletedAt: null, city: { isActive: true } },
+        OR: [{ seriesId: null }, { series: { status: "ACTIVE" } }],
+      },
+      orderBy: [{ startsAt: "asc" }, { id: "asc" }],
+      include: {
+        studentLocation: { include: { city: true } },
+        offerings: { where: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
+        appointments: {
+          where: appointmentConsumesCapacityWhere(now),
+          select: { scheduledStartsAt: true, scheduledEndsAt: true },
+        },
+      },
+    }),
+    getPublishedProfileReviews(profile.user.id, "STUDENT"),
+  ]);
+  return createPublicStudentProfile(
+    profile,
+    getBookablePublicTreatments(blocks, now, through),
+    reviewData,
+  );
 });

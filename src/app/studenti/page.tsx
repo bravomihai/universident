@@ -1,15 +1,15 @@
 import { SearchX, UsersRound } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { PublicStudentResultCard } from "@/components/public-students/public-student-result-card";
 import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
-import { Button } from "@/components/ui/button";
+import { PublicStudentPagination } from "@/components/public-students/public-student-pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
+import { publicStudentSearchHref } from "@/lib/public-students/public-student-search-pagination";
 import {
   getPublicStudentCatalog,
   searchPublicStudents,
@@ -31,15 +31,6 @@ function requestedPage(value: string | string[] | undefined) {
   if (typeof value !== "string" || !/^\d+$/.test(value)) return 1;
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
-function resultsUrl(treatmentSlug: string, citySlug: string, page?: number) {
-  const params = new URLSearchParams({
-    tratament: treatmentSlug,
-    oras: citySlug,
-  });
-  if (page && page > 1) params.set("pagina", String(page));
-  return `/studenti?${params.toString()}`;
 }
 
 export async function generateMetadata({
@@ -109,19 +100,20 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       : null;
 
   if (search && search.totalResults > 0 && page > search.totalPages) {
-    redirect(resultsUrl(treatment!.slug, city!.slug, search.totalPages));
+    redirect(publicStudentSearchHref(treatment!.slug, city!.slug, search.totalPages));
   }
 
   return (
-    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-8">
-        <header className="max-w-3xl space-y-3">
+        <header className="app-page-heading max-w-3xl space-y-3">
+          <p className="app-eyebrow">ÎNGRIJIRE, APROAPE DE TINE</p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Găsește tratamentul potrivit în orașul tău
           </h1>
           <p className="text-muted-foreground">
-            Alege mai întâi tratamentul, apoi orașul. Vei vedea numai profiluri
-            publicate cu oferte active și supervizare atribuită.
+            Alege tratamentul și orașul. Descoperă studenți care te pot primi
+            pentru îngrijire dentară sub supervizare.
           </p>
         </header>
 
@@ -209,39 +201,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 </Card>
               )}
 
-              {search.totalPages > 1 ? (
-                <nav
-                  aria-label="Paginarea rezultatelor"
-                  className="flex items-center justify-center gap-3"
-                >
-                  {page > 1 ? (
-                    <Button asChild variant="outline">
-                      <Link
-                        href={resultsUrl(treatment.slug, city.slug, page - 1)}
-                      >
-                        Pagina anterioară
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" disabled>
-                      Pagina anterioară
-                    </Button>
-                  )}
-                  {page < search.totalPages ? (
-                    <Button asChild variant="outline">
-                      <Link
-                        href={resultsUrl(treatment.slug, city.slug, page + 1)}
-                      >
-                        Pagina următoare
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button type="button" variant="outline" disabled>
-                      Pagina următoare
-                    </Button>
-                  )}
-                </nav>
-              ) : null}
+              <PublicStudentPagination
+                page={search.page}
+                totalPages={search.totalPages}
+                treatmentSlug={treatment.slug}
+                citySlug={city.slug}
+              />
             </div>
           ) : null}
         </section>

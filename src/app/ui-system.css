@@ -1,0 +1,107 @@
+/* Shared UI contract. Business-status colors remain on their components. */
+html { scroll-padding-top: calc(var(--site-header-height) + 1rem); }
+.universident-app {
+  font-family: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  font-size: var(--text-body);
+  font-weight: var(--weight-body);
+  line-height: 1.6;
+}
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--background) 96%, var(--card));
+}
+.site-header > div { min-height: var(--site-header-height); }
+
+/* Default controls are 44px; prominent navigation and CTA controls are 48px. */
+.universident-app [data-slot="button"] {
+  border-radius: var(--control-radius);
+  font-family: inherit;
+  font-weight: var(--weight-control);
+  line-height: 1.25;
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--motion-ui);
+}
+.universident-app [data-slot="button"]:is([data-size="default"], [data-size="lg"]) {
+  height: var(--control-height);
+  min-height: var(--control-height);
+  padding-inline: 1rem;
+  font-size: var(--text-body);
+}
+.universident-app [data-slot="button"][data-size="lg"] {
+  height: var(--control-height-lg);
+  min-height: var(--control-height-lg);
+  padding-inline: 1.25rem;
+}
+.universident-app [data-slot="button"][data-size="sm"] { height: 2.5rem; min-height: 2.5rem; font-size: var(--text-label); }
+.universident-app [data-slot="button"][data-size="xs"] { height: 2rem; min-height: 2rem; font-size: var(--text-label); }
+.universident-app [data-slot="button"][data-size="icon"] { width: var(--control-height); height: var(--control-height); min-height: var(--control-height); }
+.universident-app [data-slot="button"][data-size="icon-lg"] { width: var(--control-height-lg); height: var(--control-height-lg); min-height: var(--control-height-lg); }
+.universident-app [data-slot="button"][data-size="icon-sm"] { width: 2.5rem; height: 2.5rem; }
+.universident-app [data-slot="button"][data-size="icon-xs"] { width: 2rem; height: 2rem; }
+.universident-app [data-slot="button"]:disabled { cursor: not-allowed; }
+.universident-app :is([data-slot="input"], textarea, select, [data-slot="select-trigger"]) {
+  border-radius: var(--control-radius);
+  font-family: inherit;
+  font-size: var(--text-body);
+  transition-duration: var(--motion-ui);
+}
+.universident-app [data-slot="input"]:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+.universident-app select,
+.universident-app [data-slot="select-trigger"][data-size="default"] { min-height: var(--control-height); }
+.universident-app [data-slot="label"] { font-size: var(--text-label); font-weight: var(--weight-control); }
+.universident-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) { border-radius: var(--card-radius); border-color: var(--surface-edge); }
+.universident-app :is([data-slot="dropdown-menu-content"], [data-slot="select-content"]) { border-radius: var(--card-radius-compact); }
+.universident-app :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="select-item"]) { min-height: 2.5rem; font-size: var(--text-label); }
+
+/* Static cards have no hover treatment. Ring colors preserve status accents. */
+.universident-app [data-slot="card"] {
+  --card-spacing: var(--space-card);
+  border-radius: var(--card-radius);
+  font-size: var(--text-body);
+  line-height: 1.6;
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--surface-shadow);
+}
+.universident-app [data-slot="card"][data-size="sm"] {
+  --card-spacing: var(--space-card-compact);
+  border-radius: var(--card-radius-compact);
+}
+.universident-app [data-slot="card-title"] { font-size: var(--text-card-title); font-weight: var(--weight-heading); line-height: 1.35; }
+.universident-app [data-slot="card-description"] { line-height: 1.6; }
+.calendar-toolbar { display: grid; grid-template-columns: auto minmax(0, max-content) auto minmax(0, 1fr); gap: .5rem; align-items: center; }
+.calendar-toolbar > [data-slot="button"][data-size="default"] { min-width: 0; }
+.calendar-toolbar > [data-slot="select-trigger"] { justify-self: end; min-width: 0; }
+.ui-card-link { border-radius: var(--card-radius); }
+.ui-card-link:focus-visible { outline: 3px solid var(--ring); outline-offset: 4px; }
+.universident-app .ui-card-interactive {
+  cursor: pointer;
+  transition: background-color var(--motion-ui), box-shadow var(--motion-ui), border-color var(--motion-ui);
+}
+.universident-app .ui-card-link:focus-visible .ui-card-interactive {
+  --tw-ring-color: var(--card-hover-edge);
+  background-color: var(--card-hover);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--card-hover-shadow);
+}
+@media (hover: hover) {
+  .universident-app .ui-card-link:hover .ui-card-interactive {
+    --tw-ring-color: var(--card-hover-edge);
+    background-color: var(--card-hover);
+    box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--card-hover-shadow);
+  }
+}
+@media (min-width: 640px) { :root { --site-header-height: 5rem; } }
+@media (max-width: 767px) { :root { --space-card: 1.25rem; } }
+@media (max-width: 479px) {
+  .calendar-toolbar { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .calendar-toolbar > [data-slot="select-trigger"] { grid-column: 1 / -1; }
+}
+@media (pointer: coarse) {
+  .universident-app [data-slot="button"]:is([data-size="sm"], [data-size="xs"]) { min-height: var(--control-height); }
+  .universident-app [data-slot="button"]:is([data-size="icon-sm"], [data-size="icon-xs"]) { min-width: var(--control-height); min-height: var(--control-height); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .universident-app .ui-card-interactive,
+  .universident-app [data-slot="button"] { transition-duration: 0s; }
+}

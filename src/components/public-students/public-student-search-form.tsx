@@ -27,7 +27,7 @@ export function PublicStudentSearchForm({
     <form
       action="/studenti"
       method="get"
-      className="grid gap-4 rounded-2xl border bg-card p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+      className="public-search-form grid gap-4 rounded-2xl border bg-card p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
     >
       <div className="space-y-2">
         <Label htmlFor="student-search-treatment">Tratament</Label>
@@ -75,7 +75,7 @@ export function PublicStudentSearchForm({
           Caută
         </Button>
         {hasSelection ? (
-          <Button asChild type="button" variant="ghost">
+          <Button asChild variant="outline">
             <Link href="/studenti">Resetează</Link>
           </Button>
         ) : null}

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { ChangeEmailForm } from "@/components/account/change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 
@@ -28,14 +29,9 @@ export default async function AccountSecurityPage({
   const emailChangeError = firstValue(params.error);
 
   return (
-    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-4xl space-y-6">
-        <Link
-          href="/cont"
-          className="inline-flex text-sm font-medium text-muted-foreground hover:text-foreground"
-        >
-          {"<"} Înapoi la cont
-        </Link>
+        <BackLink href="/cont">Înapoi la cont</BackLink>
 
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -48,7 +44,7 @@ export default async function AccountSecurityPage({
 
         <section className="grid gap-4 md:grid-cols-2">
           <Card>
-            <CardContent className="space-y-4 p-5">
+            <CardContent className="space-y-4">
               <div className="flex items-start gap-3">
                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
                   <Mail className="size-4" aria-hidden="true" />
@@ -93,7 +89,7 @@ export default async function AccountSecurityPage({
           </Card>
 
           <Card>
-            <CardContent className="space-y-4 p-5">
+            <CardContent className="space-y-4">
               <div className="flex items-start gap-3">
                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
                   <KeyRound className="size-4" aria-hidden="true" />
@@ -113,6 +109,15 @@ export default async function AccountSecurityPage({
               </p>
 
               <ChangePasswordForm />
+              <p className="text-center text-sm text-muted-foreground">
+                Ai uitat parola?{" "}
+                <Link
+                  href="/parola-uitata"
+                  className="font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  Resetează parola
+                </Link>
+              </p>
             </CardContent>
           </Card>
         </section>

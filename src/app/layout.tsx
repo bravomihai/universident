@@ -2,13 +2,18 @@ import type { Metadata } from "next";
 import { Figtree, Geist_Mono } from "next/font/google";
 
 import { SiteHeader } from "@/components/layout/site-header";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { BrandFaviconLinks } from "@/components/layout/brand-favicon-links";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { ThemeFavicon } from "@/components/theme/theme-favicon";
 
 import "./globals.css";
+import "./site-theme.css";
+import "./ui-system.css";
 
 const figtree = Figtree({
-  variable: "--font-sans",
+  variable: "--font-figtree",
   subsets: ["latin"],
 });
 
@@ -23,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s | Universident",
   },
   description:
-    "Platformă care conectează pacienții cu studenți la medicină dentară.",
+    "Universident conectează pacienții cu studenți la medicină dentară, pentru tratamente sub supervizare.",
 };
 
 export default function RootLayout({
@@ -37,15 +42,21 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${figtree.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">
+      <head>
+        <BrandFaviconLinks />
+      </head>
+      <body className="universident-app flex min-h-full flex-col">
+        <a className="skip-to-content" href="#main-content">Mergi la conținut</a>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
+          <ThemeFavicon />
           <SiteHeader />
           {children}
+          <SiteFooter />
         </ThemeProvider>
       </body>
     </html>

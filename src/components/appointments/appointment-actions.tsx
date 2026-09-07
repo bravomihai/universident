@@ -9,7 +9,7 @@ import {
   type AppointmentReasonAction,
 } from "@/components/appointments/appointment-reason-dialog";
 import { Button } from "@/components/ui/button";
-import { appointmentReviewIsAllowed } from "@/lib/appointments/appointment-presentation";
+import { appointmentActionAvailability, type AppointmentActionMode } from "@/lib/appointments/appointment-action-availability";
 import { cn } from "@/lib/utils";
 
 type Action = "CONFIRM" | "REJECT" | "CANCEL" | "COMPLETE" | "NO_SHOW" | "REVIEW";
@@ -22,6 +22,7 @@ export function AppointmentActions({
   startsAt,
   endsAt,
   reviewedByActor,
+  mode = "all",
   onSuccess,
 }: {
   appointmentSlug: string;
@@ -31,6 +32,7 @@ export function AppointmentActions({
   startsAt: string;
   endsAt: string;
   reviewedByActor: boolean;
+  mode?: AppointmentActionMode;
   onSuccess?: () => void;
 }) {
   const router = useRouter();
@@ -42,15 +44,8 @@ export function AppointmentActions({
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
   const commentLength = comment.trim().length;
-  const now = new Date();
-  const started = new Date(startsAt) <= now;
-  const ended = new Date(endsAt) <= now;
-
-  const patientCanCancel = role === "PATIENT" && !started && (status === "PENDING" || status === "CONFIRMED");
-  const studentPending = role === "STUDENT" && !started && status === "PENDING";
-  const studentCanCancel = role === "STUDENT" && !started && status === "CONFIRMED";
-  const studentCanFinish = role === "STUDENT" && ended && status === "CONFIRMED";
-  const reviewNeeded = appointmentReviewIsAllowed(status, role) && !reviewedByActor;
+  const { patientCanCancel, studentPending, studentCanCancel, studentCanFinish, reviewNeeded } =
+    appointmentActionAvailability({ status, role, startsAt, endsAt, reviewedByActor, mode });
 
   function openReasonDialog(action: AppointmentReasonAction) {
     setError(null);
@@ -186,6 +181,12 @@ export function AppointmentActions({
               : `${commentLength}/1.000 caractere`}
         </span>
       </label>
+      {role === "PATIENT" ? (
+        <p className="text-xs text-muted-foreground">
+          Recenzia publicată va apărea cu numele și fotografia ta de profil.
+          Restul profilului tău rămâne privat.
+        </p>
+      ) : null}
     </div>
   ) : null;
 

@@ -74,7 +74,7 @@ export function HeaderAccount({ initialUser }: HeaderAccountProps) {
     <>
       <nav
         aria-label="Navigare cont"
-        className="hidden items-center gap-2 md:flex"
+        className="hidden items-center gap-2 lg:flex"
       >
         <Link
           href="/autentificare"
@@ -90,7 +90,7 @@ export function HeaderAccount({ initialUser }: HeaderAccountProps) {
           href="/inregistrare"
           className={cn(
             headerControlGeometryClassName,
-            "inline-flex items-center bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+            "inline-flex items-center bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
           )}
         >
           Creează cont

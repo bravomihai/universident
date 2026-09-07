@@ -77,7 +77,7 @@ export default async function EditStudentLocationPage({
   }
 
   return (
-    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-6">
         <BackLink href="/cont/locatii">Înapoi la locații</BackLink>
 

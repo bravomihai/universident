@@ -97,7 +97,7 @@ export function StudentPublicationControl({
   }
 
   return (
-    <div className={cn("space-y-3 border-t pt-4", className)}>
+    <div className={cn("flex flex-col gap-3 border-t pt-4", className)}>
       <div className="flex flex-wrap items-start gap-3">
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
           <Globe2 className="size-4" aria-hidden="true" />
@@ -123,7 +123,7 @@ export function StudentPublicationControl({
 
       {state.isPubliclyVisible ? (
         <p className="text-sm text-muted-foreground">
-          Profilul poate fi găsit de pacienți după tratament și oraș.
+          Retragerea oprește afișarea publică și nu șterge datele profesionale.
         </p>
       ) : state.missingRequirements.length > 0 ? (
         <div className="space-y-2">
@@ -150,7 +150,7 @@ export function StudentPublicationControl({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-auto flex flex-wrap gap-2 pt-1">
         {state.isPubliclyVisible && state.publicPath ? (
           <Button asChild variant="outline" size="sm">
             <Link href={state.publicPath}>
@@ -183,12 +183,6 @@ export function StudentPublicationControl({
           </Button>
         ) : null}
       </div>
-
-      {state.isPublished ? (
-        <p className="text-xs text-muted-foreground">
-          Retragerea oprește afișarea publică și nu șterge datele profesionale.
-        </p>
-      ) : null}
 
       {errorMessage ? (
         <p role="alert" className="text-sm text-destructive">

@@ -56,7 +56,7 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
   const age = patient.dateOfBirth ? ageOnDate(patient.dateOfBirth, new Date()) : null;
 
   return (
-    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-5xl space-y-8">
         <BackLink href={isOwner ? "/cont/profil-pacient" : "/cont/programari"}>Înapoi</BackLink>
         <header className="space-y-3">
@@ -83,6 +83,7 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
         ) : null}
 
         <SchedulingReputationCard
+          count={lateCancellationsLast10}
           description="Sunt luate în calcul ultimele 10 programări confirmate."
           value={formatLateCancellationReputation(lateCancellationsLast10)}
         />

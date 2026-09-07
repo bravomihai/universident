@@ -1,6 +1,7 @@
 import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment-service";
 import { ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
-import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
+import { generatePublicBookingSlots } from "@/lib/availability/public-booking-slots";
+import { publicBookingLocationWhere } from "@/lib/public-students/public-booking-location";
 import { prisma } from "@/lib/prisma";
 
 export async function listPublicStudentAvailability(
@@ -9,6 +10,7 @@ export async function listPublicStudentAvailability(
   citySlug: string,
   from: Date,
   to: Date,
+  locationRouteKey?: string,
 ) {
   if (to <= from || to.getTime() - from.getTime() > 120 * 86_400_000) return null;
   const now = new Date();
@@ -27,10 +29,7 @@ export async function listPublicStudentAvailability(
         OR: [{ seriesId: null }, { series: { status: "ACTIVE" } }],
         startsAt: { lt: to },
         endsAt: { gt: from },
-        studentLocation: {
-          deletedAt: null,
-          city: { slug: citySlug, isActive: true },
-        },
+        studentLocation: publicBookingLocationWhere(citySlug, locationRouteKey),
         offerings: {
           some: {
             removedAt: null,
@@ -57,27 +56,7 @@ export async function listPublicStudentAvailability(
     });
 
     const blockById = new Map(blocks.map((block) => [block.id, block]));
-    const generated = generateSmartBookingSlots(
-      blocks.flatMap((block) => {
-        const offering = block.offerings.find(
-          (item) => item.studentTreatment.treatment.slug === treatmentSlug,
-        );
-        if (!offering) return [];
-        return [{
-          id: block.id,
-          offeringId: offering.id,
-          startsAt: block.startsAt,
-          endsAt: block.endsAt,
-          treatmentDurationMinutes: offering.studentTreatment.durationMinutes,
-          offeredDurationsMinutes: block.offerings.map((item) => item.studentTreatment.durationMinutes),
-          occupied: block.appointments.map((appointment) => ({
-            startsAt: appointment.scheduledStartsAt,
-            endsAt: appointment.scheduledEndsAt,
-          })),
-        }];
-      }),
-      new Date(Math.max(now.getTime(), from.getTime())),
-    );
+    const generated = generatePublicBookingSlots(blocks, treatmentSlug, from, to, now);
 
     const displaySlots: Array<{
       availabilitySlotId: string;
@@ -87,7 +66,7 @@ export async function listPublicStudentAvailability(
       optimized: boolean;
       startOptions: Date[];
     }> = [];
-    for (const slot of generated.filter((item) => item.startsAt < to && item.endsAt > from)) {
+    for (const slot of generated) {
       const previous = displaySlots.at(-1);
       const previousStart = previous?.startOptions.at(-1);
       if (

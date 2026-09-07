@@ -12,8 +12,8 @@ type ErrorPageProps = {
 
 export default function ErrorPage({ reset }: ErrorPageProps) {
   return (
-    <main className="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
-      <Card className="w-full max-w-xl bg-muted/15">
+    <main id="main-content" className="app-page flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
+      <Card className="w-full max-w-xl">
         <CardContent className="space-y-6 p-6 text-center sm:p-8">
           <span className="mx-auto inline-flex size-12 items-center justify-center rounded-full border bg-background text-amber-500">
             <TriangleAlert className="size-6" aria-hidden="true" />

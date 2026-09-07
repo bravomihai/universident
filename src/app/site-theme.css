@@ -1,0 +1,41 @@
+/* Shared presentation only. Booking state colors and component behavior stay local. */
+.universident-app {
+  background-image: radial-gradient(ellipse 65rem 40rem at 100% 0, var(--page-glow), transparent);
+  background-repeat: no-repeat;
+  background-size: 100% 52rem;
+  background-position: center top;
+}
+.site-header {
+  background: color-mix(in srgb, var(--background) 94%, var(--card));
+  border-bottom-color: var(--relief-edge);
+  box-shadow: inset 0 -1px 0 var(--relief-highlight), 0 8px 22px -14px var(--relief-shadow);
+}
+.app-page { min-width: 0; }
+.app-page > div { min-width: 0; }
+.app-page h1 { font-size: clamp(1.8rem, 3.2vw, 2.5rem); line-height: 1.2; font-weight: var(--weight-heading); letter-spacing: -.04em; overflow-wrap: anywhere; text-wrap: balance; }
+.app-page h2 { letter-spacing: -.02em; }
+.app-page-heading, .dashboard-heading { padding-bottom: 1.5rem; }
+.app-eyebrow { color: var(--primary); font-size: .875rem; font-weight: var(--weight-heading); letter-spacing: .09em; margin-bottom: 1rem; }
+.universident-app input[type="file"] { max-width: 100%; }
+.app-page :is(input, textarea, select):disabled { cursor: not-allowed; }
+.app-page a:focus-visible { outline-offset: 4px; }
+.public-search-form { padding: 1.5rem; border-radius: 1.5rem; border-color: var(--surface-edge); box-shadow: var(--surface-shadow); }
+.public-student-card { height: 100%; }
+.professional-navigation { border-color: var(--surface-edge); background: color-mix(in srgb, var(--card) 65%, var(--background)); }
+.professional-navigation a[aria-current="page"] { background: var(--card); color: var(--primary); }
+.auth-page { padding-block: clamp(2.5rem, 7vw, 5.5rem); }
+.auth-card h1 { font-size: clamp(1.5rem, 3vw, 1.875rem); text-wrap: initial; }
+.team-intro { padding-block: 2rem 6rem; }
+.team-intro h1 { max-width: 45rem; font-size: clamp(2.3rem, 5vw, 4rem); }
+.skip-to-content { position: fixed; top: 1rem; left: 1rem; z-index: 100; transform: translateY(-200%); border: 2px solid var(--ring); border-radius: .8rem; padding: .75rem 1rem; color: var(--foreground); background: var(--card); font-size: 1rem; }
+.skip-to-content:focus { transform: translateY(0); }
+.site-footer { margin-top: auto; border-top: 1px solid var(--relief-edge); background: color-mix(in srgb, var(--background) 96%, var(--card)); box-shadow: inset 0 1px 0 var(--relief-highlight), 0 -6px 18px -14px var(--relief-shadow); }
+.site-footer-bottom { max-width: 1200px; margin-inline: auto; padding: 1.25rem 1.5rem; display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1.5rem; color: var(--muted-foreground); font-size: .8125rem; line-height: 1.6; }
+@media (max-width: 767px) {
+  .site-footer-bottom { flex-direction: column; padding: 1rem 1.25rem; gap: .25rem; }
+  .app-page h1 { letter-spacing: -.03em; }
+  .public-search-form { padding: 1.25rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .universident-app *, .universident-app *::before, .universident-app *::after { scroll-behavior: auto; transition-duration: 0s !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}

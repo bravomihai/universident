@@ -1,9 +1,12 @@
+import { CancellationReputationLabel } from "@/components/reviews/cancellation-reputation-label";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function SchedulingReputationCard({
+  count,
   description,
   value,
 }: {
+  count: number;
   description: string;
   value: string;
 }) {
@@ -14,9 +17,7 @@ export function SchedulingReputationCard({
           <p className="font-medium">Reputație de programare</p>
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
-        <span className="shrink-0 rounded-full border px-3 py-1 text-sm font-medium">
-          {value}
-        </span>
+        <CancellationReputationLabel count={count} value={value} />
       </CardContent>
     </Card>
   );

@@ -1,0 +1,14 @@
+/* Self-contained fallback: it must work even when the root layout fails. */
+.global-error-page { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+.global-error-page body { margin: 0; background: #e3efff; background: light-dark(#e3efff, #08111f); color: #10233f; color: light-dark(#10233f, #e8eef7); }
+.global-error-page main { display: flex; min-height: 100svh; box-sizing: border-box; align-items: center; justify-content: center; padding: 1.5rem; }
+.global-error-page section { width: 100%; max-width: 35rem; box-sizing: border-box; border: 1px solid light-dark(#bfd2e8, #25344a); border-radius: 1.5rem; background: light-dark(#ffffff, #101c2d); padding: clamp(1.5rem, 5vw, 2.5rem); text-align: center; }
+.global-error-brand { margin: 0 0 1.5rem; font-size: 1.6rem; font-weight: 650; letter-spacing: -.045em; }
+.global-error-page h1 { margin: 0; font-size: clamp(1.6rem, 4vw, 2rem); font-weight: 550; line-height: 1.2; letter-spacing: -.035em; }
+.global-error-description { margin: 1rem 0 1.5rem; color: light-dark(#5b6f8a, #94a3b8); line-height: 1.7; }
+.global-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem; }
+.global-error-actions :is(a, button) { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; box-sizing: border-box; border-radius: .85rem; padding: .7rem 1rem; font: inherit; font-size: .9375rem; font-weight: 550; text-decoration: none; cursor: pointer; }
+.global-error-actions button { border: 0; background: light-dark(#2563eb, #60a5fa); color: light-dark(#ffffff, #07111f); }
+.global-error-actions a { border: 1px solid light-dark(#bfd2e8, #25344a); color: inherit; }
+.global-error-actions :is(a, button):hover { filter: brightness(.95); }
+.global-error-actions :is(a, button):focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }

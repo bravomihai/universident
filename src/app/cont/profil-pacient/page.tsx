@@ -32,7 +32,7 @@ export default async function PatientProfilePage() {
   });
   const imageUrl = patientProfileImageUrl(image);
   return (
-    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-5xl space-y-6">
         <BackLink href="/cont">Înapoi la cont</BackLink>
         <header className="space-y-3">
@@ -58,9 +58,11 @@ export default async function PatientProfilePage() {
           <CardHeader>
             <CardTitle>Fotografie de profil (opțional)</CardTitle>
             <p className="text-sm text-muted-foreground">
-              O poți adăuga sau șterge oricând. Este vizibilă doar pentru tine și
-              studenții cu care ai avut o cerere de programare sau o programare.
-              Fără fotografie, profilul afișează inițialele tale.
+              O poți adăuga sau șterge oricând. Numele și fotografia ta apar și
+              lângă recenziile publicate pe profilurile studenților.
+              Restul profilului rămâne vizibil doar pentru tine și studenții cu
+              care ai avut o cerere de programare sau o programare.
+              Fără fotografie, afișăm inițialele tale.
             </p>
           </CardHeader>
           <CardContent>
@@ -86,6 +88,7 @@ export default async function PatientProfilePage() {
         </Card>
 
         <SchedulingReputationCard
+          count={result.reputation?.lateCancellationsLast10 ?? 0}
           description="Reper calculat din ultimele 10 programări confirmate."
           value={formatLateCancellationReputation(
             result.reputation?.lateCancellationsLast10 ?? 0,

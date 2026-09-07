@@ -36,7 +36,7 @@ export function StudentProfessionalNavigation({
   return (
     <nav
       aria-label="Administrare profil profesional"
-      className="grid grid-cols-3 gap-1 rounded-2xl border bg-muted/20 p-1"
+      className="professional-navigation grid grid-cols-3 gap-1 rounded-2xl border bg-muted/20 p-1"
     >
       {professionalAreas.map((area) => {
         const Icon = area.icon;
@@ -48,7 +48,7 @@ export function StudentProfessionalNavigation({
             href={area.href}
             aria-current={isCurrent ? "page" : undefined}
             className={cn(
-              "flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-medium transition sm:text-sm",
+              "flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-sm font-medium transition",
               isCurrent
                 ? "bg-background text-foreground shadow-sm ring-1 ring-foreground/5"
                 : "text-muted-foreground hover:bg-background/70 hover:text-foreground",

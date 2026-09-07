@@ -107,6 +107,26 @@ const appointmentInclude = {
 function privateAppointmentInclude(userId: string) {
   return {
     ...appointmentInclude,
+    patientProfile: {
+      select: {
+        ...appointmentInclude.patientProfile.select,
+        profileImage: { select: { id: true, updatedAt: true } },
+      },
+    },
+    studentProfile: {
+      select: {
+        ...appointmentInclude.studentProfile.select,
+        isPublished: true,
+        profileImage: { select: { id: true, updatedAt: true } },
+        user: {
+          select: {
+            ...appointmentInclude.studentProfile.select.user.select,
+            role: true,
+            emailVerified: true,
+          },
+        },
+      },
+    },
     reviews: {
       where: { authorUserId: userId },
       select: {

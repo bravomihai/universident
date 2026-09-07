@@ -4,19 +4,13 @@ import { cache } from "react";
 
 import { AppointmentReviewAuthorRole } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
+import {
+  createPublishedProfileReview,
+  type ProfileOwnerRole,
+  type PublishedProfileReview,
+} from "@/lib/reviews/profile-review-dto";
 
-export type ProfileOwnerRole = "PATIENT" | "STUDENT";
-
-export type PublishedProfileReview = {
-  id: string;
-  rating: number;
-  comment: string | null;
-  publishedAt: Date;
-  treatmentName: string;
-  appointmentDate: Date;
-  reviewerLabel: string;
-  reviewerHref: string | null;
-};
+export type { ProfileOwnerRole, PublishedProfileReview } from "@/lib/reviews/profile-review-dto";
 
 export type ProfileReviewData = {
   summary: {
@@ -52,12 +46,23 @@ export const getPublishedProfileReviews = cache(async (
         rating: true,
         comment: true,
         publishedAt: true,
-        author: { select: { name: true } },
+        author: {
+          select: {
+            name: true,
+            patientProfile: { select: { profileImage: { select: { updatedAt: true } } } },
+            studentProfile: {
+              select: {
+                publicSlug: true,
+                isPublished: true,
+                profileImage: { select: { updatedAt: true } },
+              },
+            },
+          },
+        },
         appointment: {
           select: {
             treatmentNameSnapshot: true,
             scheduledStartsAt: true,
-            studentProfile: { select: { publicSlug: true } },
           },
         },
       },
@@ -70,20 +75,8 @@ export const getPublishedProfileReviews = cache(async (
       reviewCount: aggregate._count.rating,
     },
     reviews: reviews.flatMap((review) => {
-      if (!review.publishedAt) return [];
-      const reviewerHref = targetRole === "PATIENT" && review.appointment.studentProfile.publicSlug
-        ? `/studenti/${review.appointment.studentProfile.publicSlug}`
-        : null;
-      return [{
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment,
-        publishedAt: review.publishedAt,
-        treatmentName: review.appointment.treatmentNameSnapshot,
-        appointmentDate: review.appointment.scheduledStartsAt,
-        reviewerLabel: targetRole === "STUDENT" ? "Pacient verificat" : review.author.name,
-        reviewerHref,
-      }];
+      const publishedReview = createPublishedProfileReview(review, targetRole);
+      return publishedReview ? [publishedReview] : [];
     }),
   };
 });

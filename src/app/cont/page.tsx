@@ -3,6 +3,8 @@ import {
   CalendarDays,
   GraduationCap,
   MapPin,
+  RefreshCw,
+  ShieldCheck,
   Stethoscope,
   UserRound,
   UsersRound,
@@ -14,6 +16,7 @@ import type { ReactNode } from "react";
 
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
+import { StudentProfileRefreshControl } from "@/components/student/student-profile-refresh-control";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   clickableCardClassName,
@@ -78,7 +81,7 @@ function DashboardLinkCard({
           }`}
       >
         <CardContent
-          className={`relative flex h-full flex-col gap-4 p-5 ${actionOnDesktop ? "sm:pr-56" : ""
+          className={`relative flex h-full flex-col gap-4 ${actionOnDesktop ? "sm:pr-56" : ""
             }`}
         >
           <div className="flex items-start gap-3">
@@ -157,6 +160,7 @@ export default async function AccountPage() {
           university: true,
           studyYear: true,
           bio: true,
+          lastRefreshedAt: true,
           profileImage: { select: { id: true, updatedAt: true } },
         },
       });
@@ -230,9 +234,9 @@ export default async function AccountPage() {
     : null;
 
   return (
-    <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+    <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-4">
-        <header className="space-y-2 pb-4">
+        <header className="dashboard-heading space-y-3 pb-5">
           <div className="flex items-center gap-3">
             {isStudent || isPatient ? (
               <ProfileAvatar
@@ -249,9 +253,11 @@ export default async function AccountPage() {
               Bun venit, {session.user.name}
             </h1>
           </div>
-          <p className="text-muted-foreground">
-            Aici poți gestiona informațiile și activitatea contului.
-          </p>
+          {!isStudent ? (
+            <p className="text-muted-foreground">
+              Programările și informațiile tale, la îndemână.
+            </p>
+          ) : null}
         </header>
 
         {studentData ? (
@@ -297,12 +303,34 @@ export default async function AccountPage() {
               </div>
             </DashboardLinkCard>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
+                    <RefreshCw className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 space-y-1">
+                    <h2 className="font-semibold">Actualizarea profilului</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Confirmă că informațiile și disponibilitatea ta sunt la zi.
+                    </p>
+                  </div>
+                </div>
+                <StudentProfileRefreshControl
+                  hasProfile={Boolean(studentData.profile)}
+                  isPublished={publication?.isPublished ?? false}
+                  initialLastRefreshedAt={studentData.profile?.lastRefreshedAt?.toISOString() ?? null}
+                  initialNow={new Date().toISOString()}
+                />
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-4">
               <Card>
-                <CardContent className="h-full p-5">
+                <CardContent>
                   {publication ? (
                     <StudentPublicationControl
-                      className="h-full border-t-0 pt-0"
+                      className="border-t-0 pt-0"
                       initialState={{
                         isPublished: publication.isPublished,
                         isPubliclyVisible: publication.isPubliclyVisible,
@@ -319,7 +347,7 @@ export default async function AccountPage() {
 
               <DashboardLinkCard
                 href="/cont/securitate"
-                icon={UserRound}
+                icon={ShieldCheck}
                 title="Securitatea contului"
                 description="Gestionează datele de autentificare și securitatea contului."
                 action="Gestionează securitatea"
@@ -378,7 +406,7 @@ export default async function AccountPage() {
           <section aria-label="Calendar și disponibilitate">
             <Link href="/cont/calendar" className={clickableCardLinkClassName}>
               <Card className={clickableCardClassName}>
-                <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="flex min-w-0 items-start gap-3 sm:items-center">
                     <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
                       <CalendarDays className="size-4" aria-hidden="true" />
@@ -498,7 +526,7 @@ export default async function AccountPage() {
 
             <DashboardLinkCard
               href="/cont/securitate"
-              icon={UserRound}
+              icon={ShieldCheck}
               title="Securitatea contului"
               description="Gestionează datele de autentificare și securitatea contului."
               action="Gestionează securitatea"

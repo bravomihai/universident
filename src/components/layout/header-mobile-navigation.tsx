@@ -1,10 +1,11 @@
 "use client";
 
-import { LogIn, Menu, Search, UserPlus } from "lucide-react";
+import { CircleHelp, LogIn, Menu, Search, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { headerIconControlClassName } from "@/components/layout/header-action-styles";
+import { HomeSectionLink } from "@/components/layout/home-section-link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -38,7 +39,7 @@ export function HeaderMobileNavigation({
           type="button"
           variant="ghost"
           size="icon"
-          className={cn(headerIconControlClassName, "shrink-0 md:hidden")}
+          className={cn(headerIconControlClassName, "shrink-0 xl:hidden")}
           aria-label="Deschide navigarea principală"
           aria-controls="mobile-primary-navigation"
         >
@@ -50,11 +51,11 @@ export function HeaderMobileNavigation({
       <DropdownMenuContent
         id="mobile-primary-navigation"
         align="end"
-        className="w-[min(17rem,calc(100vw-1.5rem))]"
+        className="w-[min(17rem,calc(100vw-1.5rem))] xl:hidden"
       >
         <DropdownMenuItem
           asChild
-          className={studentsCurrent ? "bg-accent" : undefined}
+          className={cn("md:hidden", studentsCurrent && "bg-accent")}
         >
           <Link
             href="/studenti"
@@ -67,10 +68,10 @@ export function HeaderMobileNavigation({
 
         {!isAuthenticated ? (
           <>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="md:hidden" />
             <DropdownMenuItem
               asChild
-              className={signInCurrent ? "bg-accent" : undefined}
+              className={cn("lg:hidden", signInCurrent && "bg-accent")}
             >
               <Link
                 href="/autentificare"
@@ -82,7 +83,7 @@ export function HeaderMobileNavigation({
             </DropdownMenuItem>
             <DropdownMenuItem
               asChild
-              className={signUpCurrent ? "bg-accent" : undefined}
+              className={cn("lg:hidden", signUpCurrent && "bg-accent")}
             >
               <Link
                 href="/inregistrare"
@@ -94,6 +95,13 @@ export function HeaderMobileNavigation({
             </DropdownMenuItem>
           </>
         ) : null}
+        <DropdownMenuSeparator className={isAuthenticated ? "md:hidden" : "lg:hidden"} />
+        <DropdownMenuItem asChild>
+          <Link href="/echipa" aria-current={isCurrentPath(pathname, "/echipa") ? "page" : undefined}><Users aria-hidden="true" />Echipa</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="lg:hidden">
+          <HomeSectionLink sectionId="cum-functioneaza"><CircleHelp aria-hidden="true" />Cum funcționează</HomeSectionLink>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

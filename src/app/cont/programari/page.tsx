@@ -22,7 +22,7 @@ export default async function AppointmentsPage() {
   const archivedAppointments = result.appointments.filter(
     (appointment) => appointmentIsArchived(appointment, role),
   );
-  return <main className="flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16"><div className="w-full max-w-5xl space-y-6">
+  return <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16"><div className="w-full max-w-5xl space-y-6">
     <AppointmentNotificationsAcknowledger notificationIds={result.unreadNotificationIds} />
     <BackLink href="/cont">Înapoi la cont</BackLink>
     <header className="space-y-2"><div className="flex items-center gap-3"><span className="inline-flex size-10 items-center justify-center rounded-full border bg-card"><CalendarDays className="size-5" /></span><h1 className="text-3xl font-semibold tracking-tight">Programările mele</h1></div><p className="text-muted-foreground">{role === "PATIENT" ? "Urmărește cererile trimise și programările confirmate." : "Confirmă cererile și înregistrează rezultatul întâlnirilor."}</p></header>

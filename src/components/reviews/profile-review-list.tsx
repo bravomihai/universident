@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ExpandableReviewComment } from "@/components/reviews/expandable-review-comment";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import type { ProfileReviewData } from "@/lib/reviews/profile-review-service";
 
 const reviewDateFormatter = new Intl.DateTimeFormat("ro-RO", {
@@ -29,20 +30,27 @@ export function ProfileReviewList({
           {data.reviews.map((review) => (
             <Card key={review.id} size="sm" className="self-start py-3">
               <CardContent className="space-y-2 px-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    {review.reviewerHref ? (
-                      <Link href={review.reviewerHref} className="font-semibold hover:underline">
-                        {review.reviewerLabel}
-                      </Link>
-                    ) : <p className="font-semibold">{review.reviewerLabel}</p>}
+                <div className="flex items-start gap-3">
+                  <ProfileAvatar
+                    name={review.reviewerLabel}
+                    imageUrl={review.reviewerImageUrl}
+                    className="size-10 text-sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                      {review.reviewerHref ? (
+                        <Link href={review.reviewerHref} className="min-w-0 break-words font-semibold hover:underline">
+                          {review.reviewerLabel}
+                        </Link>
+                      ) : <p className="min-w-0 break-words font-semibold">{review.reviewerLabel}</p>}
+                      <span className="shrink-0 tracking-wider text-orange-500" aria-label={`${review.rating} din 5 stele`}>
+                        {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                      </span>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {review.treatmentName} · {reviewDateFormatter.format(review.appointmentDate)}
                     </p>
                   </div>
-                  <span className="tracking-wider text-orange-500" aria-label={`${review.rating} din 5 stele`}>
-                    {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
-                  </span>
                 </div>
                 {review.comment ? (
                   <ExpandableReviewComment comment={review.comment} />

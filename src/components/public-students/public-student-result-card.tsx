@@ -14,6 +14,7 @@ import {
   clickableCardLinkClassName,
 } from "@/components/ui/clickable-card-styles";
 import type { PublicStudentSummaryDto } from "@/lib/public-students/public-student-service";
+import { publicStudentBookingHref } from "@/lib/public-students/public-student-booking-links";
 
 type PublicStudentResultCardProps = {
   student: PublicStudentSummaryDto;
@@ -40,14 +41,14 @@ export function PublicStudentResultCard({
   student,
   treatmentSlug,
 }: PublicStudentResultCardProps) {
-  const profileHref = `/studenti/${encodeURIComponent(student.publicSlug)}/programare/${encodeURIComponent(treatmentSlug)}/${encodeURIComponent(student.city.slug)}`;
+  const profileHref = publicStudentBookingHref(student.publicSlug, treatmentSlug, student.city.slug);
 
   return (
     <Link
       href={profileHref}
       className={clickableCardLinkClassName}
     >
-      <Card className={clickableCardClassName}>
+      <Card className={`public-student-card ${clickableCardClassName}`}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
@@ -71,15 +72,6 @@ export function PublicStudentResultCard({
               </div>
             </div>
 
-            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-foreground sm:text-sm">
-              Alege o programare
-              <span
-                className={clickableCardIndicatorClassName}
-                aria-hidden="true"
-              >
-                {">"}
-              </span>
-            </span>
           </div>
         </CardHeader>
 
@@ -126,6 +118,10 @@ export function PublicStudentResultCard({
               </span>
             </p>
           </div>
+          <span className="mt-auto inline-flex items-center justify-between gap-3 border-t pt-4 text-sm font-semibold text-foreground">
+            Alege o programare
+            <span className={clickableCardIndicatorClassName} aria-hidden="true">{">"}</span>
+          </span>
         </CardContent>
       </Card>
     </Link>
