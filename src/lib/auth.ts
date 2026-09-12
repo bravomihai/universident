@@ -83,25 +83,28 @@ export const auth = betterAuth({
   },
 
   emailVerification: {
-    sendVerificationEmail: async ({ user, url }) => {
-      after(async () => {
-        try {
-          await sendEmailVerificationMessage({
-            email: user.email,
-            name: user.name,
-            verificationUrl: url,
-          });
-        } catch {
-          // Livrarea rulează după răspuns și nu expune datele
-          // destinatarului sau detaliile providerului.
-        }
-      });
-    },
-    sendOnSignUp: true,
-    sendOnSignIn: false,
-    autoSignInAfterVerification: false,
-    expiresIn: 60 * 60,
+  sendVerificationEmail: async ({ user, url }) => {
+    console.log("Email verification callback triggered");
+
+    after(async () => {
+      try {
+        await sendEmailVerificationMessage({
+          email: user.email,
+          name: user.name,
+          verificationUrl: url,
+        });
+
+        console.log("Email verification delivery succeeded");
+      } catch (error) {
+        console.error("Email verification delivery failed:", error);
+      }
+    });
   },
+  sendOnSignUp: true,
+  sendOnSignIn: false,
+  autoSignInAfterVerification: false,
+  expiresIn: 60 * 60,
+},
 
   emailAndPassword: {
     enabled: true,
