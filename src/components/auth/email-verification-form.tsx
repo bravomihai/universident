@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 
 type EmailVerificationFormProps = {
   emailWasSent?: boolean;
+  signInHref?: string;
 };
 
 const genericSuccessMessage =
@@ -21,6 +22,7 @@ const genericSuccessMessage =
 
 export function EmailVerificationForm({
   emailWasSent = false,
+  signInHref = "/autentificare",
 }: EmailVerificationFormProps) {
   const emailInputRef = useRef<HTMLInputElement>(null);
   const [isPending, setIsPending] = useState(false);
@@ -141,7 +143,7 @@ export function EmailVerificationForm({
         <p className="text-center text-sm text-muted-foreground">
           Ai verificat deja adresa?{" "}
           <Link
-            href="/autentificare"
+            href={signInHref}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
             Continuă către autentificare

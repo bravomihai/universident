@@ -121,7 +121,13 @@ npm run db:seed
 ## Future features
 
 - Review moderation is not implemented yet. Appointment review submission, blind publication, profile summaries, and published profile review lists are part of the current workflow.
-- Chat is not part of the current MVP. If added, scope it to an appointment and do not expose private account data.
+- Chat is scoped to an appointment with a non-null `confirmedAt`. Only its verified patient and student may read or send; never expose account email or unrelated profile data.
+- Chat URLs use `Appointment.chatSlug`, a stable database-generated 12-character lowercase hexadecimal identifier with unique/format constraints. Keep appointment `routeSlug` separate. Preserve authorized legacy chat redirects and already-frozen email retry URLs; retry only chat-slug collisions when creating appointments.
+- Terminal appointments move chats to past conversations immediately. Sending closes exactly 7 elapsed days after `statusChangedAt`; messages do not extend this deadline. History remains readable.
+- Moderate text server-side before message persistence with OpenAI; failures/refusals/malformed responses fail closed and preserve the browser draft. Rate-limit before external calls. Never log message text, API keys, or provider response bodies.
+- Read receipts acknowledge only visible loaded incoming message IDs. Inbox/header reads do not consume messages.
+- Email batches live in PostgreSQL and are dispatched by `npm run chat:emails` or the production worker service, independently of browser activity. Keep batching, 15-minute per-conversation/recipient cooldowns, leases, fixed retry payloads, and Resend idempotency. Stop retries within the provider's 24-hour idempotency window.
+- Keep blocked messages out of recipient history and email. Do not add automatic account sanctions based only on a classifier verdict.
 
 ## Change quality
 

@@ -7,10 +7,12 @@ import { BrandFaviconLinks } from "@/components/layout/brand-favicon-links";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { ThemeFavicon } from "@/components/theme/theme-favicon";
+import { ChatNotificationsProvider } from "@/components/chat/chat-notifications-provider";
 
 import "./globals.css";
 import "./site-theme.css";
 import "./ui-system.css";
+import "./chat-layout.css";
 
 const figtree = Figtree({
   variable: "--font-figtree",
@@ -54,9 +56,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ThemeFavicon />
-          <SiteHeader />
-          {children}
-          <SiteFooter />
+          <ChatNotificationsProvider>
+            <SiteHeader />
+            {children}
+            <SiteFooter />
+          </ChatNotificationsProvider>
         </ThemeProvider>
       </body>
     </html>

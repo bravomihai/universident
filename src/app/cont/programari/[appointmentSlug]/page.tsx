@@ -9,6 +9,7 @@ import { AppointmentStatusBadges } from "@/components/appointments/appointment-s
 import { formatAppointmentInterval } from "@/components/appointments/appointment-status";
 import { CancellationReputationLabel } from "@/components/reviews/cancellation-reputation-label";
 import { ExpandableReviewComment } from "@/components/reviews/expandable-review-comment";
+import { Button } from "@/components/ui/button";
 import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -107,6 +108,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
           </CardHeader>
           <CardContent className="space-y-5">
             <AppointmentInformationGrid appointment={appointment} counterpart={counterpart} />
+            {appointment.confirmedAt ? <Button asChild variant="outline"><Link href={`/cont/mesaje/${appointment.chatSlug}`} prefetch={false}>{role === "PATIENT" ? "Mesaje cu studentul" : "Mesaje cu pacientul"} &gt;</Link></Button> : null}
             <div className="border-t pt-5 empty:hidden">
               <AppointmentActions
                 appointmentSlug={appointment.routeSlug}

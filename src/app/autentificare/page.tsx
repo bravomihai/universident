@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { AuthFormCard } from "@/components/auth/auth-form-card";
 import { SignInForm } from "@/components/auth/sign-in-form";
+import { safeChatReturnTo } from "@/lib/chat/policy";
 import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -11,14 +12,15 @@ export const metadata: Metadata = {
   description: "Autentifică-te în contul tău Universident.",
 };
 
-export default async function SignInPage() {
+export default async function SignInPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const returnTo = safeChatReturnTo((await searchParams).next);
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
   if (session) {
     redirect(
-      session.user.emailVerified ? "/cont" : "/verifica-email",
+      session.user.emailVerified ? returnTo ?? "/cont" : returnTo ? `/verifica-email?next=${encodeURIComponent(returnTo)}` : "/verifica-email",
     );
   }
 
@@ -27,7 +29,7 @@ export default async function SignInPage() {
       title="Autentificare"
       description="Introdu datele contului tău Universident."
     >
-      <SignInForm />
+      <SignInForm returnTo={returnTo} />
     </AuthFormCard>
   );
 }

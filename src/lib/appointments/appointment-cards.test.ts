@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { appointmentCounterpart, type AppointmentCardSource } from "./appointment-card-data";
 
 const appointment: AppointmentCardSource = {
-  routeSlug: "programare-test", version: 3, status: "CONFIRMED",
+  routeSlug: "programare-test", chatSlug: "a1b2c3d4e5f6", version: 3, status: "CONFIRMED",
   scheduledStartsAt: "2026-09-08T10:00:00Z", scheduledEndsAt: "2026-09-08T11:00:00Z",
   patientNameSnapshot: "Maria Pacient", studentNameSnapshot: "Andrei Student", patientAgeAtAppointment: 27,
   treatmentNameSnapshot: "Consultație", locationNameSnapshot: "Clinica Universitară", locationAddressSnapshot: "Strada Clinicilor 12, Cluj-Napoca",

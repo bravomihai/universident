@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { HeaderMessages } from "@/components/chat/header-messages";
 import { AccountMenu } from "@/components/account/account-menu";
 import {
   headerControlGeometryClassName,
@@ -60,6 +61,7 @@ export function HeaderAccount({ initialUser }: HeaderAccountProps) {
   if (user) {
     return (
       <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+        {user.role !== UserRole.ADMIN ? <HeaderMessages /> : null}
         <AccountMenu
           name={user.name}
           roleLabel={roleLabels[user.role]}

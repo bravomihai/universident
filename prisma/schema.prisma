@@ -30,6 +30,11 @@ model User {
   reviewsAuthored          AppointmentReview[]       @relation("AppointmentReviewAuthor")
   reviewsReceived          AppointmentReview[]       @relation("AppointmentReviewTarget")
 
+  chatMessagesSent ChatMessage[] @relation("ChatSender")
+  chatMessagesReceived ChatMessage[] @relation("ChatRecipient")
+  chatMailboxes ChatMailbox[]
+  chatSendAttempts ChatSendAttempt[]
+
   @@unique([email])
   @@map("user")
 }
@@ -293,6 +298,7 @@ model StudentAvailabilitySlotOffering {
 model Appointment {
   id                                String            @id @default(cuid())
   routeSlug                         String            @unique
+  chatSlug                          String            @unique @default(dbgenerated("substr(replace(gen_random_uuid()::text, '-', ''), 1, 12)")) @db.VarChar(12)
   patientProfileId                  String
   studentProfileId                  String
   studentAvailabilitySlotId         String
@@ -333,6 +339,8 @@ model Appointment {
   statusChangedByUser  User?                           @relation("AppointmentStatusChangedBy", fields: [statusChangedByUserId], references: [id], onDelete: SetNull)
   reviews              AppointmentReview[]
   notifications        AppointmentNotification[]
+  chatMessages         ChatMessage[]
+  chatMailboxes        ChatMailbox[]
 
   @@index([patientProfileId, status, scheduledStartsAt])
   @@index([status, pendingExpiresAt], map: "appointment_status_pending_expiry_idx")
@@ -504,4 +512,79 @@ enum AppointmentStatus {
 enum AppointmentReviewAuthorRole {
   PATIENT
   STUDENT
+}
+
+model ChatMessage {
+  id              String   @id @default(cuid())
+  appointmentId   String
+  senderUserId    String
+  recipientUserId String
+  clientId        String   @db.VarChar(64)
+  text            String   @db.VarChar(2000)
+  moderationVersion String @db.VarChar(64)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  readAt          DateTime? @db.Timestamptz(3)
+  emailBatchId    String?
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  sender User @relation("ChatSender", fields: [senderUserId], references: [id], onDelete: Restrict)
+  recipient User @relation("ChatRecipient", fields: [recipientUserId], references: [id], onDelete: Restrict)
+  emailBatch ChatEmailBatch? @relation(fields: [emailBatchId], references: [id], onDelete: SetNull)
+
+  @@unique([senderUserId, clientId])
+  @@index([appointmentId, createdAt, id])
+  @@index([recipientUserId, readAt, appointmentId])
+  @@index([emailBatchId, readAt])
+  @@map("chat_message")
+}
+
+model ChatMailbox {
+  id String @id @default(cuid())
+  appointmentId String
+  recipientUserId String
+  lastSentAt DateTime? @db.Timestamptz(3)
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  recipient User @relation(fields: [recipientUserId], references: [id], onDelete: Restrict)
+  batches ChatEmailBatch[]
+  @@unique([appointmentId, recipientUserId])
+  @@map("chat_mailbox")
+}
+
+model ChatEmailBatch {
+  id String @id @default(cuid())
+  mailboxId String
+  status ChatEmailStatus @default(PENDING)
+  dueAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  firstAttemptAt DateTime? @db.Timestamptz(3)
+  attempts Int @default(0)
+  leaseToken String?
+  leaseUntil DateTime? @db.Timestamptz(3)
+  recipientEmail String?
+  fromEmail String?
+  conversationUrl String?
+  sentAt DateTime? @db.Timestamptz(3)
+  lastErrorCode String? @db.VarChar(64)
+  mailbox ChatMailbox @relation(fields: [mailboxId], references: [id], onDelete: Restrict)
+  messages ChatMessage[]
+  @@index([status, dueAt])
+  @@index([mailboxId, status])
+  @@map("chat_email_batch")
+}
+
+model ChatSendAttempt {
+  id String @id @default(cuid())
+  userId String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+  @@map("chat_send_attempt")
+}
+
+enum ChatEmailStatus {
+  PENDING
+  SENDING
+  SENT
+  SKIPPED
+  FAILED
 }

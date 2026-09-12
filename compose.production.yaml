@@ -7,6 +7,9 @@ x-app-environment: &app-environment
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
   RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
   EMAIL_FROM: ${EMAIL_FROM:?EMAIL_FROM is required}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+  OPENAI_MODERATION_MODEL: ${OPENAI_MODERATION_MODEL:-gpt-4.1-mini}
+  CHAT_WORKER_SECRET: ${CHAT_WORKER_SECRET:?CHAT_WORKER_SECRET is required}
 
 services:
   db:
@@ -82,6 +85,33 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
+  chat-email-worker:
+    build:
+      context: .
+      target: runner
+    command: ["node", "scripts/chat-email-worker.mjs"]
+    environment:
+      CHAT_WORKER_URL: http://app:3000
+      CHAT_WORKER_SECRET: ${CHAT_WORKER_SECRET:?CHAT_WORKER_SECRET is required}
+    healthcheck:
+      test: ["CMD", "node", "scripts/chat-email-worker.mjs", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      app:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     logging:
       driver: json-file
       options:

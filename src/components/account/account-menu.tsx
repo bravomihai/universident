@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
     ChevronDown,
     CalendarDays,
+    MessageCircle,
     GraduationCap,
     LogOut,
     UserRound,
@@ -12,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { ProfileIcon } from "@/components/icons/profile-icon";
-import { headerNeutralControlClassName } from "@/components/layout/header-action-styles";
+import { compactHeaderIconControlClassName, headerNeutralControlClassName } from "@/components/layout/header-action-styles";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -71,6 +72,7 @@ export function AccountMenu({
                     className={cn(
                         headerNeutralControlClassName,
                         "min-w-0 max-w-full shrink gap-1 px-1.5 min-[300px]:px-2 sm:gap-2 sm:px-3",
+                        compactHeaderIconControlClassName,
                     )}
                     aria-label={`Deschide meniul contului pentru ${name}`}
                 >
@@ -86,7 +88,7 @@ export function AccountMenu({
                         </span>
                     </span>
 
-                    <ChevronDown className="hidden size-4 shrink-0 text-foreground min-[280px]:block" />
+                    <ChevronDown className="hidden size-4 shrink-0 text-foreground min-[420px]:block" />
                 </Button>
             </DropdownMenuTrigger>
 
@@ -118,6 +120,10 @@ export function AccountMenu({
                         <CalendarDays />
                         Programările mele
                     </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                    <Link href="/cont/mesaje"><MessageCircle />Mesaje</Link>
                 </DropdownMenuItem>
 
                 {!showStudentNavigation ? (

@@ -22,6 +22,7 @@ import { ageOnDate } from "@/lib/availability/bucharest-time";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { parsePatientProfileInput } from "@/lib/patient/patient-profile-input";
 import { prisma } from "@/lib/prisma";
+import { withChatSlugRetry } from "@/lib/chat/slug";
 import {
   findAndLockAvailabilityRoot,
   lockSchedulingKeys,
@@ -365,7 +366,7 @@ export async function createAppointmentRequest(
 ) {
   const hashes = idempotencyHashes(patientUser.id, studentSlug, input);
   try {
-    return await runSerializableTransaction(
+    return await withChatSlugRetry(() => runSerializableTransaction(
       prisma,
       async (transaction) => {
         const now = options.now ?? new Date();
@@ -559,7 +560,7 @@ export async function createAppointmentRequest(
         ]);
         return appointment;
       },
-    );
+    ));
   } catch (error) {
     if (isUniqueConflict(error) || isStudentActiveOverlap(error)) {
       if (isIdempotencyUniqueConflict(error)) {

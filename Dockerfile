@@ -5,6 +5,9 @@ FROM node:24-bookworm-slim AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 FROM base AS dependencies
 
 COPY package.json package-lock.json prisma.config.ts ./
@@ -41,6 +44,9 @@ RUN groupadd --system --gid 1001 nodejs \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+COPY --chown=nextjs:nodejs scripts/chat-email-worker.mjs ./scripts/chat-email-worker.mjs
+COPY --chown=nextjs:nodejs scripts/chat-email-worker-health.mjs ./scripts/chat-email-worker-health.mjs
 
 USER nextjs
 

@@ -15,6 +15,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
+import { AccountMessagesCard } from "@/components/chat/account-messages-card";
 import { StudentPublicationControl } from "@/components/student/student-publication-control";
 import { StudentProfileRefreshControl } from "@/components/student/student-profile-refresh-control";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
 import { formatUnreadAppointmentNotifications } from "@/lib/appointments/appointment-notification-label";
 import { patientProfileImageUrl } from "@/lib/patient/patient-profile-image";
+import { unreadChatCount } from "@/lib/chat/service";
 import { prisma } from "@/lib/prisma";
 import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
 import { getStudentPublicationReadiness } from "@/lib/student-publication/student-publication-readiness";
@@ -150,6 +152,8 @@ export default async function AccountPage() {
     session.user.role === UserRole.PATIENT || session.user.role === UserRole.STUDENT
       ? await listAppointmentsForUser(session.user.id, session.user.role)
       : null;
+
+  const unreadMessages = isStudent || isPatient ? await unreadChatCount(session.user) : 0;
 
   const studentData = isStudent
     ? await (async () => {
@@ -370,6 +374,12 @@ export default async function AccountPage() {
               </DashboardLinkCard>
 
             </div>
+          </section>
+        ) : null}
+
+        {isStudent || isPatient ? (
+          <section aria-label="Mesajele contului">
+            <AccountMessagesCard initialCount={unreadMessages} />
           </section>
         ) : null}
 

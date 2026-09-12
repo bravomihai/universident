@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
 
-export function SignInForm() {
+export function SignInForm({ returnTo }: { returnTo?: string | null }) {
   const router = useRouter();
 
   const [isPending, setIsPending] = useState(false);
@@ -44,7 +44,7 @@ export function SignInForm() {
             // Formularul de retrimitere rămâne utilizabil manual.
           }
 
-          router.replace("/verifica-email");
+          router.replace(returnTo ? `/verifica-email?next=${encodeURIComponent(returnTo)}` : "/verifica-email");
           return;
         }
 
@@ -52,7 +52,7 @@ export function SignInForm() {
         return;
       }
 
-      router.replace("/");
+      router.replace(returnTo || "/");
       router.refresh();
     } catch {
       setErrorMessage(

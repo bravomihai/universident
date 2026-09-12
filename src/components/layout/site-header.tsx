@@ -30,12 +30,12 @@ export async function SiteHeader() {
       <div className="mx-auto flex min-h-18 w-full max-w-6xl items-center gap-2 px-4 sm:min-h-20 sm:gap-4 sm:px-6">
         <SiteBrand />
 
-        <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-1 sm:gap-2">
+        <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-1 max-[420px]:shrink-0 sm:gap-2">
           <Link
             href="/echipa"
             className={cn(
               headerNeutralControlClassName,
-              "hidden shrink-0 items-center gap-2 px-3 text-sm font-medium xl:inline-flex",
+              "hidden shrink-0 items-center gap-2 px-3 text-sm font-medium min-[1150px]:inline-flex",
             )}
           >
             <Users className="size-4" aria-hidden="true" />

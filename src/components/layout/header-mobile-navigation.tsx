@@ -4,14 +4,17 @@ import { CircleHelp, LogIn, Menu, Search, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { headerIconControlClassName } from "@/components/layout/header-action-styles";
+import { compactHeaderIconControlClassName, headerIconControlClassName } from "@/components/layout/header-action-styles";
 import { HomeSectionLink } from "@/components/layout/home-section-link";
+import { ThemeMenuOptions } from "@/components/theme/theme-selector";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -39,7 +42,7 @@ export function HeaderMobileNavigation({
           type="button"
           variant="ghost"
           size="icon"
-          className={cn(headerIconControlClassName, "shrink-0 xl:hidden")}
+          className={cn(headerIconControlClassName, "shrink-0 min-[1150px]:hidden", compactHeaderIconControlClassName)}
           aria-label="Deschide navigarea principală"
           aria-controls="mobile-primary-navigation"
         >
@@ -51,7 +54,7 @@ export function HeaderMobileNavigation({
       <DropdownMenuContent
         id="mobile-primary-navigation"
         align="end"
-        className="w-[min(17rem,calc(100vw-1.5rem))] xl:hidden"
+        className="w-[min(17rem,calc(100vw-1.5rem))] min-[1150px]:hidden"
       >
         <DropdownMenuItem
           asChild
@@ -102,6 +105,11 @@ export function HeaderMobileNavigation({
         <DropdownMenuItem asChild className="lg:hidden">
           <HomeSectionLink sectionId="cum-functioneaza"><CircleHelp aria-hidden="true" />Cum funcționează</HomeSectionLink>
         </DropdownMenuItem>
+        <DropdownMenuGroup className="min-[420px]:hidden">
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Temă</DropdownMenuLabel>
+          <ThemeMenuOptions />
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

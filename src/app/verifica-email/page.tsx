@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { AuthFormCard } from "@/components/auth/auth-form-card";
 import { EmailVerificationForm } from "@/components/auth/email-verification-form";
+import { safeChatReturnTo } from "@/lib/chat/policy";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 
 type VerifyEmailPageProps = {
   searchParams: Promise<{
+    next?: string | string[];
     error?: string | string[];
     trimis?: string | string[];
     verificat?: string | string[];
@@ -29,6 +31,8 @@ export default async function VerifyEmailPage({
   searchParams,
 }: VerifyEmailPageProps) {
   const parameters = await searchParams;
+  const returnTo = safeChatReturnTo(firstValue(parameters.next));
+  const signInHref = returnTo ? `/autentificare?next=${encodeURIComponent(returnTo)}` : "/autentificare";
   const error = firstValue(parameters.error);
   const emailWasVerified =
     firstValue(parameters.verificat) === "1" && !error;
@@ -54,7 +58,7 @@ export default async function VerifyEmailPage({
               pentru a continua în contul Universident.
             </p>
             <Button asChild className="w-full">
-              <Link href="/autentificare">
+              <Link href={signInHref}>
                 Continuă către autentificare
               </Link>
             </Button>
@@ -67,7 +71,7 @@ export default async function VerifyEmailPage({
               </p>
             ) : null}
 
-            <EmailVerificationForm emailWasSent={emailWasSent} />
+            <EmailVerificationForm emailWasSent={emailWasSent} signInHref={signInHref} />
           </>
         )}
       </div>

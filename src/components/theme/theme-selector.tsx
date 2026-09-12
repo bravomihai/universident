@@ -14,9 +14,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-export function ThemeSelector() {
+export function ThemeMenuOptions() {
     const { theme, setTheme } = useTheme();
 
+    return (
+        <DropdownMenuRadioGroup
+            aria-label="Temă"
+            value={theme ?? "system"}
+            onValueChange={setTheme}
+        >
+            <DropdownMenuRadioItem value="system">
+                <Monitor />
+                Sistem
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="light">
+                <Sun />
+                Luminos
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="dark">
+                <Moon />
+                Întunecat
+            </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+    );
+}
+
+export function ThemeSelector() {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -24,7 +47,7 @@ export function ThemeSelector() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className={cn(headerIconControlClassName, "relative shrink-0")}
+                    className={cn(headerIconControlClassName, "relative hidden shrink-0 min-[420px]:inline-flex")}
                     aria-label="Schimbă tema"
                 >
                     <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
@@ -34,26 +57,8 @@ export function ThemeSelector() {
                 </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
-                <DropdownMenuRadioGroup
-                    value={theme ?? "system"}
-                    onValueChange={setTheme}
-                >
-                    <DropdownMenuRadioItem value="system">
-                        <Monitor />
-                        Sistem
-                    </DropdownMenuRadioItem>
-
-                    <DropdownMenuRadioItem value="light">
-                        <Sun />
-                        Luminos
-                    </DropdownMenuRadioItem>
-
-                    <DropdownMenuRadioItem value="dark">
-                        <Moon />
-                        Întunecat
-                    </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
+            <DropdownMenuContent align="end" className="hidden min-[420px]:block">
+                <ThemeMenuOptions />
             </DropdownMenuContent>
         </DropdownMenu>
     );

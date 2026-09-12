@@ -1,0 +1,67 @@
+/* Chat owns the remaining viewport; the site header and footer stay in normal flow. */
+html:has(.chat-page) {
+  overflow: hidden;
+  scroll-padding-top: 0;
+}
+
+body:has(.chat-page) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body:has(.chat-page) > .site-header {
+  position: relative;
+  top: auto;
+}
+
+body:has(.chat-page) > .site-footer {
+  margin-top: 0;
+}
+
+.chat-page {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chat-disclosure-short { display: none; }
+
+/* Keep the composer usable on small phones and when a keyboard reduces the viewport. */
+@media (max-height: 700px) {
+  .chat-page .chat-composer { padding: .5rem .75rem; }
+  .chat-page .chat-input { height: 2.75rem; min-height: 0; padding-block: .5rem; }
+  .chat-page .chat-disclosure { margin-top: .375rem; font-size: .6875rem; line-height: 1.35; }
+  .chat-page .chat-disclosure-full { display: none; }
+  .chat-page .chat-disclosure-short { display: inline; }
+}
+
+@media (max-height: 550px) {
+  body:has(.chat-page) > .site-header > div { min-height: 3.25rem; }
+  body:has(.chat-page) .site-footer-bottom {
+    flex-direction: row;
+    padding: .375rem 1rem;
+    gap: .25rem .75rem;
+    font-size: .6875rem;
+    line-height: 1.35;
+  }
+  .chat-page { padding-block: .5rem; }
+  .chat-page .chat-conversation-header { padding: .375rem .75rem; }
+  .chat-page .chat-conversation-header h2 { font-size: 1rem; line-height: 1.4; }
+  .chat-page .chat-back { float: right; margin: 0 0 0 .5rem; font-size: .75rem; }
+  .chat-page .chat-appointment-link { font-size: .75rem; }
+  .chat-page .chat-composer form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .375rem .75rem;
+    align-items: center;
+  }
+  .chat-page .chat-input { grid-column: 1; grid-row: 1; }
+  .chat-page .chat-composer-actions { display: contents; }
+  .chat-page .chat-composer-actions button { grid-column: 2; grid-row: 1; }
+  .chat-page .chat-composer-actions > span { grid-column: 2; grid-row: 2; text-align: right; }
+  .chat-page .chat-disclosure { grid-column: 1; grid-row: 2; margin-top: 0; }
+}

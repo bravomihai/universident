@@ -6,3 +6,6 @@ export const headerNeutralControlClassName =
 
 export const headerIconControlClassName =
   `${headerNeutralControlClassName} size-11 min-w-11 px-0`;
+
+export const compactHeaderIconControlClassName =
+  "max-[420px]:size-11 max-[420px]:min-w-11 max-[420px]:shrink-0 max-[420px]:justify-center max-[420px]:gap-0 max-[420px]:px-0";

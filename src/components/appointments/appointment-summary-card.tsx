@@ -75,6 +75,7 @@ export function AppointmentSummaryCard({
               Vezi detaliile <span className={clickableCardIndicatorClassName} aria-hidden="true">&gt;</span>
             </Link>
           </Button>
+          {appointment.confirmedAt ? <Button asChild variant="outline"><Link href={`/cont/mesaje/${appointment.chatSlug}`} prefetch={false}>Mesaje &gt;</Link></Button> : null}
           <div className="ml-auto min-w-0">{cancelAction}</div>
         </div>
       </CardContent>

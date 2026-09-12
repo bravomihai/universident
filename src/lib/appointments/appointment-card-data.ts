@@ -6,8 +6,10 @@ type Rating = { rating: number };
 
 export type AppointmentCardSource = {
   routeSlug: string;
+  chatSlug: string;
   version: number;
   status: string;
+  confirmedAt?: Date | string | null;
   scheduledStartsAt: Date | string;
   scheduledEndsAt: Date | string;
   patientNameSnapshot: string;
