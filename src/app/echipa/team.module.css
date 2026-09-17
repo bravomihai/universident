@@ -3,21 +3,10 @@
   line-height: 1.65;
 }
 
-.photo {
-  display: block;
-  width: 100%;
-  max-width: 18rem;
-  height: auto;
-  margin: 0 0 1rem;
-  border-radius: var(--card-radius-compact);
-}
-
 .story h1 {
   margin-bottom: 1rem;
 }
 
-/* Keep each heading and its opening paragraph beside the same edge of the
-   photo, even when the group extends past the bottom of the float. */
 .headingGroup {
   display: flow-root;
 }
@@ -46,13 +35,4 @@
   color: var(--primary);
   font-size: 1.125rem;
   font-weight: var(--weight-heading);
-}
-
-@media (min-width: 640px) {
-  .photo {
-    float: left;
-    width: 40%;
-    max-width: 20rem;
-    margin-right: 2rem;
-  }
 }

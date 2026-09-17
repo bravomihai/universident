@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 import styles from "./team.module.css";
@@ -19,16 +18,6 @@ export default function TeamPage() {
         <Card className="sm:py-8">
           <CardContent className="sm:px-8">
             <article className={styles.story} aria-labelledby="team-title">
-              <Image
-                src="/team/fondatori-universident.png"
-                alt="Irina Nemeș și Nemeș Mihail, fondatorii UniversiDent"
-                width={1366}
-                height={2048}
-                sizes="(min-width: 1024px) 320px, (min-width: 640px) 40vw, 288px"
-                preload
-                className={styles.photo}
-              />
-
               <header className={styles.headingGroup}>
                 <h1 id="team-title">Cine este în spatele UniversiDent?</h1>
                 <p>
