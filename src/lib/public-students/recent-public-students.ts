@@ -7,6 +7,8 @@ import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window
 import { prisma } from "@/lib/prisma";
 import { summarizeRecentStudentAvailability } from "./recent-student-availability";
 import { createRecentPublicStudent, type RecentPublicStudent } from "./recent-public-student-dto";
+import { isPublicDeployment } from "@/lib/seo/config";
+import { realStudentProfileWhere } from "@/lib/seo/eligible-students";
 
 const RECENT_PUBLIC_STUDENT_LIMIT = 8;
 
@@ -23,6 +25,7 @@ export async function getRecentPublicStudents(excludedUserId?: string) {
     lastRefreshedAt: { not: null },
     user: { role: UserRole.STUDENT, emailVerified: true },
     ...(excludedUserId ? { userId: { not: excludedUserId } } : {}),
+    ...(isPublicDeployment() ? realStudentProfileWhere() : {}),
   } as const;
 
   // Page through recently refreshed profiles; a full calendar does not hide the

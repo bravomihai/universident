@@ -1,3 +1,4 @@
+import { privateRobots } from "@/lib/seo/metadata";
 import { GraduationCap, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -19,7 +20,7 @@ type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export const metadata: Metadata = { title: "Alege o programare" };
+export const metadata: Metadata = { robots: privateRobots, title: "Alege o programare" };
 
 export default async function StudentBookingPage({ params, searchParams }: Props) {
   const [{ studentSlug, treatmentSlug, citySlug }, query] = await Promise.all([params, searchParams]);

@@ -1,3 +1,4 @@
+import { privateRobots } from "@/lib/seo/metadata";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,7 +8,7 @@ import { SignInForm } from "@/components/auth/sign-in-form";
 import { safeChatReturnTo } from "@/lib/chat/policy";
 import { auth } from "@/lib/auth";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = { robots: privateRobots,
   title: "Autentificare",
   description: "Autentifică-te în contul tău Universident.",
 };

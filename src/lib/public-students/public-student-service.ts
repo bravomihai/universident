@@ -12,6 +12,8 @@ import { getBookablePublicTreatments } from "@/lib/public-students/public-bookab
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
 import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
+import { isPublicDeployment } from "@/lib/seo/config";
+import { realStudentProfileWhere } from "@/lib/seo/eligible-students";
 
 export const PUBLIC_STUDENTS_PAGE_SIZE = 12;
 export type PublicCatalogOption = { name: string; slug: string };
@@ -83,7 +85,7 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       OR: [{ seriesId: null }, { series: { status: "ACTIVE" } }],
       startsAt: { lt: publicBookingWindowEnd(now) },
       endsAt: { gt: now },
-      studentProfile: { ...publicProfileWhere, ...(excludedUserId ? { userId: { not: excludedUserId } } : {}) },
+      studentProfile: { ...publicProfileWhere, ...(isPublicDeployment() ? realStudentProfileWhere() : {}), ...(excludedUserId ? { userId: { not: excludedUserId } } : {}) },
       studentLocation: { deletedAt: null, city: { slug: citySlug, isActive: true } },
       offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { slug: treatmentSlug, isActive: true } }, supervisor: { deletedAt: null } } },
     },

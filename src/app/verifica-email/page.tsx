@@ -1,3 +1,4 @@
+import { privateRobots } from "@/lib/seo/metadata";
 import { MailCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -7,7 +8,7 @@ import { EmailVerificationForm } from "@/components/auth/email-verification-form
 import { safeChatReturnTo } from "@/lib/chat/policy";
 import { Button } from "@/components/ui/button";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = { robots: privateRobots,
   title: "Verifică adresa de email",
   description:
     "Confirmă adresa de email asociată contului Universident.",

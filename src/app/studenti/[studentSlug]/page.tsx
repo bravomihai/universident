@@ -13,6 +13,12 @@ import { formatStudentCancellationReputation } from "@/lib/appointments/student-
 import { publicStudentLocationKey } from "@/lib/public-students/public-student-location-key";
 import { publicStudentProfileBackLink } from "@/lib/public-students/public-student-profile-navigation";
 import { getPublicStudentProfile } from "@/lib/public-students/public-student-service";
+import { getSeoStudentProfile } from "@/lib/seo/public-data";
+import { studentProfileMetadata } from "@/lib/seo/metadata";
+import { StructuredData } from "@/components/seo/structured-data";
+import { studentProfileStructuredData } from "@/lib/seo/structured-data";
+import { studentStudyDescription } from "@/lib/seo/public-answers";
+import { isPublicDeployment } from "@/lib/seo/config";
 
 type PublicStudentProfilePageProps = {
   params: Promise<{ studentSlug: string }>;
@@ -40,16 +46,7 @@ export async function generateMetadata({
   params,
 }: PublicStudentProfilePageProps): Promise<Metadata> {
   const { studentSlug } = await params;
-  const profile = await getPublicStudentProfile(studentSlug);
-
-  if (!profile) {
-    return { title: "Profil indisponibil" };
-  }
-
-  return {
-    title: `${profile.name} — student la medicină dentară`,
-    description: `${profile.name}, student la ${profile.university}. Vezi tratamentele și locațiile publice.`,
-  };
+  return studentProfileMetadata(await getSeoStudentProfile(studentSlug));
 }
 
 export default async function PublicStudentProfilePage({
@@ -60,6 +57,8 @@ export default async function PublicStudentProfilePage({
   const profile = await getPublicStudentProfile(studentSlug);
 
   if (!profile) notFound();
+
+  const seoProfile = isPublicDeployment() ? await getSeoStudentProfile(studentSlug) : null;
 
   const treatmentSlug = singleSlugQueryValue(query.tratament);
   const citySlug = singleSlugQueryValue(query.oras);
@@ -83,6 +82,7 @@ export default async function PublicStudentProfilePage({
 
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+      <StructuredData data={studentProfileStructuredData(seoProfile)} />
       <div className="w-full max-w-6xl space-y-8">
         <BackLink href={backLink.href}>
           {backLink.label}
@@ -101,7 +101,7 @@ export default async function PublicStudentProfilePage({
             <p className="flex items-start gap-2 text-muted-foreground">
               <GraduationCap className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
               <span>
-                {profile.university} · Anul {profile.studyYear}
+                {studentStudyDescription(profile.university, profile.studyYear)}
               </span>
             </p>
             <RatingStars {...profile.reviewData.summary} />

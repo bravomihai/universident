@@ -1,10 +1,11 @@
+import { privateRobots } from "@/lib/seo/metadata";
 import { KeyRound } from "lucide-react";
 import type { Metadata } from "next";
 
 import { AuthFormCard } from "@/components/auth/auth-form-card";
 import { PasswordResetRequestForm } from "@/components/auth/password-reset-request-form";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = { robots: privateRobots,
   title: "Ai uitat parola?",
   description:
     "Solicită un link pentru resetarea parolei contului Universident.",

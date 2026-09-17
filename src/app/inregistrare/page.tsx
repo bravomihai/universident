@@ -1,3 +1,4 @@
+import { privateRobots } from "@/lib/seo/metadata";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -7,7 +8,7 @@ import { StudentAccountSwitch } from "@/components/auth/student-account-switch";
 import { auth } from "@/lib/auth";
 import { requiresStudentAccountSwitch, signUpAccountType } from "@/lib/auth/student-signup";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = { robots: privateRobots,
   title: "Înregistrare",
   description: "Creează un cont pe Universident.",
 };

@@ -2,10 +2,12 @@ import { SearchX, UsersRound } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { PublicStudentResultCard } from "@/components/public-students/public-student-result-card";
 import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
 import { PublicStudentPagination } from "@/components/public-students/public-student-pagination";
+import { PublicSearchLinks } from "@/components/public-students/public-search-links";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
@@ -13,7 +15,13 @@ import { publicStudentSearchHref } from "@/lib/public-students/public-student-se
 import {
   getPublicStudentCatalog,
   searchPublicStudents,
+  PUBLIC_STUDENTS_PAGE_SIZE,
 } from "@/lib/public-students/public-student-service";
+import { parseStudentsQuery, studentSearchMetadata } from "@/lib/seo/student-search";
+import { getSeoSearchCombinations } from "@/lib/seo/public-data";
+import { StructuredData } from "@/components/seo/structured-data";
+import { studentSearchStructuredData } from "@/lib/seo/structured-data";
+import { studentSearchIntroduction } from "@/lib/seo/public-answers";
 
 type StudentsPageSearchParams = Promise<
   Record<string, string | string[] | undefined>
@@ -23,42 +31,22 @@ type StudentsPageProps = {
   searchParams: StudentsPageSearchParams;
 };
 
-function singleQueryValue(value: string | string[] | undefined) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function requestedPage(value: string | string[] | undefined) {
-  if (typeof value !== "string" || !/^\d+$/.test(value)) return 1;
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : 1;
-}
-
 export async function generateMetadata({
   searchParams,
 }: StudentsPageProps): Promise<Metadata> {
   const params = await searchParams;
-  const treatmentSlug = singleQueryValue(params.tratament);
-  const citySlug = singleQueryValue(params.oras);
+  const { treatmentSlug, citySlug, valid } = parseStudentsQuery(params);
   const catalog = await getPublicStudentCatalog();
   const treatment = catalog.treatments.find(
     (option) => option.slug === treatmentSlug,
   );
   const city = catalog.cities.find((option) => option.slug === citySlug);
 
-  if (treatment && city) {
-    return {
-      title: `Studenți pentru ${treatment.name} în ${city.name}`,
-      description: `Descoperă studenți care oferă ${treatment.name.toLocaleLowerCase(
-        "ro-RO",
-      )} în ${city.name}.`,
-    };
-  }
-
-  return {
-    title: "Găsește un student",
-    description:
-      "Alege tratamentul și orașul pentru a descoperi studenți la medicină dentară.",
-  };
+  const combinations = valid && treatment && city
+    ? await getSeoSearchCombinations(treatment.slug, city.slug)
+    : [];
+  const count = combinations.find((entry) => entry.treatment.slug === treatmentSlug && entry.city.slug === citySlug)?.studentCount ?? 0;
+  return studentSearchMetadata(params, treatment, city, count, PUBLIC_STUDENTS_PAGE_SIZE);
 }
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
@@ -66,9 +54,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     searchParams,
     auth.api.getSession({ headers: await headers() }),
   ]);
-  const requestedTreatmentSlug = singleQueryValue(params.tratament);
-  const requestedCitySlug = singleQueryValue(params.oras);
-  const page = requestedPage(params.pagina);
+  const { treatmentSlug: requestedTreatmentSlug, citySlug: requestedCitySlug, page } = parseStudentsQuery(params);
   const catalog = await getPublicStudentCatalog();
   const treatment = catalog.treatments.find(
     (option) => option.slug === requestedTreatmentSlug,
@@ -99,21 +85,23 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         })
       : null;
 
-  if (search && search.totalResults > 0 && page > search.totalPages) {
+  if (search && page > search.totalPages) {
     redirect(publicStudentSearchHref(treatment!.slug, city!.slug, search.totalPages));
   }
 
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
+      <StructuredData data={session ? null : studentSearchStructuredData({
+        params, treatment, city, results: search?.results ?? [], pageSize: PUBLIC_STUDENTS_PAGE_SIZE,
+      })} />
       <div className="w-full max-w-6xl space-y-8">
         <header className="app-page-heading max-w-3xl space-y-3">
           <p className="app-eyebrow">ÎNGRIJIRE, APROAPE DE TINE</p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Găsește tratamentul potrivit în orașul tău
+            {treatment && city ? `${treatment.name} în ${city.name}` : "Găsește tratamentul potrivit în orașul tău"}
           </h1>
           <p className="text-muted-foreground">
-            Alege tratamentul și orașul. Descoperă studenți care te pot primi
-            pentru îngrijire dentară sub supervizare.
+            {studentSearchIntroduction(treatment, city, Boolean(search?.totalResults))}
           </p>
         </header>
 
@@ -123,6 +111,8 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           selectedTreatmentSlug={treatment?.slug ?? ""}
           selectedCitySlug={city?.slug ?? ""}
         />
+
+        {!hasRequestedFilters && !hasInvalidFilter ? <PublicSearchLinks /> : null}
 
         <section aria-live="polite" aria-atomic="false">
           {!hasCompleteSelection && !hasInvalidFilter ? (
@@ -179,11 +169,16 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               {search.results.length > 0 ? (
                 <div className="grid gap-5 lg:grid-cols-2">
                   {search.results.map((student) => (
-                    <PublicStudentResultCard
-                      key={student.publicSlug}
-                      student={student}
-                      treatmentSlug={treatment.slug}
-                    />
+                    <div key={student.publicSlug} className="flex flex-col gap-2">
+                      <PublicStudentResultCard student={student} treatmentSlug={treatment.slug} />
+                      <Link
+                        href={`/studenti/${encodeURIComponent(student.publicSlug)}`}
+                        prefetch={false}
+                        className="text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                      >
+                        Vezi profilul: {student.name} <span aria-hidden="true">&gt;</span>
+                      </Link>
+                    </div>
                   ))}
                 </div>
               ) : (

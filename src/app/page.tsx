@@ -7,11 +7,18 @@ import { StudentJoinLink } from "@/components/home/student-join-link";
 import { RecentStudents, RecentStudentsLoading } from "@/components/home/recent-students";
 import { Button } from "@/components/ui/button";
 import { NavigationLink } from "@/components/ui/navigation-link";
+import { homeMetadata } from "@/lib/seo/metadata";
+import { PublicQuestions } from "@/components/home/public-questions";
+import { StructuredData } from "@/components/seo/structured-data";
+import { homeStructuredData } from "@/lib/seo/structured-data";
 import "@/components/home/home.css";
+
+export const generateMetadata = homeMetadata;
 
 export default function Home() {
   return (
     <main id="main-content" className="home-page">
+      <StructuredData data={homeStructuredData()} />
       <section className="home-hero" aria-labelledby="home-title">
         <div className="home-hero-inner">
           <h1 id="home-title">
@@ -77,6 +84,8 @@ export default function Home() {
           </ol>
         </HowItWorksCard>
       </section>
+
+      <PublicQuestions />
 
       <section className="home-section home-community" aria-labelledby="community-title">
         <div className="home-community-panel">

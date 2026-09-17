@@ -2,6 +2,7 @@ name: universident
 
 x-app-environment: &app-environment
   NODE_ENV: production
+  DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
   DATABASE_URL: "postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public"
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
