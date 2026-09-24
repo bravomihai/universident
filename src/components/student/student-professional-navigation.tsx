@@ -1,5 +1,5 @@
 import { MapPin, Stethoscope, UsersRound } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { cn } from "@/lib/utils";
 
@@ -46,6 +46,7 @@ export function StudentProfessionalNavigation({
           <Link
             key={area.id}
             href={area.href}
+            navigation="replace"
             aria-current={isCurrent ? "page" : undefined}
             className={cn(
               "flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-sm font-medium transition",

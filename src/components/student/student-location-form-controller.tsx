@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useState } from "react";
 import { StudentLocationForm, type StudentLocationCityOption, type StudentLocationFormInitialValues, type StudentLocationFormValues } from "@/components/student/student-location-form";
 

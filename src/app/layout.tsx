@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Figtree, Geist_Mono } from "next/font/google";
 
+import { NavigationProvider } from "@/components/navigation/navigation-provider";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { BrandFaviconLinks } from "@/components/layout/brand-favicon-links";
@@ -25,6 +26,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Universident",
+  appleWebApp: { title: "Universident", capable: false },
   title: {
     default: "Universident",
     template: "%s | Universident",
@@ -55,12 +58,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ThemeFavicon />
-          <ChatNotificationsProvider>
-            <SiteHeader />
-            {children}
-            <SiteFooter />
-          </ChatNotificationsProvider>
+          <NavigationProvider>
+            <ThemeFavicon />
+            <ChatNotificationsProvider>
+              <SiteHeader />
+              {children}
+              <SiteFooter />
+            </ChatNotificationsProvider>
+          </NavigationProvider>
         </ThemeProvider>
       </body>
     </html>

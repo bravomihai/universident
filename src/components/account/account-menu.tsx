@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import {
     ChevronDown,
     CalendarDays,
@@ -9,7 +9,7 @@ import {
     LogOut,
     UserRound,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useState } from "react";
 
 import { ProfileIcon } from "@/components/icons/profile-icon";

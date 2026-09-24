@@ -69,7 +69,7 @@ export default function TeamPage() {
             </article>
           </CardContent>
         </Card>
-        <BackLink href="/" className="mt-8">Înapoi la pagina principală</BackLink>
+        <BackLink className="mt-8" />
       </div>
     </main>
   );

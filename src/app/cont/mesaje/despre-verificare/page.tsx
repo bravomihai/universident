@@ -3,7 +3,7 @@ import { BackLink } from "@/components/ui/back-link";
 export const metadata = { title: "Verificarea mesajelor" };
 export default function ModerationInformationPage() {
   return <main id="main-content" className="app-page mx-auto w-full max-w-3xl space-y-5 px-4 py-10 sm:px-6">
-    <BackLink href="/cont/mesaje">Înapoi la mesaje</BackLink>
+    <BackLink />
     <h1 className="text-3xl font-semibold">Verificarea mesajelor</h1>
     <p>Înainte de trimitere, textul mesajului este transmis către OpenAI pentru verificarea automată a limbajului abuziv. Nu includem datele contului sau detaliile programării în această cerere. Informațiile pe care le scrii în mesaj fac parte din textul verificat.</p>
     <p>Blocăm mesajele identificate ca jignitoare, amenințătoare, discriminatorii, hărțuitoare sau spam. Nemulțumirile exprimate respectuos și descrierile stomatologice sunt permise.</p>

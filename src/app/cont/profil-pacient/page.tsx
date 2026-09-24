@@ -34,7 +34,7 @@ export default async function PatientProfilePage() {
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-5xl space-y-6">
-        <BackLink href="/cont">Înapoi la cont</BackLink>
+        <BackLink />
         <header className="space-y-3">
           <div>
             <div className="flex items-center gap-3">

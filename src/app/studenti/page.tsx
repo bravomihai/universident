@@ -2,7 +2,7 @@ import { SearchX, UsersRound } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { PublicStudentResultCard } from "@/components/public-students/public-student-result-card";
 import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";

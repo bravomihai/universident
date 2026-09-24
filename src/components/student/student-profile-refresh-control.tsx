@@ -1,7 +1,7 @@
 "use client";
 
 import { RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";

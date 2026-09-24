@@ -1,5 +1,5 @@
 import { GraduationCap, MapPin, RefreshCw } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
@@ -8,7 +8,7 @@ import { clickableCardClassName, clickableCardIndicatorClassName, clickableCardL
 import { auth } from "@/lib/auth";
 import { UserRole } from "@/generated/prisma/enums";
 import { getRecentPublicStudents } from "@/lib/public-students/recent-public-students";
-import { publicStudentProfileFromHomeHref } from "@/lib/public-students/public-student-profile-navigation";
+import { publicStudentProfileHref } from "@/lib/public-students/public-student-profile-navigation";
 
 const refreshedDate = new Intl.DateTimeFormat("ro-RO", { day: "numeric", month: "short", timeZone: "Europe/Bucharest" });
 
@@ -29,7 +29,7 @@ export async function RecentStudents() {
   return (
     <div className="home-profiles-grid">
       {profiles.map((profile) => (
-        <Link href={publicStudentProfileFromHomeHref(profile.publicSlug)} key={profile.publicSlug} className={clickableCardLinkClassName}>
+        <Link href={publicStudentProfileHref(profile.publicSlug)} key={profile.publicSlug} className={clickableCardLinkClassName}>
           <Card className={`home-profile-card ${clickableCardClassName}`}>
             <div className="home-profile-top"><ProfileAvatar name={profile.name} imageUrl={profile.imageUrl} className="size-16 text-xl" /><span className="home-study-year">Anul {profile.studyYear}</span></div>
             <h3>{profile.name}</h3>

@@ -1,8 +1,8 @@
 "use client";
 
 import { ExternalLink, Globe2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/navigation/app-link";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";

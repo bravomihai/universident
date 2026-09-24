@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/navigation/app-link";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { type SubmitEvent, useState } from "react";
 
 import { AuthFormField } from "@/components/auth/auth-form-field";

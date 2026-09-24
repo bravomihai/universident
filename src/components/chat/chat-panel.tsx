@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { type SubmitEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Send, LockKeyhole } from "lucide-react";
+import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { CHAT_MAX_LENGTH } from "@/lib/chat/policy";
 import { CHAT_CHANGED_EVENT, startChatPolling } from "@/lib/chat/polling";
@@ -136,10 +137,10 @@ export function ChatPanel({ initialData }: { initialData: ChatPageDto }) {
   const conversation = data.conversation;
   return <section className="flex min-h-0 min-w-0 flex-col" aria-label={`Conversație cu ${conversation.counterpartName}`}>
     <header className="chat-conversation-header shrink-0 border-b px-4 py-3 sm:px-5">
-      <Link href="/cont/mesaje" className="chat-back mb-2 inline-block text-sm underline-offset-4 hover:underline md:hidden">&lt; Înapoi la mesaje</Link>
+      <BackLink variant="text" className="chat-back mb-2 inline-block text-sm underline-offset-4 hover:underline" />
       <h2 className="truncate text-lg font-semibold" title={conversation.counterpartName}>{conversation.counterpartName}</h2>
       <Link href={`/cont/programari/${encodeURIComponent(conversation.appointmentSlug)}`} title={conversation.treatment} className="chat-appointment-link mt-1 block truncate text-sm text-muted-foreground underline-offset-4 hover:underline">{conversation.treatment} · {new Date(conversation.startsAt).toLocaleDateString("ro-RO", { timeZone: "Europe/Bucharest" })} &gt;</Link>
-      {conversation.past ? <p className="mt-2 text-xs text-muted-foreground">Conversație trecută{conversation.canSend && conversation.closesAt ? ` · Poți scrie până la ${new Date(conversation.closesAt).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", dateStyle: "short", timeStyle: "short" })}` : " · Doar citire"}</p> : null}
+      {conversation.past ? <p className="mt-2 text-xs text-muted-foreground">Conversație trecută{conversation.canSend && conversation.closesAt ? ` · Poți scrie până la ${new Date(conversation.closesAt).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", dateStyle: "short", timeStyle: "short", hourCycle: "h23" })}` : " · Doar citire"}</p> : null}
     </header>
     {connectionError ? <p className="shrink-0 border-b px-4 py-2 text-sm text-destructive" role="status">Actualizarea mesajelor este întreruptă. Verifică conexiunea.</p> : null}
     <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5" onScroll={() => {
@@ -153,7 +154,7 @@ export function ChatPanel({ initialData }: { initialData: ChatPageDto }) {
         {data.messages.map((message) => <div key={message.id} className={cn("flex", message.own ? "justify-end" : "justify-start")} data-unread-message={!message.own && !message.readAt ? message.id : undefined}>
           <div className={cn("max-w-[90%] rounded-2xl border px-3 py-2 sm:max-w-[80%]", message.own ? "border-primary/20 bg-primary/10" : "bg-muted/40")}>
             <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{message.text}</p>
-            <p className="mt-1 text-right text-[11px] text-muted-foreground"><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time>{message.own ? ` · ${message.readAt ? "Citit" : "Trimis"}` : ""}</p>
+            <p className="mt-1 text-right text-[11px] text-muted-foreground"><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</time>{message.own ? ` · ${message.readAt ? "Citit" : "Trimis"}` : ""}</p>
           </div>
         </div>)}
       </div>

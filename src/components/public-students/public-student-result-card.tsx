@@ -4,7 +4,7 @@ import {
   GraduationCap,
   MapPin,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -35,6 +35,7 @@ const availabilityFormatter = new Intl.DateTimeFormat("ro-RO", {
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
+  hourCycle: "h23",
 });
 
 export function PublicStudentResultCard({

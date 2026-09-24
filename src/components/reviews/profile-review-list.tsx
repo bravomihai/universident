@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { ExpandableReviewComment } from "@/components/reviews/expandable-review-comment";
 import { Card, CardContent } from "@/components/ui/card";

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Info, MapPin, MessageSquare, ShieldCheck, type LucideIcon } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { RatingStars } from "@/components/reviews/rating-summary";
 import { ProfileAvatar } from "@/components/ui/profile-avatar";

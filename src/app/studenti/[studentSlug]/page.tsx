@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BackLink } from "@/components/ui/back-link";
 import { formatStudentCancellationReputation } from "@/lib/appointments/student-reputation-label";
 import { publicStudentLocationKey } from "@/lib/public-students/public-student-location-key";
-import { publicStudentProfileBackLink } from "@/lib/public-students/public-student-profile-navigation";
 import { getPublicStudentProfile } from "@/lib/public-students/public-student-service";
 import { getSeoStudentProfile } from "@/lib/seo/public-data";
 import { studentProfileMetadata } from "@/lib/seo/metadata";
@@ -67,10 +66,6 @@ export default async function PublicStudentProfilePage({
       treatment.slug === treatmentSlug &&
       treatment.locations.some((location) => location.city.slug === citySlug),
   );
-  const backLink = publicStudentProfileBackLink(
-    query.sursa,
-    highlightedTreatment ? { treatmentSlug, citySlug } : undefined,
-  );
   const orderedTreatments = highlightedTreatment
     ? [
         highlightedTreatment,
@@ -84,9 +79,7 @@ export default async function PublicStudentProfilePage({
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <StructuredData data={studentProfileStructuredData(seoProfile)} />
       <div className="w-full max-w-6xl space-y-8">
-        <BackLink href={backLink.href}>
-          {backLink.label}
-        </BackLink>
+        <BackLink />
 
         <header className="flex flex-col gap-5 sm:flex-row sm:items-center">
           <PublicStudentAvatar
@@ -175,7 +168,6 @@ export default async function PublicStudentProfilePage({
                             treatmentSlug={treatment.slug}
                             treatmentName={treatment.name}
                             location={location}
-                            profileSource={query.sursa === "acasa" ? "acasa" : undefined}
                           />
                         </li>
                       ))}

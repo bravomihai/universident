@@ -61,15 +61,14 @@ test("a profile location renders as one accessible link with the shared card int
   assert.match(markup, /ui-card-interactive/);
 });
 
-test("a location card opened from the homepage forwards the source to the calendar", () => {
+test("location cards retain clean booking links without navigation metadata", () => {
   const markup = renderToStaticMarkup(createElement(PublicStudentLocationCard, {
     studentSlug: "student", treatmentSlug: "carii", treatmentName: "Carii și obturații",
-    profileSource: "acasa",
     location: {
       routeKey: "a123bc", name: "Clinica", address: "Adresă",
       city: { name: "Cluj-Napoca", slug: "cluj-napoca" },
       supervisor: { fullName: "Ana Popescu", academicTitle: null },
     },
   }));
-  assert.match(markup, /href="\/studenti\/student\/programare\/carii\/cluj-napoca\?locatie=a123bc&amp;sursa=acasa"/);
+  assert.match(markup, /href="\/studenti\/student\/programare\/carii\/cluj-napoca\?locatie=a123bc"/);
 });

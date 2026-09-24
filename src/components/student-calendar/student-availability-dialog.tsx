@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimeField } from "@/components/ui/time-field";
 import {
   Select,
   SelectContent,
@@ -327,22 +328,15 @@ export function StudentAvailabilityDialog({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="calendar-time">Ora</Label>
-              <Input
-                id="calendar-time"
-                type="time"
-                step={900}
-                required
-                value={form.time}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    time: event.target.value,
-                  }))
-                }
-              />
-            </div>
+            <TimeField
+              id="calendar-time"
+              label="Ora"
+              required
+              value={form.time}
+              onValueChange={(time) =>
+                setForm((current) => ({ ...current, time }))
+              }
+            />
           </div>
 
           <div className="flex items-center gap-3 rounded-xl border bg-muted/20 px-4 py-3">

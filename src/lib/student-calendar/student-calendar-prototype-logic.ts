@@ -31,11 +31,13 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat("ro-RO", {
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
+  hourCycle: "h23",
 });
 
 const timeFormatter = new Intl.DateTimeFormat("ro-RO", {
   hour: "2-digit",
   minute: "2-digit",
+  hourCycle: "h23",
 });
 
 export function toDateInputValue(date: Date) {

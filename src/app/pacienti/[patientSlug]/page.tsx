@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { notFound } from "next/navigation";
 
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
@@ -58,7 +58,7 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-5xl space-y-8">
-        <BackLink href={isOwner ? "/cont/profil-pacient" : "/cont/programari"}>Înapoi</BackLink>
+        <BackLink />
         <header className="space-y-3">
           <div className="flex items-center gap-4">
             <ProfileAvatar

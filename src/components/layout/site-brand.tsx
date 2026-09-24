@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { headerNeutralControlClassName } from "@/components/layout/header-action-styles";
 import { brandAssets } from "@/lib/branding/brand-assets";

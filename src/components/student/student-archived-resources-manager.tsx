@@ -1,8 +1,8 @@
 "use client";
 
 import { Archive } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/navigation/app-link";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -185,7 +185,7 @@ export function StudentArchivedResourcesManager({
 
   return (
     <>
-      <BackLink href="/cont">Înapoi la cont</BackLink>
+      <BackLink />
 
       <div className="space-y-2">
         <div className="flex items-center gap-3">

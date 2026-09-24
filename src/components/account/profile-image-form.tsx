@@ -1,7 +1,7 @@
 "use client";
 
 import { ImagePlus, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/navigation/use-app-router";
 import {
   type ChangeEvent,
   type SubmitEvent,

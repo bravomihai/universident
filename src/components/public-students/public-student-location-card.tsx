@@ -1,5 +1,5 @@
 import { MapPin, UserRound } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import {
   clickableCardClassName,
@@ -15,18 +15,16 @@ export function PublicStudentLocationCard({
   treatmentSlug,
   treatmentName,
   location,
-  profileSource,
 }: {
   studentSlug: string;
   treatmentSlug: string;
   treatmentName: string;
   location: PublicStudentLocationDto;
-  profileSource?: "acasa";
 }) {
   const supervisorName = [location.supervisor.academicTitle, location.supervisor.fullName].filter(Boolean).join(" ");
   return (
     <Link
-      href={publicStudentBookingHref(studentSlug, treatmentSlug, location.city.slug, location.routeKey, profileSource)}
+      href={publicStudentBookingHref(studentSlug, treatmentSlug, location.city.slug, location.routeKey)}
       className={clickableCardLinkClassName}
       style={{ borderRadius: "0.75rem" }}
       aria-label={`Alege o programare pentru ${treatmentName} la ${location.name}, ${location.city.name}. Profesor supervizor: ${supervisorName}.`}

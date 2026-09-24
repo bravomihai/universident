@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { type SubmitEvent, useState } from "react";
 
 import { AccountTypeSwitcher } from "@/components/auth/account-type-switcher";

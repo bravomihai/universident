@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleHelp, LogIn, Menu, Search, UserPlus, Users } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { usePathname } from "next/navigation";
 
 import { compactHeaderIconControlClassName, headerIconControlClassName } from "@/components/layout/header-action-styles";
@@ -98,7 +98,7 @@ export function HeaderMobileNavigation({
             </DropdownMenuItem>
           </>
         ) : null}
-        <DropdownMenuSeparator className={isAuthenticated ? "md:hidden" : "lg:hidden"} />
+        {!isAuthenticated ? <DropdownMenuSeparator className="lg:hidden" /> : null}
         <DropdownMenuItem asChild>
           <Link href="/echipa" aria-current={isCurrentPath(pathname, "/echipa") ? "page" : undefined}><Users aria-hidden="true" />Echipa</Link>
         </DropdownMenuItem>

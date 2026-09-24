@@ -41,15 +41,6 @@ export default async function StudentBookingPage({ params, searchParams }: Props
 
   const city = matchingLocations[0].city;
   const selectedLocation = locationRouteKey ? matchingLocations[0] : null;
-  const backQuery = new URLSearchParams({ tratament: treatmentSlug, oras: city.slug });
-  const backHref = selectedLocation
-    ? publicStudentProfileHref(profile.publicSlug, {
-        source: query.sursa,
-        treatmentSlug,
-        citySlug: city.slug,
-        section: "tratamente",
-      })
-    : `/studenti?${backQuery}`;
   const locationCount = new Set(
     matchingLocations.map((location) => location.routeKey),
   ).size;
@@ -57,9 +48,7 @@ export default async function StudentBookingPage({ params, searchParams }: Props
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-8">
-        <BackLink href={backHref}>
-          {selectedLocation ? "Înapoi la profil" : "Înapoi la rezultate"}
-        </BackLink>
+        <BackLink />
 
         <header className="flex flex-col gap-5 rounded-2xl border bg-card p-5 sm:flex-row sm:items-center">
           <PublicStudentAvatar
@@ -78,7 +67,6 @@ export default async function StudentBookingPage({ params, searchParams }: Props
             <RatingSummaryLink
               summary={profile.reviewData.summary}
               href={publicStudentProfileHref(profile.publicSlug, {
-                source: query.sursa,
                 section: "recenzii",
               })}
             />

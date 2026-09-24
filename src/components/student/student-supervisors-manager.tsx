@@ -1,8 +1,8 @@
 "use client";
 
 import { Archive, Pencil, Plus, UserRound, UsersRound } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/navigation/app-link";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useState } from "react";
 
 import { StudentCardFeedbackMessage } from "@/components/student/student-card-feedback";
@@ -143,7 +143,7 @@ export function StudentSupervisorsManager({
 
   return (
     <>
-      <BackLink href="/cont">Înapoi la cont</BackLink>
+      <BackLink />
 
       <StudentProfessionalNavigation current="supervisors" />
 

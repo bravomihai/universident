@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { type SubmitEvent, useState } from "react";
 
 import { AuthFormField } from "@/components/auth/auth-form-field";

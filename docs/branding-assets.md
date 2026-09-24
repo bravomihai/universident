@@ -46,3 +46,23 @@ CRITICAL: remove EVERY speckle, tiny line, distressed patch, photographic shadin
 LIGHT THEME palette: tooth + four upper page shapes pure #2563EB; lower binding pure #10233F. No black strokes. No outlines around the colored shapes. No extra symbols, words, labels, watermark or shadow.
 One centered isolated symbol on genuine transparent RGBA background. Square PNG 1024x1024, symbol 84% canvas width. This is a final logo/favicon asset, not a mockup. Clean flat logo geometry takes priority over copying damaged pixels.
 ```
+
+## Iconițe pentru scurtături și ecranul principal
+
+Toate variantele sunt exportate din `favicon-light.png`, simbolul actual cu dintele și cartea. Nu există un logo separat cu inițiala „U”.
+
+| Fișier | Dimensiuni | Utilizare |
+| --- | --- | --- |
+| `public/branding/universident-apple-touch-icon.png` | 180 × 180 | iPhone/iPad, legătură `apple-touch-icon` în fiecare pagină |
+| `public/branding/universident-icon-192.png` | 192 × 192 | Scurtături prin manifest |
+| `public/branding/universident-icon-512.png` | 512 × 512 | Scurtături prin manifest, rezoluție mare |
+| `public/apple-touch-icon.png` | 180 × 180 | Calea implicită căutată de Safari |
+| `public/favicon.ico` | 16, 32, 48 | Calea implicită pentru browsere mai vechi |
+
+Iconițele de ecran principal au fundal opac `#E3EFFF`; nu depind de tema paginii și nu necesită JavaScript. Cele două faviconuri tematice din tab rămân transparente. Manifestul păstrează afișarea în browser.
+
+După o actualizare a simbolului, rulează `npm run brand:icons` și verifică exporturile. Scriptul reutilizează `sharp` din Next.js și păstrează geometria logo-ului existent; nu generează un desen nou.
+
+La verificarea pe iOS după publicare, adaugă o scurtătură nouă. O scurtătură salvată anterior poate păstra iconița veche; în acest caz, elimin-o și adaugă site-ul din nou din Safari.
+
+Referință: [Apple — Specifying a Webpage Icon for Web Clip](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html).

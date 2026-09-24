@@ -1,7 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useState } from "react";
 
 import {

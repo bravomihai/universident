@@ -16,6 +16,7 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTransientMessage } from "@/components/ui/use-transient-message";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimeField } from "@/components/ui/time-field";
 import {
   Select,
   SelectContent,
@@ -158,10 +160,12 @@ export function StudentAvailabilityEditorDialog({
   const [recurrenceEndMode, setRecurrenceEndMode] = useState<RecurrenceEndMode>(
     slot?.series?.endMode === "UNTIL" ? "UNTIL" : "COUNT",
   );
-  const [occurrenceCount, setOccurrenceCount] = useState(remainingOccurrences);
+  const [occurrenceCountInput, setOccurrenceCountInput] = useState(
+    String(remainingOccurrences),
+  );
   const [endsOn, setEndsOn] = useState(initialEndsOn);
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useTransientMessage();
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
 
   const occupied = Boolean(slot?.appointments.length);
@@ -169,6 +173,11 @@ export function StudentAvailabilityEditorDialog({
     occupied || (editScope === "SERIES" && seriesHasAppointments);
   const editable = !slot || (slot.status === "ACTIVE" && range.startsAt > new Date());
   const selectedIntervalMinutes = intervalMinutes(startTime, endTime);
+  const occurrenceCount = Number(occurrenceCountInput);
+  const hasValidOccurrenceCount =
+    Number.isInteger(occurrenceCount) &&
+    occurrenceCount >= 1 &&
+    occurrenceCount <= 1000;
   const editsSeries = Boolean(slot?.series && editScope === "SERIES");
   const showsRecurrence = !slot || editsSeries;
 
@@ -245,12 +254,7 @@ export function StudentAvailabilityEditorDialog({
       return;
     }
     if (showsRecurrence && repeat !== "none") {
-      if (
-        recurrenceEndMode === "COUNT" &&
-        (!Number.isInteger(occurrenceCount) ||
-          occurrenceCount < 1 ||
-          occurrenceCount > 1000)
-      ) {
+      if (recurrenceEndMode === "COUNT" && !hasValidOccurrenceCount) {
         setError("Numărul de apariții trebuie să fie între 1 și 1.000.");
         return;
       }
@@ -377,28 +381,20 @@ export function StudentAvailabilityEditorDialog({
                   onChange={(event) => setDate(event.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="availability-start">Început</Label>
-                <Input
-                  id="availability-start"
-                  type="time"
-                  step={900}
-                  value={startTime}
-                  disabled={!editable || pending}
-                  onChange={(event) => changeStartTime(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="availability-end">Final</Label>
-                <Input
-                  id="availability-end"
-                  type="time"
-                  step={900}
-                  value={endTime}
-                  disabled={!editable || pending}
-                  onChange={(event) => changeEndTime(event.target.value)}
-                />
-              </div>
+              <TimeField
+                id="availability-start"
+                label="Început"
+                value={startTime}
+                disabled={!editable || pending}
+                onValueChange={changeStartTime}
+              />
+              <TimeField
+                id="availability-end"
+                label="Final"
+                value={endTime}
+                disabled={!editable || pending}
+                onValueChange={changeEndTime}
+              />
             </div>
 
             <div className="space-y-2">
@@ -572,10 +568,10 @@ export function StudentAvailabilityEditorDialog({
                           type="number"
                           min={1}
                           max={1000}
-                          value={occurrenceCount}
+                          value={occurrenceCountInput}
                           disabled={pending}
                           onChange={(event) =>
-                            setOccurrenceCount(Number(event.target.value))
+                            setOccurrenceCountInput(event.target.value)
                           }
                         />
                       </div>
@@ -596,7 +592,9 @@ export function StudentAvailabilityEditorDialog({
                     )}
                     <p className="text-xs text-muted-foreground sm:col-span-2">
                       {recurrenceEndMode === "COUNT"
-                        ? `Se vor crea ${countLabel(occurrenceCount)}.`
+                        ? hasValidOccurrenceCount
+                          ? `Se vor crea ${countLabel(occurrenceCount)}.`
+                          : "Introdu un număr de apariții între 1 și 1.000."
                         : `Seria se repetă până la ${endsOn || "data aleasă"}, inclusiv.`}
                     </p>
                   </div>

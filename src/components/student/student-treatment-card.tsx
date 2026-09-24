@@ -1,7 +1,7 @@
 "use client";
 
 import { Archive, Clock3, Pencil } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { StudentCardFeedbackMessage, type StudentCardFeedback } from "@/components/student/student-card-feedback";
 import { Button } from "@/components/ui/button";

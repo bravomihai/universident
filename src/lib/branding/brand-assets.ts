@@ -26,3 +26,24 @@ export function faviconMedia(variant: BrandTheme, resolvedTheme?: string) {
 export function faviconLinkId(theme: BrandTheme) {
   return `universident-favicon-${theme}`;
 }
+
+// Home-screen icons use a fixed, opaque background, independent of page theme.
+export const shortcutBrandAssets = {
+  apple: {
+    src: "/branding/universident-apple-touch-icon.png",
+    sizes: "180x180",
+    type: "image/png",
+  },
+  icons: [
+    {
+      src: "/branding/universident-icon-192.png",
+      sizes: "192x192",
+      type: "image/png",
+    },
+    {
+      src: "/branding/universident-icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+    },
+  ],
+} as const;

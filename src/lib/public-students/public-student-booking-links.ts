@@ -3,12 +3,10 @@ export function publicStudentBookingHref(
   treatmentSlug: string,
   citySlug: string,
   locationRouteKey?: string,
-  profileSource?: "acasa",
 ) {
   const path = `/studenti/${encodeURIComponent(studentSlug)}/programare/${encodeURIComponent(treatmentSlug)}/${encodeURIComponent(citySlug)}`;
   const query = new URLSearchParams();
   if (locationRouteKey) query.set("locatie", locationRouteKey);
-  if (profileSource === "acasa") query.set("sursa", "acasa");
   const search = query.toString();
   return search ? `${path}?${search}` : path;
 }

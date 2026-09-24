@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { MessageCircle } from "lucide-react";
 import { compactHeaderIconControlClassName, headerNeutralControlClassName } from "@/components/layout/header-action-styles";
 import { cn } from "@/lib/utils";

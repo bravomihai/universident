@@ -28,7 +28,7 @@ export default async function StudentCalendarPage() {
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="w-full max-w-[90rem] space-y-6">
         <header className="space-y-4">
-          <BackLink href="/cont">Înapoi la cont</BackLink>
+          <BackLink />
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-3">

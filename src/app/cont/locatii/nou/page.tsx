@@ -1,6 +1,6 @@
 import { MapPin } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { StudentLocationFormController } from "@/components/student/student-location-form-controller";
 import { BackLink } from "@/components/ui/back-link";
@@ -43,7 +43,7 @@ export default async function NewStudentLocationPage() {
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-6xl space-y-6">
-        <BackLink href="/cont/locatii">Înapoi la locații</BackLink>
+        <BackLink />
 
         <div className="space-y-2">
           <div className="flex items-center gap-3">

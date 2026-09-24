@@ -1,6 +1,6 @@
 import { CalendarDays, History, Stethoscope, UserRound } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { notFound } from "next/navigation";
 
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
@@ -80,7 +80,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <div className="w-full max-w-4xl space-y-6">
-        <BackLink href="/cont/programari">Înapoi la programări</BackLink>
+        <BackLink />
         <header className="flex items-start gap-3">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border bg-card">
             <Stethoscope className="size-5" aria-hidden="true" />

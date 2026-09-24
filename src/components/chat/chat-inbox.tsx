@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,7 @@ export function ChatInbox({ initialData, initialPast = false, selectedSlug }: { 
     {error ? <p role="status" className="p-3 text-sm text-destructive">{error}</p> : null}
     <div className="min-h-0 flex-1 overflow-y-auto p-2">
       {data.conversations.length ? <ul className="space-y-1">{data.conversations.map((c) => <li key={c.slug}>
-        <Link href={`/cont/mesaje/${encodeURIComponent(c.slug)}`} prefetch={false} aria-current={selectedSlug === c.slug ? "page" : undefined} className={cn("block rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", selectedSlug === c.slug && "border-border bg-muted/60")}>
+        <Link href={`/cont/mesaje/${encodeURIComponent(c.slug)}`} navigation={selectedSlug ? "replace" : "forward"} prefetch={false} aria-current={selectedSlug === c.slug ? "page" : undefined} className={cn("block rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", selectedSlug === c.slug && "border-border bg-muted/60")}>
           <div className="flex items-start justify-between gap-2"><p className="min-w-0 break-words font-semibold">{c.counterpartName}</p>{c.unreadCount ? <span className="shrink-0 rounded-full bg-primary px-2 text-xs leading-5 text-primary-foreground" aria-label={c.unreadCount === 1 ? "Un mesaj necitit" : `${c.unreadCount} mesaje necitite`}>{c.unreadCount > 99 ? "99+" : c.unreadCount}</span> : null}</div>
           <p className="mt-1 text-xs text-muted-foreground">{c.treatment} · {new Date(c.startsAt).toLocaleDateString("ro-RO", { timeZone: "Europe/Bucharest", day: "numeric", month: "short" })}</p>
           <p className={cn("mt-2 line-clamp-2 break-words text-sm", c.unreadCount ? "font-medium" : "text-muted-foreground")}>{c.lastMessage ?? "Conversația este disponibilă. Poți trimite primul mesaj."}</p>

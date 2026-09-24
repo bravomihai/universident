@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { MessageCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { clickableCardClassName, clickableCardIndicatorClassName, clickableCardLinkClassName } from "@/components/ui/clickable-card-styles";

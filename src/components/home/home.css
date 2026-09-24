@@ -145,6 +145,7 @@
   .home-hero-details { padding-top: 1.4rem; }
   .home-hero-description { max-width: 34rem; font-size: 1rem; }
   .home-hero-actions { margin-top: 1.4rem; gap: .4rem; }
+  .home-how-action { display: none; }
   .home-primary-action { padding-inline: 1rem; }
   .home-hero-note { font-size: .9375rem; margin-bottom: .75rem; }
   .home-section { padding: 3rem 1.25rem; }

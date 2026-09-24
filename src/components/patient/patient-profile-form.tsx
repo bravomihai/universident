@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/navigation/use-app-router";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";

@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import type { ReactNode } from "react";
 
 import { ProfileAvatar } from "@/components/ui/profile-avatar";

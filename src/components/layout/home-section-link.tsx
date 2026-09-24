@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { usePathname } from "next/navigation";
 
 import { homeSectionHref } from "@/lib/navigation/home-section-href";

@@ -24,6 +24,7 @@ export function formatAppointmentInterval(startsAt: string | Date, endsAt: strin
     timeZone: "Europe/Bucharest",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
   });
   return `${date}, ${time.format(start)}–${time.format(end)}`;
 }

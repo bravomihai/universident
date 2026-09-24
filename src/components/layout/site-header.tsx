@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { headers } from "next/headers";
 import { CircleHelp, Search, Users } from "lucide-react";
 

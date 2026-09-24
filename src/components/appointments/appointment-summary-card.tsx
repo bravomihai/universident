@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { CalendarDays, MapPin } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { formatAppointmentInterval } from "@/components/appointments/appointment-status";
 import { AppointmentStatusBadges } from "@/components/appointments/appointment-status-badges";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";

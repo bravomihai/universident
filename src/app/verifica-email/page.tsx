@@ -1,7 +1,7 @@
 import { privateRobots } from "@/lib/seo/metadata";
 import { MailCheck } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { AuthFormCard } from "@/components/auth/auth-form-card";
 import { EmailVerificationForm } from "@/components/auth/email-verification-form";

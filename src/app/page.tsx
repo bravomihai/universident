@@ -1,5 +1,7 @@
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 import { Suspense } from "react";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 import { CalendarDays, ClipboardCheck, GraduationCap, Search, ShieldCheck, UserRound } from "lucide-react";
 import { ToothHero } from "@/components/home/tooth-hero";
 import { HowItWorksCard } from "@/components/home/how-it-works-card";
@@ -15,7 +17,8 @@ import "@/components/home/home.css";
 
 export const generateMetadata = homeMetadata;
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth.api.getSession({ headers: await headers() });
   return (
     <main id="main-content" className="home-page">
       <StructuredData data={homeStructuredData()} />
@@ -38,7 +41,7 @@ export default function Home() {
               <Button asChild size="lg" className="home-primary-action">
                 <Link href="/studenti">Găsește un student <span aria-hidden="true">&gt;</span></Link>
               </Button>
-              <NavigationLink href="#cum-functioneaza">Cum funcționează</NavigationLink>
+              <NavigationLink className="home-how-action" href="#cum-functioneaza">Cum funcționează</NavigationLink>
             </div>
           </div>
         </div>
@@ -87,7 +90,7 @@ export default function Home() {
 
       <PublicQuestions />
 
-      <section className="home-section home-community" aria-labelledby="community-title">
+      {!session ? <section className="home-section home-community" aria-labelledby="community-title">
         <div className="home-community-panel">
           <div>
             <p className="home-kicker"><GraduationCap aria-hidden="true" />PENTRU VIITORII MEDICI</p>
@@ -101,7 +104,7 @@ export default function Home() {
             <li><span className="home-community-icon"><ClipboardCheck aria-hidden="true" /></span><div><h3>Fiecare cerere, la îndemână</h3><p>Gestionezi programările și confirmările din contul tău.</p></div></li>
           </ul>
         </div>
-      </section>
+      </section> : null}
 
     </main>
   );

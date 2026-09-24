@@ -1,7 +1,7 @@
 "use client";
 
 import { Home, RefreshCw, TriangleAlert } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/navigation/app-link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
