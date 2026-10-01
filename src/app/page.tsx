@@ -58,33 +58,61 @@ export default async function Home() {
       </section>
 
       <section className="home-section home-how" aria-labelledby="how-title">
+        <div className="home-section-heading">
+          <h2 id="how-title">Cum funcționează</h2>
+        </div>
         <HowItWorksCard>
-          <div className="home-how-intro">
-            <h2 id="how-title">Cum te programezi</h2>
+          <div className="home-how-guide" aria-labelledby="patient-guide-title">
+            <h3 id="patient-guide-title">Pentru pacienți</h3>
+            <ol className="home-booking-steps" role="list">
+              <li>
+                <span className="home-booking-step-icon"><Search aria-hidden="true" /></span>
+                <h4>Alege tratamentul și orașul</h4>
+                <p>
+                  Caută serviciul de care ai nevoie, acolo unde îți este la îndemână.
+                </p>
+              </li>
+              <li>
+                <span className="home-booking-step-icon"><UserRound aria-hidden="true" /></span>
+                <h4>Descoperă profilurile</h4>
+                <p>
+                  Cunoaște studentul, consultă recenziile și vezi cine supervizează tratamentul.
+                </p>
+              </li>
+              <li>
+                <span className="home-booking-step-icon"><CalendarDays aria-hidden="true" /></span>
+                <h4>Alege un interval disponibil</h4>
+                <p>
+                  Trimite cererea pentru programare și urmărește confirmarea din contul tău.
+                </p>
+              </li>
+            </ol>
           </div>
-          <ol className="home-booking-steps" role="list">
-            <li>
-              <span className="home-booking-step-icon"><Search aria-hidden="true" /></span>
-              <h3>Alege tratamentul și orașul</h3>
-              <p>
-                Caută serviciul de care ai nevoie, acolo unde îți este la îndemână.
-              </p>
-            </li>
-            <li>
-              <span className="home-booking-step-icon"><UserRound aria-hidden="true" /></span>
-              <h3>Descoperă profilurile</h3>
-              <p>
-                Cunoaște studentul, consultă recenziile și vezi cine supervizează tratamentul.
-              </p>
-            </li>
-            <li>
-              <span className="home-booking-step-icon"><CalendarDays aria-hidden="true" /></span>
-              <h3>Alege un interval disponibil</h3>
-              <p>
-                Trimite cererea pentru programare și urmărește confirmarea din contul tău.
-              </p>
-            </li>
-          </ol>
+          <div className="home-how-guide" aria-labelledby="student-guide-title">
+            <h3 id="student-guide-title">Pentru studenți</h3>
+            <ol className="home-booking-steps home-student-steps" role="list">
+              <li>
+                <span className="home-booking-step-icon"><UserRound aria-hidden="true" /></span>
+                <h4>Creează-ți contul</h4>
+                <p>Înregistrează-te ca student, confirmă adresa de email și completează-ți profilul.</p>
+              </li>
+              <li>
+                <span className="home-booking-step-icon"><ClipboardCheck aria-hidden="true" /></span>
+                <h4>Adaugă resursele</h4>
+                <p>Configurează tratamentele pe care le oferi, supraveghetorii și locațiile în care lucrezi.</p>
+              </li>
+              <li>
+                <span className="home-booking-step-icon"><CalendarDays aria-hidden="true" /></span>
+                <h4>Setează disponibilitatea</h4>
+                <p>Adaugă intervale în calendar și alege locația, tratamentele și supraveghetorul pentru fiecare tratament.</p>
+              </li>
+              <li>
+                <span className="home-booking-step-icon"><GraduationCap aria-hidden="true" /></span>
+                <h4>Publică-ți profilul</h4>
+                <p>Fă-ți profilul vizibil pentru ca pacienții să te poată găsi și să solicite programări.</p>
+              </li>
+            </ol>
+          </div>
         </HowItWorksCard>
       </section>
 
