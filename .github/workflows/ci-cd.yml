@@ -87,6 +87,8 @@ jobs:
         run: |
           bash -n scripts/deploy-vps.sh scripts/ci-deploy-ssh.sh
           shellcheck scripts/deploy-vps.sh scripts/ci-deploy-ssh.sh
+      - name: Deployment regression tests (isolated Git and simulated Docker)
+        run: node --test scripts/deploy-vps.test.mjs
       - name: Build existing production Docker targets
         run: |
           docker build --target runner --tag universident-ci:runner .

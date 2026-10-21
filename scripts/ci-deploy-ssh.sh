@@ -45,7 +45,10 @@ ssh_options=(
 printf -v remote_command 'timeout --signal=TERM --kill-after=30s 35m bash -s -- %q %q %q' \
   "$VPS_PATH" "$DEPLOY_SHA" "$DEPLOY_MODE"
 timeout --signal=TERM --kill-after=30s 37m \
-  ssh "${ssh_options[@]}" "$VPS_USER@$VPS_HOST" "$remote_command" < scripts/deploy-vps.sh
+  ssh "${ssh_options[@]}" "$VPS_USER@$VPS_HOST" "$remote_command" < scripts/deploy-vps.sh | tee "$ssh_dir/output"
+# An SSH exit code alone cannot prove that a streamed script reached its end.
+grep -Fxq "UNIVERSIDENT_VPS_COMPLETE $DEPLOY_MODE $DEPLOY_SHA" "$ssh_dir/output" \
+  || fail 'Remote script did not confirm completion; public health alone cannot verify a deployment'
 
 printf 'Checking public HTTPS health endpoint.\n'
 http_status=$(curl --fail --silent --show-error --proto '=https' \
