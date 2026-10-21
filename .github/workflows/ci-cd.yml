@@ -1,0 +1,129 @@
+name: CI / CD
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Verify VPS access only, or deploy after CI (main only)
+        type: choice
+        options: [verify, deploy]
+        default: verify
+        required: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    services:
+      postgres:
+        image: postgres:18.4
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: universident_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d universident_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    # Disposable runner credentials only. No repository/environment secrets in CI.
+    env:
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/universident_ci?schema=public
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-placeholder-secret-at-least-32-characters
+      DEPLOYMENT_ENV: staging
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked dependencies and generate Prisma client
+        run: npm ci
+      - name: Validate Prisma schema
+        run: npm run db:validate
+      - name: Generate Next.js route types
+        run: npx --no-install next typegen
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Local fixture safety tests
+        run: npx --no-install tsx --test scripts/local-demo-*.test.ts
+      - name: Apply and verify migrations on disposable CI database
+        run: |
+          npm run db:deploy
+          npx --no-install prisma migrate status
+      - name: PostgreSQL chat integration tests (isolated test database)
+        env:
+          NODE_OPTIONS: --conditions=react-server
+        run: npx --no-install tsx scripts/test-chat-integration.ts
+      - name: Production build
+        run: npm run build
+      - name: Standalone SEO integration tests
+        run: npm run test:seo
+      - name: Validate deployment shell scripts
+        run: |
+          bash -n scripts/deploy-vps.sh scripts/ci-deploy-ssh.sh
+          shellcheck scripts/deploy-vps.sh scripts/ci-deploy-ssh.sh
+      - name: Build existing production Docker targets
+        run: |
+          docker build --target runner --tag universident-ci:runner .
+          docker build --target migrator --tag universident-ci:migrator .
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+
+  deploy:
+    name: VPS deployment
+    needs: ci
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      ((github.event_name == 'push' && vars.VPS_DEPLOY_ENABLED == 'true') ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    environment: production
+    concurrency:
+      group: universident-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify VPS or deploy tested commit over SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH }}
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+          VPS_HEALTH_URL: ${{ secrets.VPS_HEALTH_URL }}
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'deploy' }}
+        run: bash scripts/ci-deploy-ssh.sh
+      - name: Failure guidance
+        if: failure()
+        run: |
+          echo '::error::VPS verification/deployment failed. Check the failed stage above and docs/deployment.md. No automatic database migration or rollback is performed.'

@@ -121,8 +121,12 @@ await withServer('production', async (get) => {
     if (path === '/') {
       assert.equal(data[0]['@graph'][0]['@type'], 'WebSite');
       assert.ok(result.body.includes(data[0]['@graph'][0].description));
-      assert.match(result.body, /<dt[^>]*>Ce este Universident\?<\/dt>/);
-      assert.match(result.body, /<dt[^>]*>Cererea de programare este confirmată automat\?<\/dt>/);
+      // Question terms include decorative icons and a span in the current UI.
+      // Assert their visible text within each dt, rather than its exact markup.
+      const questions = [...result.body.matchAll(/<dt\b[^>]*>([\s\S]*?)<\/dt>/g)]
+        .map((match) => match[1].replace(/<[^>]*>/g, '').trim());
+      assert.ok(questions.includes('Ce este Universident?'));
+      assert.ok(questions.includes('Cererea de programare este confirmată automat?'));
     } else if (path.startsWith('/studenti/student-verificare-0')) {
       assert.equal(data[0]['@type'], 'ProfilePage');
       assert.equal(data[0].mainEntity['@type'], 'Person');
