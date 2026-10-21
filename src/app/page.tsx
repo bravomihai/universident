@@ -74,7 +74,7 @@ export default async function Home() {
               </li>
               <li>
                 <span className="home-booking-step-icon"><UserRound aria-hidden="true" /></span>
-                <h4>Descoperă profilurile</h4>
+                <h4>Explorează profilurile</h4>
                 <p>
                   Cunoaște studentul, consultă recenziile și vezi cine supervizează tratamentul.
                 </p>

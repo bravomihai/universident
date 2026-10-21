@@ -20,8 +20,6 @@ Universident is a Romanian-language web application that connects adult patients
 
 Next.js, React, TypeScript, PostgreSQL, Prisma, Better Auth, Tailwind CSS, shadcn/Radix UI, FullCalendar, Resend, and the Node.js test runner (via tsx).
 
-For product rules and contribution conventions, see [`AGENTS.md`](./AGENTS.md).
+## Documentation
 
-GitHub Actions CI/CD and VPS setup: [`docs/deployment.md`](./docs/deployment.md).
-
-Explicația workflow-ului și a remedierilor de securitate: [`docs/ci-cd-explicat.md`](./docs/ci-cd-explicat.md).
+See the [documentation index](docs/README.md) for deployment, dependency security, chat, navigation, SEO, and brand assets. Product rules and contribution conventions are in [AGENTS.md](AGENTS.md).
