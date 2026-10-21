@@ -1,24 +1,22 @@
-# GitHub Actions CI/CD and existing VPS deployment
+# CI/CD and VPS deployment
 
-The pipeline automates the existing process: update the VPS checkout, build locally on the VPS with `compose.production.yaml`, and update the app and chat email worker. It does not introduce a registry, hosting provider, new database, reverse proxy, or deployment service. Nothing is deployed merely by adding these files: automatic CD requires the repository variable described below.
+The workflow updates the existing VPS checkout, builds with `compose.production.yaml`, and replaces the application and chat email worker. Database storage, server configuration, and the reverse proxy remain on the VPS. Automatic deployment requires `VPS_DEPLOY_ENABLED=true`.
 
-## Repository inspection and design
+## Architecture and scope
 
-- Next.js App Router / React / TypeScript; standalone output in `next.config.ts`. Global security headers are unchanged.
-- npm with a committed lockfile, Node 24 in `.nvmrc` and the Dockerfile. `npm ci` runs the existing `postinstall` Prisma generation. A fresh checkout needs `next typegen` before typecheck; generated route types and `next-env.d.ts` are not committed.
-- `npm run check` comprises typecheck, ESLint, `npm test`, and the webpack production build. Tests use Node's test runner through tsx, rather than Vitest. CI runs the constituent checks separately for clear failures.
-- Additional existing checks: `db:validate`, local demo fixture safety tests, the isolated PostgreSQL chat integration script, and `test:seo` against the standalone build. No real email or OpenAI credentials are supplied; chat integration injects test providers and uses the React Server export condition for its `server-only` imports. SEO uses the existing in-memory Prisma fixture.
-- `src/lib/scheduling/phase2a.integration.ts` is a separately gated destructive database diagnostic outside `npm test`. It requires a specially named database and includes fixed August/September 2026 dates alongside real-clock queries. It is not enabled by this workflow. The normal scheduling, overlap, recurrence, DST, and privacy unit tests run without skipping them.
-- Prisma migrations and catalogs are in `prisma/`. CI applies migrations only to disposable runner databases. Production only runs `prisma migrate status`; it never seeds or applies migrations.
-- The existing multi-stage Dockerfile has `runner` and `migrator` targets. CI builds both, without production configuration. `.dockerignore` already excludes `.env` and other local secrets.
-- Production Compose defines `db`, `app`, `chat-email-worker`, and a tools-profile `migrate` service. PostgreSQL uses its existing named volume; the app binds to loopback port 3000. App and worker health checks already exist.
-- There were no checked-in deployment scripts or Actions workflows. The manual sequence in `docs/release-check-2026-09-13.md` builds these services, runs migrations, then updates services. The user confirmed deployment currently consists of pulling and building with Docker Compose. Automation retains that infrastructure and leaves migration execution manual.
+The application uses Next.js standalone output, npm lockfiles, Node 24, and Prisma/PostgreSQL. The existing Dockerfile provides `runner` and `migrator` targets. Production Compose defines `db`, `app`, `chat-email-worker`, and the tools-profile `migrate` service, with a persistent PostgreSQL volume and loopback application port 3000.
+
+CI tests fresh migrations in disposable databases. Production only checks migration status; operators apply reviewed migrations separately. The workflow updates an established installation and does not bootstrap infrastructure. See [dependency security](dependency-security.md) for audit policy and known tooling limitations.
 
 ## Triggers and checks
 
 `.github/workflows/ci-cd.yml` runs on every pull request, pushes to `main`, and manual **Run workflow** requests. There are no path filters that could leave a required check missing.
 
 The `CI` job uses an Ubuntu 24.04 runner, Node from `.nvmrc`, npm download caching keyed by `package-lock.json`, and PostgreSQL 18.4 matching Compose. It installs locked dependencies, validates Prisma, generates route types, checks types/lint, runs existing unit and fixture tests, applies/checks migrations on the disposable CI database, runs chat integration, builds Next.js, runs SEO integration, checks the deployment shells, builds both Docker targets, and audits production dependencies. Failures are not suppressed. CI has no production secrets and does not access the VPS. Its database credentials are intentionally disposable, public test values.
+
+A fresh checkout needs generated Prisma and Next.js route types before typecheck; CI runs the existing postinstall generation and `next typegen`. Tests use Node's runner through tsx. The separately gated `src/lib/scheduling/phase2a.integration.ts` diagnostic is not included: it is outside `npm test` and combines fixed August/September 2026 dates with real-clock queries. Normal scheduling, recurrence, DST, overlap, and privacy unit tests remain enabled.
+
+Deployment regression tests run with `node --test scripts/deploy-vps.test.mjs`. They use temporary Git repositories and simulated Docker/SSH commands to check streamed-script completion, failure gates, image verification, and verification mode without production access.
 
 The workflow token has only `contents: read`; checkout does not persist credentials. Official checkout/setup-node actions use full commit pins. Dependabot checks Action updates monthly and npm updates weekly; review its PRs before merging. Updates are not merged automatically.
 
@@ -34,17 +32,30 @@ Under that environment's **Secrets**, add every entry below. Do not put secrets 
 | --- | --- |
 | `VPS_HOST` | VPS hostname or IP reachable from GitHub-hosted runners; no `ssh://`, username, or port. |
 | `VPS_PORT` | SSH port, including `22` if standard. |
-| `VPS_USER` | Existing deployment account that owns the checkout and can run Docker without interactive sudo. |
-| `VPS_PATH` | Absolute path to the **existing repository root** on the VPS. No spaces. This is configuration, not a request to create a new checkout. |
+| `VPS_USER` | Existing deployment account that can update the checkout, read `.env`, and run Docker without interactive sudo. |
+| `VPS_PATH` | Absolute path to the **existing repository root** on the VPS, without spaces. |
 | `VPS_SSH_PRIVATE_KEY` | Entire dedicated, unencrypted Ed25519 private key, including header/footer and newlines. Its public key must be authorized for `VPS_USER`. |
 | `VPS_SSH_KNOWN_HOSTS` | Independently verified OpenSSH known_hosts entry for exactly `VPS_HOST` and `VPS_PORT`. See below. |
 | `VPS_HEALTH_URL` | Exact public HTTPS `/api/health` URL, for example `https://universident.ro/api/health`. No credentials, query string, or redirect. Must return HTTP 200. |
 
-In **Settings → Secrets and variables → Actions → Variables**, add the **repository variable** `VPS_DEPLOY_ENABLED`, initially **`false`**. Only the exact string **`true`** enables CD on pushes to main. This must be a repository variable because the job condition is evaluated before environment variables become available. Do not enable it until the safe verification steps pass.
+In **Settings → Secrets and variables → Actions → Variables**, add the **repository variable** `VPS_DEPLOY_ENABLED`, initially **`false`**. Only the exact string **`true`** enables CD on pushes to main. With branch protection, merge a successful PR into `main`; a push to a feature branch does not deploy. This must be a repository variable because the job condition is evaluated before environment variables become available. Do not enable it until the safe verification steps pass.
 
-In the repository's Actions settings, allow the pinned official actions. Make the `CI` job a required check in the `main` branch ruleset. Protect `main` and review changes to workflows/deployment scripts: merged code is trusted to access deployment credentials. No SSH credentials or production environment are attached to pull-request jobs. [GitHub environment secrets and protection rules](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+In the repository's Actions settings, allow the pinned official actions. Require pull requests and the `CI` check for `main`; review workflow and deployment-script changes because merged code can access deployment credentials. No SSH credentials or production environment are attached to pull-request jobs. [GitHub environment secrets and protection rules](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
 
 ## SSH setup and host verification
+
+Use a dedicated Linux account such as `universident-deploy`, with SSH key authentication and no general-purpose sudo access. Set `VPS_USER` to that account. It must be able to traverse the checkout's parent directories, update the checkout and `.git`, read the existing `.env`, and run Docker Compose noninteractively. Review existing ownership before changing permissions; do not alter PostgreSQL volume ownership or create a second Compose installation.
+
+With a rootful Docker daemon, membership in the `docker` group grants root-equivalent control. A dedicated account separates credentials and audit trails but is not a privilege boundary around that daemon. See [Docker's access guidance](https://docs.docker.com/engine/install/linux-postinstall/).
+
+There are two independent connections:
+
+| Connection | Private key | Public key |
+| --- | --- | --- |
+| GitHub Actions → VPS | `production` environment secret `VPS_SSH_PRIVATE_KEY` | Deployment account's `~/.ssh/authorized_keys` on the VPS |
+| VPS → GitHub, when using SSH | Deployment account's SSH directory on the VPS | Repository **Settings → Deploy keys**, read-only |
+
+Use distinct keys for the two connections. The first key belongs in Actions Secrets, not personal GitHub SSH keys or repository Deploy keys. Public repositories can instead be fetched over HTTPS without credentials; no second key is then required. For private repositories, use existing read-only repository access or a dedicated read-only deploy key. See [GitHub's deploy-key documentation](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys).
 
 Generate a dedicated key **outside the repository** on a trusted workstation:
 
@@ -73,7 +84,7 @@ The VPS also needs its **own existing read access to this GitHub repository** fo
 
 ## VPS prerequisites and retained configuration
 
-Use the existing Linux checkout on branch `main`, with a clean working tree and an `origin` pointing to this repository. Local tracked edits and untracked files must be resolved manually; the script never resets, cleans, stashes, or force-updates the checkout. Ignored `.env` remains in place. Confirm the server uses **this repository's `compose.production.yaml` without additional overrides** before activation. If your real command uses overrides, a different env file, project name, or directory, adapt and review the script first; do not point the pipeline at an unverified path.
+Use the existing Linux checkout on branch `main`, with a clean working tree and an `origin` pointing to this repository. Local tracked edits and untracked files must be resolved manually; the script never resets, cleans, stashes, or force-updates the checkout. Ignored `.env` remains in place. Confirm the server uses **this repository's `compose.production.yaml` without additional overrides** before activation. Installations with overrides, a different environment file, project name, or directory require a reviewed script adaptation before activation.
 
 The noninteractive SSH session needs Bash, Git, GNU timeout, flock (util-linux), Docker Engine, and Docker Compose v2.24 or newer on PATH. Allow sufficient disk and memory for the existing Node 24 Docker builds and HTTPS outbound access for npm/fonts/image pulls. The existing database, app, and email worker must all be running and healthy. This pipeline updates an established installation; it refuses to bootstrap a missing database or fix an unhealthy installation automatically.
 
@@ -85,14 +96,14 @@ The existing Compose project identity, PostgreSQL volume, database credentials, 
 
 After successful CI on main, a push deploys only when `VPS_DEPLOY_ENABLED=true`. A manual run on main offers `verify` (default) or `deploy`; manual `deploy` is an explicit deployment request and works even while automatic deployment is disabled. Non-main manual runs perform CI only.
 
-The runner sends `scripts/deploy-vps.sh` over authenticated SSH; the script receives the configured checkout path, the exact tested commit SHA, and mode. It does not install a persistent server script or copy `.env`.
+The runner sends `scripts/deploy-vps.sh` over authenticated SSH; the script receives the configured checkout path, the exact tested commit SHA, and mode. Bash parses the complete deployment function before running it with stdin redirected to `/dev/null`, so child commands cannot consume the script source. The runner requires an explicit completion marker for that mode and SHA before checking public health. It does not install a persistent server script or copy `.env`.
 
 1. Validate the existing checkout, untracked `.env`, Compose configuration, and healthy database/app/worker.
 2. In `verify` mode, stop here. The runner also checks public HTTPS health. No fetch, checkout update, build, migration command, or service update runs. This checks connectivity/prerequisites, not the VPS's ability to fetch/build the next release.
 3. In `deploy` mode, hold `.git/universident-deploy.lock` with flock for the entire operation. Manual releases/migrations must use the same lock. Fetch main with strict SSH host checking and require its tip to equal this run's tested SHA. Refuse stale or non-fast-forward deployments.
 4. Refuse any target commit that tracks `.env`, then fast-forward the existing `main` checkout, recording the previous SHA in the Actions log. Build `app`, `migrate`, and `chat-email-worker` using the existing Dockerfile/Compose configuration.
 5. Run **only** `npx --no-install prisma migrate status` in a disposable migrator container, using `--no-deps`. Pending, failed, or divergent migrations and connection errors stop the release before service replacement. Output that could reveal database configuration is suppressed; inspect status directly on the VPS if it fails.
-6. Run `docker compose ... up -d --no-deps --no-build --pull never --wait --wait-timeout 180 app chat-email-worker`. The database is never targeted for recreation. Confirm container health, then require HTTP 200 from public HTTPS `/api/health`.
+6. Run `docker compose ... up -d --no-deps --no-build --pull never --wait --wait-timeout 180 app chat-email-worker`. The database is never targeted for recreation. Confirm container health and that the app/worker image IDs match their built images, then require HTTP 200 from public HTTPS `/api/health`.
 
 There is no `down`, volume deletion, database reset, automatic seed, migration application, image/volume pruning, or automatic rollback. `run --rm migrate` removes only its disposable status-check container. CI's migration application is isolated to the GitHub runner. Health endpoints alone do not validate email delivery; retain an authorized email smoke test as a release gate for email changes.
 
@@ -102,14 +113,14 @@ This retains the current single-VPS Compose service replacement and its possible
 
 ## Safe activation and verification
 
-1. Review and merge these files with `VPS_DEPLOY_ENABLED` absent or `false`. No live server connection or update is triggered by that push. Confirm the pull-request and main `CI` checks, including Docker builds, are green. Existing failing checks must be fixed, never bypassed.
+1. Keep `VPS_DEPLOY_ENABLED` absent or `false` while validating the workflow. Pushes then run CI without connecting to the VPS. Confirm the pull-request and main `CI` checks, including Docker builds, are green. Existing failing checks must be fixed, never bypassed.
 2. Verify the existing server path, branch, Compose command/project/volume, healthy containers, backup, and `.env`. Configure the `production` environment, main-only restriction, seven secrets, dedicated key, and verified host key as above. Verify server-to-GitHub fetch access separately.
 3. In **Actions → CI / CD → Run workflow**, select branch **main**, mode **verify**. It reruns CI, then checks SSH, checkout/configuration, current container health, and public HTTPS health without changing the running deployment. Inspect the step summary and verify nothing restarted. All CI gates must pass before this SSH check runs.
-4. After that passes and you intend a real release, manually run mode **deploy** on **main**, leaving the automatic flag false. This is the first live update; confirm the tested SHA, app/worker health, public pages/login, and authorized email delivery. This implementation work does not perform that action for you.
+4. For the first approved release, manually run **deploy** on **main** with the automatic flag still false. This is the first live update; confirm the tested SHA, app/worker health, public pages/login, and authorized email delivery.
 5. Once satisfied, change the **repository** variable `VPS_DEPLOY_ENABLED` to **`true`**. The next successful push/merge to main deploys automatically; setting it does not retroactively deploy a previous commit. A documentation-only main push can verify the complete automatic path. Check the deployed `git rev-parse HEAD` against the successful Actions SHA and inspect health. A pull-request run must never show a deployment job accessing the environment.
 6. To disable new automatic deployments, set the variable back to `false`. This does not stop an already running release, and does not disable explicit manual `deploy` requests.
 
-To test against a separate VPS/staging installation first, use a separately cloned repository with these settings targeting that installation and its existing Compose project. Do not run a second project against the production volume. No staging service is required by this implementation.
+To test against a separate VPS/staging installation first, use a separately cloned repository with these settings targeting that installation and its existing Compose project. Do not run a second project against the production volume.
 
 ## Manual migrations, failure recovery, and rollback
 
@@ -129,27 +140,3 @@ lock_path="$(git rev-parse --absolute-git-dir)/universident-deploy.lock"
 These are operator commands, never executed by Actions. Use the same environment/project options as your installation. Do not apply a migration that breaks the old running application without a reviewed maintenance plan. Rerun the successful main workflow with `deploy` after manual migration; status must now be clean. Never use `db push`, reset, or restore over production as an automatic recovery step.
 
 For a failed build/status check, inspect the named stage and correct the underlying issue. For failed health, use `docker compose -f compose.production.yaml ps` and inspect restricted server-side logs/status (which may contain private information); the workflow intentionally does not upload application/database logs. Fix infrastructure/configuration or deploy a reviewed correction. For rollback, assess schema compatibility, revert the bad application change through a reviewed main commit, and run CI/CD. Never automatically roll back the database. Preserve backups and previous images until the release is accepted; disk cleanup remains a separate deliberate maintenance task.
-
-## Implementation validation (21 October 2026)
-
-Validation used an isolated temporary checkout without the local `.env`, with Node 24.19.0 and locked dependencies:
-
-| Check | Result |
-| --- | --- |
-| Clean `npm ci`, Prisma generation/schema validation, route type generation | Passed |
-| TypeScript and ESLint | Passed |
-| `npm test` and existing fixture safety tests | 193 + 20 passed, none skipped |
-| Next.js production build | Passed |
-| Standalone SEO/AEO HTTP checks | 38 requests passed |
-| All 26 migrations and migration status | Passed against a fresh, temporary PostgreSQL 18.6 cluster on loopback port 55439; cluster stopped afterward |
-| PostgreSQL chat integration | Passed; its generated test database was removed by the existing test script |
-| Workflow syntax, Bash syntax, ShellCheck | Passed with actionlint 1.7.12 and ShellCheck 0.11.0 |
-| Deployment control flow | Seven local scenarios passed: verify, successful update, dirty checkout, stale commit, target tracking `.env`, pending migration, and failed build. Used temporary real Git repositories and a recording Docker stub, not a live VPS/container deployment. |
-| `npm audit --omit=dev` | Passed after targeted dependency updates: **0 vulnerabilities** |
-| Full `npm audit` | 8 high findings remain in development tools, all tracing to the same unpatched `braces` advisory. See [the security explanation](ci-cd-explicat.md). No critical findings remain. |
-| Docker builds | Not run locally: Docker Desktop's Linux daemon was unavailable. Both are mandatory checks in Actions. |
-| SSH / real VPS deployment | Not attempted; requires configured secrets and explicit activation |
-
-The existing SEO test assumed question text was a direct child of `<dt>`, whereas the current UI contains decorative icons and a span. Its assertions now extract question text within each `<dt>` and still require the same exact questions. No assertion was removed and application behavior was unchanged.
-
-The production audit remains a blocking CI/release gate with its original severity threshold. Next.js was patched to 16.3.8, its ESLint configuration aligned to that version, and vulnerable transitive packages with available compatible fixes were updated in the lockfile. The full local application checks and SEO checks were repeated on the updated dependency tree. The remaining development advisory is explicitly documented; no audit threshold was relaxed and no failing production check was bypassed.
