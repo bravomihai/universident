@@ -40,6 +40,41 @@ try {
   const student = await db.user.create({ data: { id: randomUUID(), email: "student@example.invalid", name: "Student Test Chat", role: "STUDENT", emailVerified: true } });
   const outsider = await db.user.create({ data: { id: randomUUID(), email: "outsider@example.invalid", name: "Alt Pacient", role: "PATIENT", emailVerified: true } });
   for (const user of [patient, student, outsider]) await db.account.create({ data: { id: randomUUID(), accountId: user.id, userId: user.id, providerId: "credential", password: passwordHash } });
+
+  // Exercise the application auth handlers against the migrated account schema.
+  // These verified fixtures never trigger verification or password-reset emails.
+  const { GET: authGet, POST: authPost } = await import("../src/app/api/auth/[...all]/route");
+  const authOrigin = process.env.BETTER_AUTH_URL;
+  const signIn = (email: string, password: string) => authPost(new Request(`${authOrigin}/api/auth/sign-in/email`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: authOrigin },
+    body: JSON.stringify({ email, password }),
+  }));
+  assert.equal((await signIn(patient.email, `${testPassword}-incorrect`)).status, 401);
+  for (const user of [patient, student]) {
+    const login = await signIn(user.email, testPassword);
+    assert.equal(login.status, 200, "existing credential accounts must still sign in");
+    const cookie = login.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
+    assert.ok(cookie, "sign-in must issue a session cookie");
+    const sessionResponse = await authGet(new Request(`${authOrigin}/api/auth/get-session`, { headers: { cookie } }));
+    assert.equal(sessionResponse.status, 200);
+    const session = await sessionResponse.json();
+    assert.equal(session.user.id, user.id);
+    assert.equal(session.user.role, user.role);
+    assert.equal(session.user.emailVerified, true);
+    const foreignOrigin = await authPost(new Request(`${authOrigin}/api/auth/sign-out`, {
+      method: "POST", headers: { cookie, origin: "https://untrusted.example.invalid" },
+    }));
+    assert.equal(foreignOrigin.status, 403, "cross-origin account mutations must remain blocked");
+    const logout = await authPost(new Request(`${authOrigin}/api/auth/sign-out`, {
+      method: "POST", headers: { cookie, origin: authOrigin },
+    }));
+    assert.equal(logout.status, 200);
+    const loggedOut = await authGet(new Request(`${authOrigin}/api/auth/get-session`, { headers: { cookie } }));
+    assert.equal(await loggedOut.json(), null, "sign-out must invalidate the stored session");
+  }
+  console.log("PASS: credential sign-in, participant roles, origin checks and session invalidation.");
+
   const pp = await db.patientProfile.create({ data: { userId: patient.id, profileSlug: "pacient-chat-test", dateOfBirth: new Date("1990-01-01") } });
   const sp = await db.studentProfile.create({ data: { userId: student.id, publicSlug: "student-chat-test", university: "UMFCD", studyYear: 4 } });
   const city = await db.city.create({ data: { name: "Oraș test", slug: "oras-test" } });
