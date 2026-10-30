@@ -1,3 +1,5 @@
+import { readRequestBytes, requestBodyErrorResponse } from "@/lib/api/request-body";
+
 type EmptyJsonRequestBodyResult =
   | {
       ok: true;
@@ -10,7 +12,12 @@ type EmptyJsonRequestBodyResult =
 export async function parseEmptyJsonRequestBody(
   request: Request,
 ): Promise<EmptyJsonRequestBodyResult> {
-  const bodyText = await request.text();
+  let bodyText: string;
+  try {
+    bodyText = new TextDecoder().decode(await readRequestBytes(request, 1024));
+  } catch (error) {
+    return { ok: false, response: requestBodyErrorResponse(error) };
+  }
 
   if (!bodyText.trim()) {
     return {

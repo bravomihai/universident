@@ -44,7 +44,7 @@ docker compose -f compose-dev.yaml stop
 The two Compose files are independent configurations, selected explicitly with `-f`:
 
 - [`compose-dev.yaml`](compose-dev.yaml): local PostgreSQL; the application and worker run through npm for development.
-- [`compose.production.yaml`](compose.production.yaml): PostgreSQL, the built Next.js application, and a separate chat email worker container, with restart policies, health checks, and production container settings. PostgreSQL is reachable only inside the Docker network. The `migrate` service belongs to the `tools` profile and runs separately during deployment.
+- [`compose-production.yaml`](compose-production.yaml): PostgreSQL, the built Next.js application, and a separate chat email worker container, with restart policies, health checks, and production container settings. PostgreSQL is reachable only inside the Docker network. The `migrate` service belongs to the `tools` profile and runs separately during deployment.
 
 Their shared PostgreSQL settings intentionally appear in both files so each environment can run independently. Follow the [deployment guide](docs/deployment.md) for production commands and migration ordering.
 

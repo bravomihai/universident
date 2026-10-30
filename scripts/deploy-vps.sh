@@ -38,10 +38,22 @@ main() {
   if git ls-files --error-unmatch .env > /dev/null 2>&1; then
     fail 'The production .env must be untracked'
   fi
-  [[ -f compose.production.yaml ]] || fail 'Missing production Compose file'
   docker compose version > /dev/null
-  compose=(docker compose --project-directory "$PWD" --env-file "$PWD/.env" -f "$PWD/compose.production.yaml")
-  "${compose[@]}" config --quiet
+  configure_compose() {
+    local compose_file=compose-production.yaml
+    # The runner streams the new script before the VPS checkout is updated.
+    # Accept the previous filename only for preflight on that old checkout.
+    if [[ ! -f $compose_file ]]; then
+      if [[ ${1:-} == allow-legacy && -f compose.production.yaml ]]; then
+        compose_file=compose.production.yaml
+      else
+        fail 'Missing compose-production.yaml'
+      fi
+    fi
+    compose=(docker compose --project-directory "$PWD" --env-file "$PWD/.env" -f "$PWD/$compose_file")
+    "${compose[@]}" config --quiet
+  }
+  configure_compose allow-legacy
 
   healthy() {
     local service=$1 container state
@@ -74,7 +86,7 @@ main() {
   printf 'Previous checkout: %s\n' "$previous_sha"
   git merge --ff-only "$sha"
   # The new Compose definition must still address the existing healthy database.
-  "${compose[@]}" config --quiet
+  configure_compose
   healthy db
 
   stage=build

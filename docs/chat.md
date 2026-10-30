@@ -38,7 +38,7 @@ Keep server configuration in the untracked `.env` or a secret store:
 
 `npm run dev` starts Next.js and the email worker together; stopping it stops both. `npm run dev:web` starts only Next.js. With the application already running, `npm run chat:emails` starts the worker separately. The worker can send real emails: use an isolated test database for QA.
 
-Production runs the separate `chat-email-worker` service from [`compose.production.yaml`](../compose.production.yaml). Its state survives restarts in PostgreSQL. Apply reviewed migrations once, before updating the application and worker, following the [deployment procedure](deployment.md#manual-migrations-failure-recovery-and-rollback). The chat migrations are `20260911100000_add_moderated_appointment_chat` and `20260912100000_add_chat_conversation_slug`; the latter backfills identifiers without changing message history.
+Production runs the separate `chat-email-worker` service from [`compose-production.yaml`](../compose-production.yaml). Its state survives restarts in PostgreSQL. Apply reviewed migrations once, before updating the application and worker, following the [deployment procedure](deployment.md#manual-migrations-failure-recovery-and-rollback). The chat migrations are `20260911100000_add_moderated_appointment_chat` and `20260912100000_add_chat_conversation_slug`; the latter backfills identifiers without changing message history.
 
 ## Email delivery and recovery
 

@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { parseAccountName } from "@/lib/account/account-name";
@@ -72,16 +73,9 @@ export async function PUT(request: Request) {
     }
 
     const userId = session.user.id;
-    let body: StudentProfileBody;
-
-    try {
-        body = (await request.json()) as StudentProfileBody;
-    } catch {
-        return Response.json(
-            { error: "Datele trimise nu sunt valide." },
-            { status: 400 },
-        );
-    }
+    const bodyResult = await readJsonRequest(request);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data as StudentProfileBody;
 
     if (
         typeof body !== "object" ||

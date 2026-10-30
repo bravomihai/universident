@@ -7,7 +7,7 @@ import { test } from "node:test";
 
 const script = readFileSync(new URL("./deploy-vps.sh", import.meta.url), "utf8");
 
-function fixture(t) {
+function fixture(t, { renameCompose = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), "universident-deploy-test-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const origin = join(root, "origin.git");
@@ -35,12 +35,14 @@ function fixture(t) {
   git("init", "--bare", "--initial-branch=main", origin);
   git("clone", origin, source);
   writeFileSync(join(source, ".gitignore"), ".env\n");
-  writeFileSync(join(source, "compose.production.yaml"), "name: universident\n");
+  const initialComposeFile = renameCompose ? "compose.production.yaml" : "compose-production.yaml";
+  writeFileSync(join(source, initialComposeFile), "name: universident\n");
   git("-C", source, "add", ".");
   git("-C", source, "commit", "-m", "Existing deployment");
   git("-C", source, "push", "origin", "main");
   git("clone", origin, repo);
   const previous = git("-C", repo, "rev-parse", "HEAD");
+  if (renameCompose) git("-C", source, "mv", "compose.production.yaml", "compose-production.yaml");
   writeFileSync(join(source, "release.txt"), "new application version\n");
   git("-C", source, "add", "release.txt");
   git("-C", source, "commit", "-m", "Next release");
@@ -53,7 +55,15 @@ set -eu
 printf '%s\\n' "$*" >> "$FAKE_DOCKER_LOG"
 if [[ $1 == compose ]]; then
   shift
-  while [[ \${1:-} == --project-directory || \${1:-} == --env-file || \${1:-} == -f ]]; do shift 2; done
+  compose_file=
+  while [[ \${1:-} == --project-directory || \${1:-} == --env-file || \${1:-} == -f ]]; do
+    if [[ $1 == -f ]]; then compose_file=$2; fi
+    shift 2
+  done
+  if [[ $1 != version && ( -z $compose_file || ! -f $compose_file ) ]]; then
+    printf 'Missing Compose file: %s\\n' "$compose_file" >&2
+    exit 98
+  fi
   case $1 in
     version|config) exit 0 ;;
     ps) printf '%s\\n' "\${@: -1}"; exit 0 ;;
@@ -138,6 +148,36 @@ test("verify leaves checkout and services unchanged", (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(f.head(), f.previous);
   assert.doesNotMatch(f.commands(), /build|prisma migrate status|up -d/);
+  assert.ok(result.stdout.includes(`UNIVERSIDENT_VPS_COMPLETE verify ${f.target}`));
+});
+
+test("the first deployment preflights the old Compose filename and uses the renamed file after updating", (t) => {
+  const f = fixture(t, { renameCompose: true });
+  const result = f.run();
+  assert.equal(result.status, 0, result.stderr);
+  const commands = f.commands().trim().split("\n");
+  const legacy = commands.filter((command) => command.includes("/compose.production.yaml "));
+  const renamed = commands.filter((command) => command.includes("/compose-production.yaml "));
+  assert.ok(legacy.some((command) => command.endsWith("config --quiet")));
+  assert.ok(legacy.some((command) => command.endsWith("ps --all --quiet db")));
+  assert.ok(legacy.every((command) => !/ build | run | up /.test(command)));
+  assert.ok(renamed.some((command) => command.includes("build app migrate chat-email-worker")));
+  assert.ok(renamed.some((command) => command.includes("prisma migrate status")));
+  assert.ok(renamed.some((command) => command.includes("up -d ")));
+  const firstRenamed = commands.findIndex((command) => command.includes("/compose-production.yaml "));
+  assert.ok(commands.slice(firstRenamed).every((command) => !command.includes("/compose.production.yaml ")));
+  assert.equal(f.head(), f.target);
+  assert.equal(f.configuration(), "TEST_CONFIGURATION=preserve-me\n");
+  assert.match(result.stdout, /Deployment healthy at commit/);
+});
+
+test("verify accepts the old Compose filename without updating the checkout or services", (t) => {
+  const f = fixture(t, { renameCompose: true });
+  const result = f.run("verify");
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(f.head(), f.previous);
+  assert.match(f.commands(), /\/compose\.production\.yaml config --quiet/);
+  assert.doesNotMatch(f.commands(), /compose-production\.yaml|build|prisma migrate status|up -d/);
   assert.ok(result.stdout.includes(`UNIVERSIDENT_VPS_COMPLETE verify ${f.target}`));
 });
 

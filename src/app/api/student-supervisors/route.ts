@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { prisma } from "@/lib/prisma";
 import { studentSupervisorSelect } from "@/lib/student-supervisors/student-supervisor-data";
 import { parseCreateStudentSupervisorInput } from "@/lib/student-supervisors/student-supervisor-input";
@@ -41,16 +42,9 @@ export async function POST(request: Request) {
 
     if (!authorization.ok) return authorization.response;
 
-    let body: unknown;
-
-    try {
-      body = await request.json();
-    } catch {
-      return Response.json(
-        { error: "Datele trimise nu sunt valide." },
-        { status: 400 },
-      );
-    }
+    const bodyResult = await readJsonRequest(request);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data;
 
     const parsedInput = parseCreateStudentSupervisorInput(body);
 

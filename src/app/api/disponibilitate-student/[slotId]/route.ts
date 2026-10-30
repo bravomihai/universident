@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { UserRole } from "@/generated/prisma/enums";
 import { authorizeAccountRequest } from "@/lib/api/account-request";
 import { domainErrorResponse } from "@/lib/api/domain-error-response";
@@ -21,8 +22,9 @@ async function authorize(request: Request) {
 export async function PATCH(request: Request, context: Context) {
   const authorization = await authorize(request);
   if (!authorization.ok) return authorization.response;
-  let body: unknown;
-  try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
   const parsed = parseUpdateAvailabilityInput(body, new Date());
   if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   try {
@@ -37,8 +39,9 @@ export async function PATCH(request: Request, context: Context) {
 export async function DELETE(request: Request, context: Context) {
   const authorization = await authorize(request);
   if (!authorization.ok) return authorization.response;
-  let body: unknown;
-  try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
   const parsed = parseCancelAvailabilityInput(body);
   if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   try {
