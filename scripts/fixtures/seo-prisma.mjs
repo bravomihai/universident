@@ -73,6 +73,8 @@ function model(rows, extra = {}) {
   } });
 }
 globalThis.prisma = new Proxy({
+  // Better Auth probes this optional metadata before using the read-only double.
+  _runtimeDataModel: undefined,
   studentProfile: model(profiles), studentAvailabilitySlot: model(blocks), studentAvailabilitySeries: model([]),
   treatment: model([treatment, { ...treatment, id: 'empty-treatment', slug: 'consultatie', name: 'Consultație' }]),
   city: model([city, { ...city, id: 'empty-city', slug: 'iasi', name: 'Iași' }]),

@@ -1,3 +1,4 @@
+# Local PostgreSQL; run Next.js and the chat email worker with npm run dev.
 services:
   db:
     image: postgres:18.4
