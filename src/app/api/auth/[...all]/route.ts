@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { prepareAuthMutationRequest } from "@/lib/auth/auth-mutation-request";
 import { toNextJsHandler } from "better-auth/next-js";
 
 const handlers = toNextJsHandler(auth);
@@ -74,22 +75,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const pathname = new URL(request.url).pathname.replace(/\/+$/, "");
-
-  if (
-    pathname === "/api/auth/request-password-reset" ||
-    pathname === "/api/auth/reset-password" ||
-    pathname === "/api/auth/change-email" ||
-    pathname === "/api/auth/verify-password"
-  ) {
-    return Response.json(
-      { error: "Ruta nu este disponibilă." },
-      { status: 404 },
-    );
-  }
+  const prepared = await prepareAuthMutationRequest(request);
+  if (!prepared.ok) return prepared.response;
 
   const blockedResponse =
-    await blockProtectedRequestForUnverifiedSession(request);
+    await blockProtectedRequestForUnverifiedSession(prepared.request);
 
-  return blockedResponse ?? handlers.POST(request);
+  return blockedResponse ?? handlers.POST(prepared.request);
 }

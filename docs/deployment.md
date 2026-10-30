@@ -1,6 +1,6 @@
 # CI/CD and VPS deployment
 
-The workflow updates the existing VPS checkout, builds with `compose.production.yaml`, and replaces the application and chat email worker. Database storage, server configuration, and the reverse proxy remain on the VPS. Automatic deployment requires `VPS_DEPLOY_ENABLED=true`.
+The workflow updates the existing VPS checkout, builds with `compose-production.yaml`, and replaces the application and chat email worker. Database storage, server configuration, and the reverse proxy remain on the VPS. Automatic deployment requires `VPS_DEPLOY_ENABLED=true`.
 
 ## Architecture and scope
 
@@ -84,13 +84,15 @@ The VPS also needs its **own existing read access to this GitHub repository** fo
 
 ## VPS prerequisites and retained configuration
 
-Use the existing Linux checkout on branch `main`, with a clean working tree and an `origin` pointing to this repository. Local tracked edits and untracked files must be resolved manually; the script never resets, cleans, stashes, or force-updates the checkout. Ignored `.env` remains in place. Confirm the server uses **this repository's `compose.production.yaml` without additional overrides** before activation. Installations with overrides, a different environment file, project name, or directory require a reviewed script adaptation before activation.
+Use the existing Linux checkout on branch `main`, with a clean working tree and an `origin` pointing to this repository. Local tracked edits and untracked files must be resolved manually; the script never resets, cleans, stashes, or force-updates the checkout. Ignored `.env` remains in place. Confirm the server uses **this repository's `compose-production.yaml` without additional overrides** before activation. Installations with overrides, a different environment file, project name, or directory require a reviewed script adaptation before activation.
 
 The noninteractive SSH session needs Bash, Git, GNU timeout, flock (util-linux), Docker Engine, and Docker Compose v2.24 or newer on PATH. Allow sufficient disk and memory for the existing Node 24 Docker builds and HTTPS outbound access for npm/fonts/image pulls. The existing database, app, and email worker must all be running and healthy. This pipeline updates an established installation; it refuses to bootstrap a missing database or fix an unhealthy installation automatically.
 
 Keep production application configuration **only in the VPS's existing, untracked `.env`**. Compose requires `POSTGRES_PASSWORD`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `OPENAI_API_KEY`, and `CHAT_WORKER_SECRET`; retain existing database names/users and optional model settings. Compose constructs the internal `DATABASE_URL`. `BETTER_AUTH_URL` must be the final HTTPS origin, and `DEPLOYMENT_ENV=production` explicitly enables public indexing. Do not copy production values to GitHub CI. Protect the file with restrictive permissions readable by the deployment account.
 
 The existing Compose project identity, PostgreSQL volume, database credentials, loopback binding, and external HTTPS proxy must remain the same. Verify automated backups and a tested restore process separately.
+
+The production file is named `compose-production.yaml`, matching `compose-dev.yaml`. On a VPS checkout predating this rename, the streamed deployment script accepts `compose.production.yaml` only for the initial preflight (including `verify` mode). After fast-forwarding to the tested commit, it reloads the Compose command using `compose-production.yaml` before building or updating services. The Compose project name, service names, and volume declaration are unchanged; no manual file rename on the VPS is needed.
 
 ## What a deployment does
 
@@ -131,12 +133,12 @@ cd /absolute/existing/checkout
 lock_path="$(git rev-parse --absolute-git-dir)/universident-deploy.lock"
 (
   flock --exclusive --wait 60 9 || exit 1
-  docker compose -f compose.production.yaml build migrate &&
-    docker compose -f compose.production.yaml run --rm --no-deps migrate &&
-    docker compose -f compose.production.yaml run --rm --no-deps migrate npx --no-install prisma migrate status
+  docker compose -f compose-production.yaml build migrate &&
+    docker compose -f compose-production.yaml run --rm --no-deps migrate &&
+    docker compose -f compose-production.yaml run --rm --no-deps migrate npx --no-install prisma migrate status
 ) 9> "$lock_path"
 ```
 
 These are operator commands, never executed by Actions. Use the same environment/project options as your installation. Do not apply a migration that breaks the old running application without a reviewed maintenance plan. Rerun the successful main workflow with `deploy` after manual migration; status must now be clean. Never use `db push`, reset, or restore over production as an automatic recovery step.
 
-For a failed build/status check, inspect the named stage and correct the underlying issue. For failed health, use `docker compose -f compose.production.yaml ps` and inspect restricted server-side logs/status (which may contain private information); the workflow intentionally does not upload application/database logs. Fix infrastructure/configuration or deploy a reviewed correction. For rollback, assess schema compatibility, revert the bad application change through a reviewed main commit, and run CI/CD. Never automatically roll back the database. Preserve backups and previous images until the release is accepted; disk cleanup remains a separate deliberate maintenance task.
+For a failed build/status check, inspect the named stage and correct the underlying issue. For failed health, use `docker compose -f compose-production.yaml ps` and inspect restricted server-side logs/status (which may contain private information); the workflow intentionally does not upload application/database logs. Fix infrastructure/configuration or deploy a reviewed correction. For rollback, assess schema compatibility, revert the bad application change through a reviewed main commit, and run CI/CD. Never automatically roll back the database. Preserve backups and previous images until the release is accepted; disk cleanup remains a separate deliberate maintenance task.

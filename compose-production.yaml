@@ -3,7 +3,8 @@ name: universident
 x-app-environment: &app-environment
   NODE_ENV: production
   DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
-  DATABASE_URL: "postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public"
+  # Keep the existing connection until the restricted role has been prepared.
+  DATABASE_URL: ${APP_DATABASE_URL:-postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public}
   BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
   BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
   RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
@@ -11,6 +12,7 @@ x-app-environment: &app-environment
   OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
   OPENAI_MODERATION_MODEL: ${OPENAI_MODERATION_MODEL:-gpt-4.1-mini}
   CHAT_WORKER_SECRET: ${CHAT_WORKER_SECRET:?CHAT_WORKER_SECRET is required}
+  PUBLIC_REQUEST_IP_HEADER: ${PUBLIC_REQUEST_IP_HEADER:-}
 
 services:
   db:
@@ -32,6 +34,9 @@ services:
     restart: unless-stopped
     stop_grace_period: 1m
     shm_size: 256mb
+    mem_limit: ${DB_MEMORY_LIMIT:-3g}
+    cpus: ${DB_CPU_LIMIT:-2.0}
+    pids_limit: 512
     security_opt:
       - no-new-privileges:true
     logging:
@@ -44,13 +49,19 @@ services:
     build:
       context: .
       target: migrator
-    environment: *app-environment
+    environment:
+      <<: *app-environment
+      # Migrations retain the schema owner's connection after APP_DATABASE_URL changes.
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public"
     depends_on:
       db:
         condition: service_healthy
     profiles:
       - tools
     restart: "no"
+    mem_limit: ${MIGRATION_MEMORY_LIMIT:-1g}
+    cpus: ${MIGRATION_CPU_LIMIT:-2.0}
+    pids_limit: 256
     security_opt:
       - no-new-privileges:true
     logging:
@@ -82,6 +93,9 @@ services:
     init: true
     restart: unless-stopped
     stop_grace_period: 30s
+    mem_limit: ${APP_MEMORY_LIMIT:-2g}
+    cpus: ${APP_CPU_LIMIT:-2.0}
+    pids_limit: 256
     cap_drop:
       - ALL
     security_opt:
@@ -111,6 +125,9 @@ services:
         condition: service_healthy
     init: true
     restart: unless-stopped
+    mem_limit: ${CHAT_WORKER_MEMORY_LIMIT:-384m}
+    cpus: ${CHAT_WORKER_CPU_LIMIT:-0.5}
+    pids_limit: 128
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     logging:

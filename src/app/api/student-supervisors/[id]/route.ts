@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { prisma } from "@/lib/prisma";
 import { parseEmptyJsonRequestBody } from "@/lib/student/empty-json-request-body";
 import { studentSupervisorSelect } from "@/lib/student-supervisors/student-supervisor-data";
@@ -13,7 +14,9 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: Context) {
   const auth = await authorizeStudentTreatmentRequest(request, { verifyOrigin: true }); if (!auth.ok) return auth.response;
-  let body: unknown; try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
   const parsed = parseUpdateStudentSupervisorInput(body); if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   const { id } = await context.params;
   const existing = await prisma.studentSupervisor.findFirst({ where: { id, studentProfileId: auth.studentProfileId, deletedAt: null } });

@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { auth } from "@/lib/auth";
 
 const genericResponse = {
@@ -36,16 +37,9 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json(
-      { error: "Cererea nu este validă." },
-      { status: 400 },
-    );
-  }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
 
   if (
     typeof body !== "object" ||
