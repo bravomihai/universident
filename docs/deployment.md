@@ -124,6 +124,10 @@ This retains the current single-VPS Compose service replacement and its possible
 
 To test against a separate VPS/staging installation first, use a separately cloned repository with these settings targeting that installation and its existing Compose project. Do not run a second project against the production volume.
 
+## Temporary public suspension
+
+For an application-independent HTTP 503 page, reversible nginx flag, app/worker shutdown and reopening, follow the [maintenance procedure](maintenance.md). Installing the repository files does not activate maintenance; the nginx include must be installed and reviewed on the VPS.
+
 ## Manual migrations, failure recovery, and rollback
 
 If status blocks a deployment, inspect pending SQL, verify the database identity and backup, and review compatibility with the currently running app. Stop automatic releases while preparing changes. Apply approved migrations manually in the same checkout under the shared lock, **before** the next service update. For example, after reviewing the exact checked-out commit:

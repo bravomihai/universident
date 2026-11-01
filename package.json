@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit --incremental false",
     "test": "tsx --test src/lib/**/*.test.ts scripts/chat-email-worker-health.test.mjs",
     "test:seo": "node scripts/verify-seo.mjs",
+    "test:maintenance": "node scripts/test-maintenance.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "db:validate": "prisma validate",
     "db:deploy": "prisma migrate deploy",
