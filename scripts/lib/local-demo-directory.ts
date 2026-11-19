@@ -78,13 +78,13 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
   const cities = demoDirectoryCities.map((spec) => {
     const city = catalog.cities.find((candidate) => candidate.slug === spec.slug);
     if (!city || !catalog.universities.some((university) => university.city === city.name)) {
-      throw new Error(`Lipsește orașul sau universitatea activă pentru ${spec.slug}. Rulează npm run db:seed.`);
+      throw new Error(`Missing city or active university for ${spec.slug}. Run npm run db:seed.`);
     }
     return { ...city, count: spec.count };
   });
   const treatments = demoDirectoryTreatments.map((spec) => {
     const treatment = catalog.treatments.find((candidate) => candidate.slug === spec.slug);
-    if (!treatment) throw new Error(`Lipsește tratamentul activ ${spec.slug}. Rulează npm run db:seed.`);
+    if (!treatment) throw new Error(`Missing active treatment ${spec.slug}. Run npm run db:seed.`);
     return { ...treatment, durationMinutes: spec.durationMinutes };
   });
   const homeCities = cities.flatMap((city) => Array.from({ length: city.count }, () => city));
@@ -150,7 +150,7 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
       const duration = 180 + (index + slotIndex) % 3 * 60;
       const startsAt = utcInstantForBucharestLocal(day, startMinute);
       const endsAt = utcInstantForBucharestLocal(day, startMinute + duration);
-      if (!startsAt || !endsAt) throw new Error(`Interval demo invalid: ${day}.`);
+      if (!startsAt || !endsAt) throw new Error(`Invalid demo slot on ${day}.`);
       const slotId = `${identity.prefix}-slot-${slotIndex + 1}`;
       plan.slots.push({
         id: slotId, studentProfileId: identity.profileId,
@@ -189,7 +189,7 @@ export function assertDemoIdentities(label: string, expected: DemoIdentityRow[],
   for (const row of existing) {
     if ((byId.has(row.id) && byId.get(row.id) !== row.identity) ||
         (byIdentity.has(row.identity) && byIdentity.get(row.identity) !== row.id)) {
-      throw new Error(`Coliziune în ${label}: ${row.id}. Seed-ul nu preia și nu suprascrie înregistrări străine.`);
+      throw new Error(`Identity conflict in ${label}: ${row.id}. The demo seed cannot take ownership of or overwrite records outside its fixture set.`);
     }
   }
 }
@@ -201,15 +201,15 @@ export function assertDemoCalendarSafe(
   activeSeries: number,
 ) {
   if (dependentAppointments > 0) {
-    throw new Error("Există programări pe intervalele profilurilor demo. Rerularea a fost oprită pentru a le păstra; folosește datele existente sau o copie locală separată.");
+    throw new Error("Appointments exist on demo profile slots. The demo seed stopped to preserve them. Use the existing data or a separate local database.");
   }
-  if (activeSeries > 0) throw new Error("Există serii active adăugate profilurilor demo. Seed-ul nu modifică acest calendar manual.");
+  if (activeSeries > 0) throw new Error("Demo profiles have active recurring availability. The demo seed cannot modify this manually configured calendar.");
   const ids = new Set(plan.slots.map((slot) => slot.id));
   for (const slot of existing) {
     if (ids.has(slot.id) || slot.status !== "ACTIVE") continue;
     if (plan.slots.some((planned) => planned.studentProfileId === slot.studentProfileId &&
       new Date(planned.startsAt) < slot.endsAt && new Date(planned.endsAt) > slot.startsAt)) {
-      throw new Error("Calendarul manual se suprapune cu un interval al profilurilor demo. Seed-ul a fost oprit fără modificări.");
+      throw new Error("Manually configured availability overlaps a demo profile slot. The demo seed stopped without making changes.");
     }
   }
 }

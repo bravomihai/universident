@@ -22,10 +22,10 @@ function stop(signal = "SIGTERM") {
 }
 process.on("SIGINT", () => stop("SIGINT"));
 process.on("SIGTERM", () => stop());
-web.on("error", () => { console.error("Serverul local nu a putut fi pornit."); stop(); process.exitCode = 1; });
+web.on("error", () => { console.error("The local server could not start."); stop(); process.exitCode = 1; });
 web.on("exit", (code) => { stop(); process.exitCode ??= code ?? 0; });
 emails.on("error", () => {
-  console.error("Procesul notificărilor email nu a putut fi pornit.");
+  console.error("The chat email worker could not start.");
   if (controlSocket) {
     process.exitCode = 1;
     stop();
@@ -33,7 +33,7 @@ emails.on("error", () => {
 });
 emails.on("exit", (code) => {
   if (stopping) return;
-  console.error(`Notificările email s-au oprit (cod ${code ?? "necunoscut"}). Verifică configurația și repornește mediul local.`);
+  console.error(`The chat email worker stopped (exit code: ${code ?? "unknown"}). Check the configuration and restart the local stack.`);
   if (controlSocket) {
     process.exitCode = code || 1;
     stop();
@@ -48,7 +48,7 @@ if (controlSocket) {
     stop();
   });
   control.on("error", (error) => {
-    console.error("Pornirea controlului local a eșuat:", error.message);
+    console.error("Could not start the local control socket:", error.message);
     process.exitCode = 1;
     stop();
   });

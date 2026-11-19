@@ -8,7 +8,7 @@ type DirectoryClient = Pick<Prisma.TransactionClient,
 
 function ids(rows: { id?: string }[]) {
   return rows.map((row) => {
-    if (!row.id) throw new Error("Lipsește identificatorul stabil al unei înregistrări demo.");
+    if (!row.id) throw new Error("A demo record is missing its stable identifier.");
     return row.id;
   });
 }
@@ -50,19 +50,19 @@ export async function validateDemoDirectory(client: DirectoryClient, plan: DemoD
     client.studentAvailabilitySeries.count({ where: { studentProfileId: { in: profileIds }, status: "ACTIVE" } }),
   ]);
 
-  assertDemoIdentities("utilizatori demo", identities(plan.users, (row) => [row.email, row.role]), identities(users, (row) => [row.email, row.role]));
-  assertDemoIdentities("profiluri demo", identities(plan.profiles, (row) => [row.userId, row.publicSlug]), identities(profiles, (row) => [row.userId, row.publicSlug]));
+  assertDemoIdentities("demo users", identities(plan.users, (row) => [row.email, row.role]), identities(users, (row) => [row.email, row.role]));
+  assertDemoIdentities("demo profiles", identities(plan.profiles, (row) => [row.userId, row.publicSlug]), identities(profiles, (row) => [row.userId, row.publicSlug]));
   // userId and publicSlug are individually unique as well as part of the identity above.
-  assertDemoIdentities("proprietari profiluri demo", identities(plan.profiles, (row) => [row.userId]), identities(profiles, (row) => [row.userId]));
-  assertDemoIdentities("URL-uri profiluri demo", identities(plan.profiles, (row) => [row.publicSlug]), identities(profiles, (row) => [row.publicSlug]));
-  assertDemoIdentities("emailuri demo", identities(plan.users, (row) => [row.email]), identities(users, (row) => [row.email]));
-  assertDemoIdentities("locații demo", identities(plan.locations, (row) => [row.studentProfileId, row.routeKey]), identities(locations, (row) => [row.studentProfileId, row.routeKey]));
-  assertDemoIdentities("tratamente demo", identities(plan.treatments, (row) => [row.studentProfileId, row.treatmentId]), identities(treatments, (row) => [row.studentProfileId, row.treatmentId]));
-  assertDemoIdentities("intervale demo", identities(plan.slots, (row) => [row.id, row.studentProfileId, row.studentLocationId, row.seriesId]), identities(slots, (row) => [row.id, row.studentProfileId, row.studentLocationId, row.seriesId]));
-  assertDemoIdentities("oferte demo", identities(plan.offerings, (row) => [row.id, row.studentProfileId, row.slotId, row.studentTreatmentId]), identities(offerings, (row) => [row.id, row.studentProfileId, row.slotId, row.studentTreatmentId]));
+  assertDemoIdentities("demo profile owners", identities(plan.profiles, (row) => [row.userId]), identities(profiles, (row) => [row.userId]));
+  assertDemoIdentities("demo profile URLs", identities(plan.profiles, (row) => [row.publicSlug]), identities(profiles, (row) => [row.publicSlug]));
+  assertDemoIdentities("demo email addresses", identities(plan.users, (row) => [row.email]), identities(users, (row) => [row.email]));
+  assertDemoIdentities("demo locations", identities(plan.locations, (row) => [row.studentProfileId, row.routeKey]), identities(locations, (row) => [row.studentProfileId, row.routeKey]));
+  assertDemoIdentities("demo treatments", identities(plan.treatments, (row) => [row.studentProfileId, row.treatmentId]), identities(treatments, (row) => [row.studentProfileId, row.treatmentId]));
+  assertDemoIdentities("demo slots", identities(plan.slots, (row) => [row.id, row.studentProfileId, row.studentLocationId, row.seriesId]), identities(slots, (row) => [row.id, row.studentProfileId, row.studentLocationId, row.seriesId]));
+  assertDemoIdentities("demo offerings", identities(plan.offerings, (row) => [row.id, row.studentProfileId, row.slotId, row.studentTreatmentId]), identities(offerings, (row) => [row.id, row.studentProfileId, row.slotId, row.studentTreatmentId]));
   const offeringIds = new Set(ids(plan.offerings));
   if (offerings.some((offering) => !offeringIds.has(offering.id))) {
-    throw new Error("Există oferte adăugate manual pe intervalele demo. Seed-ul nu resetează acest calendar.");
+    throw new Error("Demo slots have manually added offerings. The demo seed cannot reset this calendar.");
   }
   assertDemoCalendarSafe(plan, slots, dependentAppointments, activeSeries);
   return { users, profiles, locations, treatments, slots, offerings };

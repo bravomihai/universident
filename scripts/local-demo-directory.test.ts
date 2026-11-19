@@ -143,9 +143,9 @@ test("identities are stable on rerun and dates shift in Bucharest time across DS
 });
 
 test("missing active catalogs fail before writing instead of generating invalid data", () => {
-  assert.throws(() => buildDemoDirectory({ ...catalog, cities: catalog.cities.slice(1) }, now), /Lipsește/);
-  assert.throws(() => buildDemoDirectory({ ...catalog, treatments: catalog.treatments.slice(1) }, now), /Lipsește/);
-  assert.throws(() => buildDemoDirectory({ ...catalog, universities: [] }, now), /Lipsește/);
+  assert.throws(() => buildDemoDirectory({ ...catalog, cities: catalog.cities.slice(1) }, now), /Missing city or active university/);
+  assert.throws(() => buildDemoDirectory({ ...catalog, treatments: catalog.treatments.slice(1) }, now), /Missing active treatment/);
+  assert.throws(() => buildDemoDirectory({ ...catalog, universities: [] }, now), /Missing city or active university/);
 });
 
 test("original scenario selection excludes only exact demo identities", () => {
@@ -161,16 +161,16 @@ test("original scenario selection excludes only exact demo identities", () => {
 test("ID, ownership and natural-key collisions are rejected; unrelated records are preserved", () => {
   const expected = [{ id: "demo-1", identity: "owner-1:route-1" }];
   assert.doesNotThrow(() => assertDemoIdentities("test", expected, [...expected, { id: "manual-1", identity: "other-owner:route-1" }]));
-  assert.throws(() => assertDemoIdentities("test", expected, [{ id: "demo-1", identity: "foreign-owner:route-1" }]), /Coliziune/);
-  assert.throws(() => assertDemoIdentities("test", expected, [{ id: "manual-1", identity: "owner-1:route-1" }]), /Coliziune/);
+  assert.throws(() => assertDemoIdentities("test", expected, [{ id: "demo-1", identity: "foreign-owner:route-1" }]), /Identity conflict/);
+  assert.throws(() => assertDemoIdentities("test", expected, [{ id: "manual-1", identity: "owner-1:route-1" }]), /Identity conflict/);
 });
 
 test("manual appointments, active series and overlapping calendar entries stop reruns", () => {
-  assert.throws(() => assertDemoCalendarSafe(plan, [], 1, 0), /programări/);
-  assert.throws(() => assertDemoCalendarSafe(plan, [], 0, 1), /serii active/);
+  assert.throws(() => assertDemoCalendarSafe(plan, [], 1, 0), /Appointments exist/);
+  assert.throws(() => assertDemoCalendarSafe(plan, [], 0, 1), /active recurring availability/);
   const slot = plan.slots[0];
   const existing = { id: "manual-slot", studentProfileId: slot.studentProfileId, startsAt: new Date(slot.startsAt), endsAt: new Date(slot.endsAt), status: "ACTIVE" };
-  assert.throws(() => assertDemoCalendarSafe(plan, [existing], 0, 0), /suprapune/);
+  assert.throws(() => assertDemoCalendarSafe(plan, [existing], 0, 0), /overlaps a demo profile slot/);
   assert.doesNotThrow(() => assertDemoCalendarSafe(plan, [{ ...existing, id: slot.id! }], 0, 0));
   assert.doesNotThrow(() => assertDemoCalendarSafe(plan, [{ ...existing, status: "CANCELLED" }], 0, 0));
   assert.doesNotThrow(() => assertDemoCalendarSafe(plan, [{ ...existing, studentProfileId: "someone-else" }], 0, 0));
@@ -236,7 +236,7 @@ test("preflight rejects foreign email, profile slug, location key and fixture ow
   ] as [string, StoredRow][]) {
     const store = memoryStore();
     store.tables.get(model)!.push(row);
-    await assert.rejects(validateDemoDirectory(store.client, plan), /Coliziune/);
+    await assert.rejects(validateDemoDirectory(store.client, plan), /Identity conflict/);
     assert.equal(store.calls.length, 0);
   }
 });
@@ -244,6 +244,6 @@ test("preflight rejects foreign email, profile slug, location key and fixture ow
 test("preflight preserves manually added offerings rather than removing them", async () => {
   const store = memoryStore();
   store.tables.get("studentAvailabilitySlotOffering")!.push({ ...plan.offerings[0], id: "manual-offering" });
-  await assert.rejects(validateDemoDirectory(store.client, plan), /oferte adăugate manual/);
+  await assert.rejects(validateDemoDirectory(store.client, plan), /manually added offerings/);
   assert.equal(store.calls.length, 0);
 });

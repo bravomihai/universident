@@ -1,6 +1,7 @@
 .PHONY: dev dev-stop prod demo_data
 
 prod_compose = docker compose -f compose.yaml --profile prod --profile tools
+# Use the existing verified local demo accounts unless ARGS is supplied.
 demo_args = $(if $(strip $(ARGS)),$(ARGS),--patient-email=pacient@dev.com --student-email=student@dev.com)
 
 dev dev-stop:

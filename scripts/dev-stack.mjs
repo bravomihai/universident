@@ -12,7 +12,7 @@ const composeArgs = ["compose", "-f", "compose.yaml", "--profile", "dev"];
 async function compose(...args) {
   const command = spawn("docker", [...composeArgs, ...args], { stdio: "inherit" });
   const [code] = await once(command, "exit");
-  if (code !== 0) throw new Error(`Docker Compose a eșuat (${args[0]}).`);
+  if (code !== 0) throw new Error(`Docker Compose failed (${args[0]}).`);
 }
 
 async function stopApp() {
@@ -22,7 +22,7 @@ async function stopApp() {
     await once(connection, "end", { signal: AbortSignal.timeout(30_000) });
   } catch (error) {
     if (!["ENOENT", "ECONNREFUSED"].includes(error.code)) {
-      throw new Error("Aplicația și workerul local nu s-au oprit în timpul disponibil.", { cause: error });
+      throw new Error("Timed out waiting for the local app and worker to stop.", { cause: error });
     }
   } finally {
     connection.destroy();
@@ -37,7 +37,7 @@ async function requireFreePort(port) {
     await once(listener, "listening");
   } catch (error) {
     if (error.code === "EADDRINUSE") {
-      throw new Error(`Portul ${port} este ocupat de alt proces. Oprește-l înainte de make dev.`);
+      throw new Error(`Port ${port} is in use by another process. Stop it before running make dev.`);
     }
     throw error;
   }
@@ -71,7 +71,7 @@ async function startApp(port) {
     });
     const startup = new AbortController();
     const signal = AbortSignal.any([startup.signal, AbortSignal.timeout(60_000)]);
-    const stopped = once(app, "exit").then(() => { throw new Error("Procesul local s-a oprit."); });
+    const stopped = once(app, "exit").then(() => { throw new Error("The local process exited."); });
     try {
       await Promise.race([once(app, "message", { signal }), stopped]);
       await Promise.race([waitForWeb(port, signal), stopped]);
@@ -81,7 +81,7 @@ async function startApp(port) {
         app.kill("SIGTERM");
         await exited.catch(() => {});
       }
-      throw new Error(`Pornirea aplicației locale a eșuat. Verifică ${logPath}.`, { cause: error });
+      throw new Error(`The local app failed to start. Check ${logPath}.`, { cause: error });
     } finally {
       startup.abort();
       if (app.connected) app.disconnect();
@@ -94,12 +94,12 @@ async function startApp(port) {
 
 try {
   const target = process.argv[2];
-  if (target !== "dev" && target !== "dev-stop") throw new Error("Folosește make dev sau make dev-stop.");
+  if (target !== "dev" && target !== "dev-stop") throw new Error("Run make dev or make dev-stop.");
   const shouldStart = target === "dev";
   const port = Number(process.env.PORT || 3000);
   if (shouldStart) {
-    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Setează un PORT valid.");
-    if (!existsSync("node_modules/next/dist/bin/next")) throw new Error("Instalează dependențele cu npm ci.");
+    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Set PORT to an integer between 1 and 65535.");
+    if (!existsSync("node_modules/next/dist/bin/next")) throw new Error("Install dependencies with npm ci.");
   }
   await stopApp();
   if (shouldStart) await requireFreePort(port);
@@ -107,7 +107,7 @@ try {
   if (shouldStart) {
     await compose("up", "-d", "--wait", "--wait-timeout", "180", "db-dev");
     await startApp(port);
-    console.log(`Mediul local rulează la http://localhost:${port}. Jurnal: ${logPath}`);
+    console.log(`The local app is running at http://localhost:${port}. Log file: ${logPath}`);
   }
 } catch (error) {
   console.error(error.message);

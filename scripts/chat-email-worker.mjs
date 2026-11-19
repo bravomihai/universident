@@ -11,13 +11,13 @@ if (process.argv.includes("--healthcheck")) {
 const baseUrl = process.env.CHAT_WORKER_URL || process.env.BETTER_AUTH_URL;
 const secret = process.env.CHAT_WORKER_SECRET;
 if (!baseUrl || !secret || secret.length < 32) {
-  console.error("Configurează CHAT_WORKER_URL (sau BETTER_AUTH_URL) și CHAT_WORKER_SECRET (minimum 32 de caractere).");
+  console.error("Set CHAT_WORKER_URL (or BETTER_AUTH_URL) and CHAT_WORKER_SECRET (at least 32 characters).");
   process.exit(1);
 }
 const abort = new AbortController();
 process.on("SIGTERM", () => abort.abort());
 process.on("SIGINT", () => abort.abort());
-console.log("Procesarea notificărilor chat este activă.");
+console.log("The chat email worker is running.");
 const state = { lastSuccessAt: null, lastErrorCode: "STARTING", result: null };
 await writeWorkerHealth(healthFile, state);
 let previousStatus = "";
@@ -42,7 +42,7 @@ while (!abort.signal.aborted) {
   const status = evaluateWorkerHealth(state);
   const summary = JSON.stringify({ ...status, result: state.result });
   if (summary !== previousStatus) {
-    (status.healthy ? console.log : console.error)(`Notificări chat: ${summary}`);
+    (status.healthy ? console.log : console.error)(`Chat email worker: ${summary}`);
     previousStatus = summary;
   }
   try { await setTimeout(15_000, undefined, { signal: abort.signal }); } catch { break; }

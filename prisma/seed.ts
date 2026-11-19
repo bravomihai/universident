@@ -251,13 +251,13 @@ async function main() {
     }
 
     console.log(
-        `Au fost configurate ${treatments.length} tratamente, ${cities.length} orașe și ${universities.length} universități.`,
+        `Seeded ${treatments.length} treatments, ${cities.length} cities, and ${universities.length} universities.`,
     );
 }
 
 main()
     .catch((error: unknown) => {
-        console.error("Seed-ul a eșuat:", error);
+        console.error("Catalog seed failed:", error);
         process.exitCode = 1;
     })
     .finally(async () => {
