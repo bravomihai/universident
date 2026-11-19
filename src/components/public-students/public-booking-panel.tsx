@@ -29,7 +29,6 @@ type PublicSlot = {
   startOptions: string[];
   treatment: { name: string; slug: string; durationMinutes: number };
   location: { name: string; address: string; routeKey: string; city: { name: string } };
-  supervisor: { fullName: string; academicTitle: string | null };
 };
 type CalendarView = "timeGridDay" | "timeGridWeek";
 type PatientState = "loading" | "anonymous" | "student" | "missing-birth-date" | "ready" | "error";
@@ -78,7 +77,7 @@ function BookingEventContent({ event, timeText }: EventContentArg) {
   return <div className="min-w-0 p-1 leading-tight" data-booking-slot-id={slot.id}><p className="truncate text-[11px] font-semibold sm:text-xs">{slot.treatment.name}</p><p className="truncate text-[10px] opacity-85">{slot.location.name}</p><p className="truncate text-[10px] opacity-75">{timeText}</p>{selected ? <p className="mt-0.5 text-[10px] font-bold uppercase">Selectat</p> : null}</div>;
 }
 
-export function PublicBookingPanel({ studentSlug, treatmentSlug, citySlug, locationRouteKey }: { studentSlug: string; treatmentSlug: string; citySlug: string; locationRouteKey?: string }) {
+export function PublicBookingPanel({ studentSlug, university, treatmentSlug, citySlug, locationRouteKey }: { studentSlug: string; university: string; treatmentSlug: string; citySlug: string; locationRouteKey?: string }) {
   const calendarRef = useRef<FullCalendar>(null);
   const idempotencyKeyRef = useRef("");
   const [slots, setSlots] = useState<PublicSlot[]>([]);
@@ -164,7 +163,7 @@ export function PublicBookingPanel({ studentSlug, treatmentSlug, citySlug, locat
   function datesChanged(arg: DatesSetArg) { setNavLabel(navigationLabel(arg)); setCanGoBack(dayDistance(arg.view.currentStart) > 0); if (arg.view.type === "timeGridDay" || arg.view.type === "timeGridWeek") setView(arg.view.type); }
 
   return <section aria-labelledby="booking-title" className="space-y-4">
-    <div><h2 id="booking-title" className="text-2xl font-semibold">Alege o programare</h2><p className="mt-1 text-sm text-muted-foreground">Intervalul studentului este împărțit automat în ore care reduc timpul nefolosit.</p></div>
+    <h2 id="booking-title" className="text-2xl font-semibold">Alege o programare</h2>
     {patientState === "missing-birth-date" ? <Card className="border-primary/40"><CardContent className="space-y-4"><div className="flex gap-3"><ShieldCheck className="size-5" /><div><p className="font-medium">Completează data nașterii</p><p className="text-sm text-muted-foreground">O păstrăm în profilul privat; studentul vede numai vârsta calculată.</p></div></div><div className="max-w-sm space-y-2"><Label htmlFor="booking-birth-date">Data nașterii</Label><Input id="booking-birth-date" type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} /></div>{error ? <p className="text-sm text-destructive">{error}</p> : null}<Button disabled={savingProfile || !dateOfBirth} onClick={() => void saveBirthDate()}>Salvează și continuă</Button></CardContent></Card> : null}
     {createdSlug ? <Card><CardContent className="space-y-3"><p className="flex items-center gap-2 font-medium"><CalendarCheck2 className="size-5" />Cererea a fost trimisă.</p><Button asChild><Link href={`/cont/programari/${createdSlug}`}>Vezi cererea</Link></Button></CardContent></Card> : null}
     {patientState !== "missing-birth-date" ? <Card className="overflow-hidden"><CardContent className="space-y-4">
@@ -182,7 +181,7 @@ export function PublicBookingPanel({ studentSlug, treatmentSlug, citySlug, locat
         </DialogHeader>
         {selected ? (
           <div className="space-y-5">
-            <PublicBookingSlotDetails slot={selected} />
+            <PublicBookingSlotDetails slot={selected} university={university} />
             <div className="space-y-2">
               <Label htmlFor="booking-start">Ora de început</Label>
               {selected.startOptions.length === 1 ? (

@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { Client } from "pg";
 import { hashPassword } from "better-auth/crypto";
+import { policyConfirmations, signUpPolicyHeader } from "../src/lib/account/policy-confirmations";
 
 // Always create a fresh local database. Never run fixtures against the configured database.
 const source = new URL(process.env.DATABASE_URL ?? "");
@@ -28,7 +29,7 @@ try {
   const migrate = spawnSync("npx", ["prisma", "migrate", "deploy"], { env: process.env, encoding: "utf8" });
   if (migrate.status !== 0) throw new Error(`TEST_MIGRATIONS_FAILED: ${migrate.stderr}`);
   db = (await import("../src/lib/prisma")).prisma;
-  const { sendChatMessage, getChatPage, listChatConversations, acknowledgeChatMessages, unreadChatCount } = await import("../src/lib/chat/service");
+  const { sendChatMessage, getChatPage, listChatConversations, acknowledgeChatMessages, unreadChatCount, reportMedicalChatMessage } = await import("../src/lib/chat/service");
   const { processChatEmails, chatEmailContent, getChatEmailQueueStatus } = await import("../src/lib/chat/email-worker");
   const { ChatError } = await import("../src/lib/chat/errors");
   const { withChatSlugRetry } = await import("../src/lib/chat/slug");
@@ -44,7 +45,16 @@ try {
   // Exercise the application auth handlers against the migrated account schema.
   // These verified fixtures never trigger verification or password-reset emails.
   const { GET: authGet, POST: authPost } = await import("../src/app/api/auth/[...all]/route");
+  const { POST: confirm } = await import("../src/app/api/confirmari-cont/route");
+  const { GET: chatUnread } = await import("../src/app/api/mesaje/necitite/route");
   const authOrigin = process.env.BETTER_AUTH_URL;
+  const unsignedSignup = await authPost(new Request(authOrigin + "/api/auth/sign-up/email", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: authOrigin, "x-universident-account-type": "student", [signUpPolicyHeader]: "old-version" },
+    body: JSON.stringify({ name: "Student fără declarație", email: "unsigned@example.invalid", password: testPassword }),
+  }));
+  assert.equal(unsignedSignup.status, 400);
+  assert.equal(await db.user.count({ where: { email: "unsigned@example.invalid" } }), 0);
   const signIn = (email: string, password: string) => authPost(new Request(`${authOrigin}/api/auth/sign-in/email`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: authOrigin },
@@ -62,6 +72,25 @@ try {
     assert.equal(session.user.id, user.id);
     assert.equal(session.user.role, user.role);
     assert.equal(session.user.emailVerified, true);
+
+    const chatRequest = () => new Request(authOrigin + "/api/mesaje/necitite", { headers: { cookie } });
+    const confirmationRequest = (version: string, confirmed = true, origin = authOrigin) => new Request(authOrigin + "/api/confirmari-cont", {
+      method: "POST", headers: { "content-type": "application/json", cookie, origin },
+      body: JSON.stringify({ confirmed, version }),
+    });
+    const accountPolicy = user.role === "PATIENT" ? policyConfirmations.patientPrivacy : policyConfirmations.studentDeclaration;
+    const chatPolicy = user.role === "PATIENT" ? policyConfirmations.patientChat : policyConfirmations.studentChat;
+    const wrongChatPolicy = user.role === "PATIENT" ? policyConfirmations.studentChat : policyConfirmations.patientChat;
+    assert.equal((await chatUnread(chatRequest())).status, 403);
+    assert.equal((await confirm(confirmationRequest(wrongChatPolicy.version))).status, 400);
+    assert.equal((await confirm(confirmationRequest(accountPolicy.version, false))).status, 400);
+    assert.equal((await confirm(confirmationRequest(accountPolicy.version, true, "https://example.invalid"))).status, 403);
+    assert.equal((await confirm(confirmationRequest(accountPolicy.version))).status, 204);
+    assert.equal((await chatUnread(chatRequest())).status, 403);
+    assert.equal((await confirm(confirmationRequest(chatPolicy.version))).status, 204);
+    assert.equal((await confirm(confirmationRequest(chatPolicy.version))).status, 204);
+    assert.equal((await db.accountPolicyConfirmation.findMany({ where: { userId: user.id } })).length, 2);
+    assert.equal((await chatUnread(chatRequest())).status, 200);
     const foreignOrigin = await authPost(new Request(`${authOrigin}/api/auth/sign-out`, {
       method: "POST", headers: { cookie, origin: "https://untrusted.example.invalid" },
     }));
@@ -80,16 +109,15 @@ try {
   const city = await db.city.create({ data: { name: "Oraș test", slug: "oras-test" } });
   const treatment = await db.treatment.create({ data: { name: "Consultație de test", slug: "consultatie-test", description: "Test local" } });
   const location = await db.studentLocation.create({ data: { studentProfileId: sp.id, cityId: city.id, routeKey: "abc123", name: "Cabinet Test", address: "Adresă fictivă" } });
-  const supervisor = await db.studentSupervisor.create({ data: { studentProfileId: sp.id, fullName: "Coordonator Test" } });
   const st = await db.studentTreatment.create({ data: { studentProfileId: sp.id, treatmentId: treatment.id, durationMinutes: 30 } });
   const start = new Date(Date.now() + 2 * 86_400_000); start.setUTCHours(9, 0, 0, 0);
   const end = new Date(start.getTime() + 4 * 3_600_000);
   const slot = await db.studentAvailabilitySlot.create({ data: { studentProfileId: sp.id, studentLocationId: location.id, originalStartsAt: start, startsAt: start, endsAt: end } });
-  const offering = await db.studentAvailabilitySlotOffering.create({ data: { slotId: slot.id, studentProfileId: sp.id, studentTreatmentId: st.id, supervisorId: supervisor.id } });
+  const offering = await db.studentAvailabilitySlotOffering.create({ data: { slotId: slot.id, studentProfileId: sp.id, studentTreatmentId: st.id } });
   const appointmentData = {
     patientProfileId: pp.id, studentProfileId: sp.id, studentAvailabilitySlotId: slot.id, studentAvailabilitySlotOfferingId: offering.id,
     patientAgeAtAppointment: 36, patientNameSnapshot: patient.name, studentNameSnapshot: student.name,
-    treatmentNameSnapshot: treatment.name, locationNameSnapshot: location.name, locationAddressSnapshot: location.address, supervisorNameSnapshot: supervisor.fullName,
+    treatmentNameSnapshot: treatment.name, locationNameSnapshot: location.name, locationAddressSnapshot: location.address, studentUniversitySnapshot: sp.university,
   };
   const appointment = await db.appointment.create({ data: { ...appointmentData, routeSlug: "consultatie-chat-test", scheduledStartsAt: start, scheduledEndsAt: new Date(start.getTime() + 1_800_000), status: "CONFIRMED", confirmedAt: new Date() } });
   const pending = await db.appointment.create({ data: { ...appointmentData, routeSlug: "cerere-chat-test", scheduledStartsAt: new Date(start.getTime() + 3_600_000), scheduledEndsAt: new Date(start.getTime() + 5_400_000), pendingExpiresAt: new Date(Date.now() + 3_600_000), status: "PENDING" } });
@@ -195,6 +223,12 @@ try {
   const history = Array.from({ length: 53 }, (_, i) => ({ appointmentId: appointment.id, senderUserId: student.id, recipientUserId: patient.id, text: `Mesaj fictiv din istoric ${i + 1}`, clientId: randomUUID(), moderationVersion: "test-fixture", createdAt: new Date(Date.now() - (60 - i) * 60_000) }));
   await db.chatMessage.createMany({ data: history });
   const latest = await getChatPage(slug, patient);
+  const reportMessage = latest.messages[0];
+  await assert.rejects(reportMedicalChatMessage(slug, outsider, reportMessage.id), code("NOT_FOUND"));
+  await assert.rejects(reportMedicalChatMessage(slug, patient, randomUUID()), code("NOT_FOUND"));
+  await reportMedicalChatMessage(slug, patient, reportMessage.id);
+  await reportMedicalChatMessage(slug, patient, reportMessage.id);
+  assert.equal(await db.chatMedicalDataReport.count({ where: { messageId: reportMessage.id, reporterUserId: patient.id } }), 1);
   assert.equal(latest.messages.length, 50); assert.ok(latest.olderCursor);
   const older = await getChatPage(slug, patient, latest.olderCursor!);
   assert.equal(older.messages.length, 6);

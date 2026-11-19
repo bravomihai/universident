@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 type Context = { params: Promise<{ slotId: string }> };
 
 async function authorize(request: Request) {
-  const authorization = await authorizeAccountRequest(request, { verifyOrigin: true, roles: [UserRole.STUDENT] });
+  const authorization = await authorizeAccountRequest(request, { requireCurrentPolicy: true, verifyOrigin: true, roles: [UserRole.STUDENT] });
   if (!authorization.ok) return authorization;
   const student = await prisma.studentProfile.findUnique({ where: { userId: authorization.user.id }, select: { id: true } });
   if (!student) return { ok: false as const, response: Response.json({ error: "Completează profilul profesional." }, { status: 404 }) };

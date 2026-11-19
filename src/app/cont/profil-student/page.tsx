@@ -1,3 +1,5 @@
+import Link from "@/components/navigation/app-link";
+import { missingAccountPolicy } from "@/lib/account/policy-confirmation-service";
 import { GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -47,6 +49,7 @@ export default async function StudentProfilePage() {
                 university: true,
                 studyYear: true,
                 bio: true,
+                showCompletedAppointmentsCount: true,
                 profileImage: {
                     select: { id: true, updatedAt: true },
                 },
@@ -74,12 +77,18 @@ export default async function StudentProfilePage() {
                 normalizedProfileUniversity,
         )?.slug ?? legacyUniversitySlugs[normalizedProfileUniversity] ?? null
         : null;
+    const needsDeclaration = await missingAccountPolicy(session.user);
     const initialImageUrl = studentProfileImageUrl(profile?.profileImage);
 
     return (
         <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
             <div className="w-full max-w-6xl space-y-6">
                 <BackLink />
+                {needsDeclaration ? (
+                    <p className="rounded-xl border bg-muted/20 p-4 text-sm">
+                        După ce ai revizuit profilul, <Link href="/confirma-reguli" className="font-medium underline underline-offset-4">confirmă corectitudinea informațiilor &gt;</Link>
+                    </p>
+                ) : null}
 
                 <div className="space-y-2">
                     <div className="flex items-center gap-3">
@@ -136,6 +145,7 @@ export default async function StudentProfilePage() {
                                         universitySlug: initialUniversitySlug,
                                         studyYear: profile.studyYear,
                                         bio: profile.bio,
+                                        showCompletedAppointmentsCount: profile.showCompletedAppointmentsCount,
                                     }
                                     : null
                             }

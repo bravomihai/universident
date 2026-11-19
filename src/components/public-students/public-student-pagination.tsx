@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "@/components/navigation/app-link";
 
+import { publicStudentDirectoryHref, type StudentDirectorySort } from "@/lib/public-students/public-student-directory-order";
 import { Button } from "@/components/ui/button";
 import {
   publicStudentPaginationItems,
@@ -10,12 +11,15 @@ import {
 type PublicStudentPaginationProps = {
   page: number;
   totalPages: number;
-  treatmentSlug: string;
-  citySlug: string;
-};
+} & (
+  | { treatmentSlug: string; citySlug: string; sort?: never }
+  | { treatmentSlug?: never; citySlug?: never; sort?: StudentDirectorySort }
+);
 
-function PaginationList({ page, totalPages, treatmentSlug, citySlug, compact }: PublicStudentPaginationProps & { compact: boolean }) {
-  const href = (target: number) => publicStudentSearchHref(treatmentSlug, citySlug, target);
+function PaginationList({ page, totalPages, treatmentSlug, citySlug, sort, compact }: PublicStudentPaginationProps & { compact: boolean }) {
+  const href = (target: number) => treatmentSlug && citySlug
+    ? publicStudentSearchHref(treatmentSlug, citySlug, target)
+    : publicStudentDirectoryHref(target, sort);
   return (
     <ul className={`${compact ? "flex sm:hidden" : "hidden sm:flex"} items-center justify-center gap-1`}>
       <li>

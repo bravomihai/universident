@@ -9,11 +9,10 @@ import {
   locationResourceLockKey,
   lockSchedulingKeys,
   seriesLockKey,
-  supervisorResourceLockKey,
   treatmentResourceLockKey,
 } from "@/lib/scheduling/locks";
 
-export type SchedulingResourceKind = "location" | "treatment" | "supervisor";
+export type SchedulingResourceKind = "location" | "treatment";
 
 export class ResourceSchedulingLimitError extends Error {
   constructor() {
@@ -24,26 +23,17 @@ export class ResourceSchedulingLimitError extends Error {
 
 function resourceLockKey(kind: SchedulingResourceKind, resourceId: string) {
   if (kind === "location") return locationResourceLockKey(resourceId);
-  if (kind === "treatment") return treatmentResourceLockKey(resourceId);
-  return supervisorResourceLockKey(resourceId);
+  return treatmentResourceLockKey(resourceId);
 }
 
 function seriesWhere(kind: SchedulingResourceKind, resourceId: string) {
   if (kind === "location") return { studentLocationId: resourceId };
-  if (kind === "treatment") {
-    return { offerings: { some: { studentTreatmentId: resourceId } } };
-  }
-  return { offerings: { some: { supervisorId: resourceId } } };
+  return { offerings: { some: { studentTreatmentId: resourceId } } };
 }
 
 function slotWhere(kind: SchedulingResourceKind, resourceId: string) {
   if (kind === "location") return { studentLocationId: resourceId };
-  if (kind === "treatment") {
-    return {
-      offerings: { some: { studentTreatmentId: resourceId, removedAt: null } },
-    };
-  }
-  return { offerings: { some: { supervisorId: resourceId, removedAt: null } } };
+  return { offerings: { some: { studentTreatmentId: resourceId, removedAt: null } } };
 }
 
 export async function lockSchedulingResourceAndRoots(

@@ -48,14 +48,13 @@ test("adding the gingival cohort preserves all generated data for the original 1
     users: plan.users.slice(0, 100),
     profiles: plan.profiles.slice(0, 100),
     locations: plan.locations.filter((row) => originalIds.has(row.studentProfileId)),
-    supervisors: plan.supervisors.filter((row) => originalIds.has(row.studentProfileId)),
     treatments: plan.treatments.filter((row) => originalIds.has(row.studentProfileId)),
     slots: plan.slots.filter((row) => originalIds.has(row.studentProfileId)),
     offerings: plan.offerings.filter((row) => originalIds.has(row.studentProfileId)),
   };
-  // Snapshot of the original generator using the fixed catalog/date above, before adding 101–140.
+  // Snapshot of the original cohort using the fixed catalog and current fixture schema.
   assert.equal(createHash("sha256").update(JSON.stringify(originalRows)).digest("hex"),
-    "bd0d258c4abc0a9d331177691a4b721a49250f2d5fd83e51485a7514798021cc");
+    "0580688a984450091246c4cb6756cc39ac35c6e63383d3894e10341af25f801e");
 });
 
 test("forty additional students offer gingival treatment in Cluj with future capacity at both locations", () => {
@@ -111,7 +110,6 @@ test("every advertised treatment has real sliceable capacity in its exact locati
     const offerings = plan.offerings.filter((offering) => offering.slotId === slot.id).map((offering) => {
       const treatment = plan.treatments.find((treatment) => treatment.id === offering.studentTreatmentId)!;
       assert.equal(treatment.studentProfileId, slot.studentProfileId);
-      assert.equal(plan.supervisors.find((supervisor) => supervisor.id === offering.supervisorId)!.studentProfileId, slot.studentProfileId);
       return { id: offering.id!, studentTreatment: { durationMinutes: treatment.durationMinutes, treatment: { slug: catalog.treatments.find((row) => row.id === treatment.treatmentId)!.slug } } };
     });
     for (const offering of offerings) {
@@ -132,7 +130,8 @@ test("every advertised treatment has real sliceable capacity in its exact locati
 test("identities are stable on rerun and dates shift in Bucharest time across DST", () => {
   for (const date of ["2026-03-27T12:00:00Z", "2026-10-23T12:00:00Z", "2027-01-10T12:00:00Z"]) {
     const regenerated = buildDemoDirectory(catalog, new Date(date));
-    assert.deepEqual(regenerated.users, plan.users);
+    assert.ok(regenerated.users.every((user) => new Date(user.signupPolicyConfirmedAt!).getTime() === new Date(date).getTime()));
+    assert.deepEqual(regenerated.users.map((user) => ({ ...user, signupPolicyConfirmedAt: now })), plan.users);
     assert.deepEqual(regenerated.slots.map((slot) => slot.id), plan.slots.map((slot) => slot.id));
     for (const [index, slot] of regenerated.slots.entries()) {
       assert.equal(localDateForInstant(new Date(slot.startsAt)), localDateForInstant(new Date(slot.endsAt)));
@@ -180,7 +179,7 @@ test("manual appointments, active series and overlapping calendar entries stop r
 
 type StoredRow = { id: string } & Record<string, unknown>;
 function memoryStore() {
-  const models = ["user", "studentProfile", "studentLocation", "studentSupervisor", "studentTreatment", "studentAvailabilitySlot", "studentAvailabilitySlotOffering"];
+  const models = ["user", "studentProfile", "studentLocation", "studentTreatment", "studentAvailabilitySlot", "studentAvailabilitySlotOffering"];
   const tables = new Map(models.map((model) => [model, [] as StoredRow[]]));
   const calls: string[] = [];
   const client = Object.fromEntries(models.map((model) => [model, {
@@ -215,7 +214,7 @@ test("preflight is read-only; first population batches writes; rerun creates no 
   const empty = await validateDemoDirectory(store.client, plan);
   assert.equal(store.calls.length, 0);
   await writeDemoDirectory(store.client, plan, empty, now);
-  assert.equal(store.calls.filter((call) => call.startsWith("create:")).length, 7);
+  assert.equal(store.calls.filter((call) => call.startsWith("create:")).length, 6);
   assert.equal(store.tables.get("user")!.length, 140);
   assert.equal(store.tables.get("studentAvailabilitySlot")!.length, 840);
   const counts = [...store.tables].map(([model, rows]) => [model, rows.length]);

@@ -7,6 +7,10 @@ const publicReview = {
   authorRole: "PATIENT",
   target: {
     role: "STUDENT", emailVerified: true,
+    OR: [
+      { signupPolicyVersion: "declaratie-student-v1", signupPolicyConfirmedAt: { not: null } },
+      { policyConfirmations: { some: { policy: "studentDeclaration", version: "declaratie-student-v1" } } },
+    ],
     studentProfile: {
       isPublished: true, publicSlug: { not: null },
       university: { not: "" }, studyYear: { gte: 1, lte: 6 },
@@ -14,7 +18,7 @@ const publicReview = {
   },
 };
 
-test("anonymous avatar requests require a published review on a visible, verified student profile", () => {
+test("anonymous avatar requests require a published review on a public profile with a current student declaration", () => {
   assert.deepEqual(reviewAvatarAccessWhere("review-one"), {
     id: "review-one", publishedAt: { not: null }, OR: [publicReview],
   });

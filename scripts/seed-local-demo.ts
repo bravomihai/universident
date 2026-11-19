@@ -53,7 +53,6 @@ const demoSlotKeys = [
 type DemoSlotKey = (typeof demoSlotKeys)[number];
 type TreatmentKey = (typeof requiredTreatmentSlugs)[number];
 type LocationKey = "clinic" | "faculty";
-type SupervisorKey = "primary" | "secondary";
 
 type SlotDefinition = {
   key: DemoSlotKey;
@@ -63,7 +62,6 @@ type SlotDefinition = {
   location: LocationKey;
   treatments: Array<{
     treatment: TreatmentKey;
-    supervisor: SupervisorKey;
   }>;
   isException?: boolean;
   isCancelled?: boolean;
@@ -225,8 +223,8 @@ async function main() {
       endMinute: 12 * 60,
       location: "clinic",
       treatments: [
-        { treatment: "consultatie", supervisor: "primary" },
-        { treatment: "igienizare", supervisor: "secondary" },
+        { treatment: "consultatie" },
+        { treatment: "igienizare" },
       ],
     },
     {
@@ -236,8 +234,8 @@ async function main() {
       endMinute: 13 * 60,
       location: "faculty",
       treatments: [
-        { treatment: "consultatie", supervisor: "primary" },
-        { treatment: "igienizare", supervisor: "secondary" },
+        { treatment: "consultatie" },
+        { treatment: "igienizare" },
       ],
     },
     {
@@ -247,8 +245,8 @@ async function main() {
       endMinute: 17 * 60,
       location: "clinic",
       treatments: [
-        { treatment: "carii-si-obturatii", supervisor: "primary" },
-        { treatment: "consultatie", supervisor: "secondary" },
+        { treatment: "carii-si-obturatii" },
+        { treatment: "consultatie" },
       ],
     },
     {
@@ -257,7 +255,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 11 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
       isException: true,
     },
     {
@@ -267,8 +265,8 @@ async function main() {
       endMinute: 14 * 60,
       location: "clinic",
       treatments: [
-        { treatment: "consultatie", supervisor: "primary" },
-        { treatment: "carii-si-obturatii", supervisor: "secondary" },
+        { treatment: "consultatie" },
+        { treatment: "carii-si-obturatii" },
       ],
     },
     {
@@ -277,7 +275,7 @@ async function main() {
       startMinute: 10 * 60,
       endMinute: 13 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
       isCancelled: true,
     },
     {
@@ -286,7 +284,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 11 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "completed-awaiting-patient",
@@ -294,7 +292,7 @@ async function main() {
       startMinute: 9 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
     },
     {
       key: "completed-reviewed",
@@ -302,7 +300,7 @@ async function main() {
       startMinute: 14 * 60,
       endMinute: 18 * 60,
       location: "clinic",
-      treatments: [{ treatment: "carii-si-obturatii", supervisor: "primary" }],
+      treatments: [{ treatment: "carii-si-obturatii" }],
     },
     {
       key: "completed-reviewed-second",
@@ -310,7 +308,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "consultatie", supervisor: "secondary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "no-show-reviewed",
@@ -318,7 +316,7 @@ async function main() {
       startMinute: 13 * 60,
       endMinute: 17 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "cancelled-patient-late",
@@ -326,7 +324,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 11 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
     },
     {
       key: "cancelled-patient-normal",
@@ -334,7 +332,7 @@ async function main() {
       startMinute: 13 * 60,
       endMinute: 17 * 60,
       location: "clinic",
-      treatments: [{ treatment: "carii-si-obturatii", supervisor: "primary" }],
+      treatments: [{ treatment: "carii-si-obturatii" }],
     },
     {
       key: "cancelled-student",
@@ -342,7 +340,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "consultatie", supervisor: "secondary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "rejected",
@@ -350,7 +348,7 @@ async function main() {
       startMinute: 14 * 60,
       endMinute: 18 * 60,
       location: "clinic",
-      treatments: [{ treatment: "carii-si-obturatii", supervisor: "primary" }],
+      treatments: [{ treatment: "carii-si-obturatii" }],
     },
     {
       key: "superseded",
@@ -358,7 +356,7 @@ async function main() {
       startMinute: 9 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
     },
     {
       key: "expired",
@@ -366,7 +364,7 @@ async function main() {
       startMinute: 13 * 60,
       endMinute: 17 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
   ];
   if (
@@ -758,62 +756,6 @@ async function main() {
         },
       });
 
-      const supervisors = new Map<
-        SupervisorKey,
-        { id: string; fullName: string; academicTitle: string | null }
-      >();
-      const supervisorSpecs = [
-        {
-          key: "primary" as const,
-          id: demoId("supervisor", "primary"),
-          fullName: "Andrei Popescu",
-          academicTitle: "Conf. dr.",
-          deletedAt: null,
-        },
-        {
-          key: "secondary" as const,
-          id: demoId("supervisor", "secondary"),
-          fullName: "Ioana Marinescu",
-          academicTitle: "Șef lucr. dr.",
-          deletedAt: null,
-        },
-      ];
-      for (const spec of supervisorSpecs) {
-        const supervisor = await transaction.studentSupervisor.upsert({
-          where: { id: spec.id },
-          update: {
-            studentProfileId: studentProfile.id,
-            fullName: spec.fullName,
-            academicTitle: spec.academicTitle,
-            deletedAt: spec.deletedAt,
-          },
-          create: {
-            id: spec.id,
-            studentProfileId: studentProfile.id,
-            fullName: spec.fullName,
-            academicTitle: spec.academicTitle,
-            deletedAt: spec.deletedAt,
-          },
-        });
-        supervisors.set(spec.key, supervisor);
-      }
-      await transaction.studentSupervisor.upsert({
-        where: { id: demoId("supervisor", "archived") },
-        update: {
-          studentProfileId: studentProfile.id,
-          fullName: "Radu Ionescu",
-          academicTitle: "Prof. dr.",
-          deletedAt: now,
-        },
-        create: {
-          id: demoId("supervisor", "archived"),
-          studentProfileId: studentProfile.id,
-          fullName: "Radu Ionescu",
-          academicTitle: "Prof. dr.",
-          deletedAt: now,
-        },
-      });
-
       const demoRouteSlugs = allDemoRouteSlugs;
       await transaction.appointmentNotification.deleteMany({
         where: { appointment: { routeSlug: { in: demoRouteSlugs } } },
@@ -856,7 +798,7 @@ async function main() {
       >();
       const offerings = new Map<
         string,
-        { id: string; supervisorName: string }
+        { id: string }
       >();
       for (const definition of selectedSlots) {
         const localDate = addLocalDays(today, definition.dayOffset);
@@ -910,8 +852,7 @@ async function main() {
           const studentTreatment = studentTreatments.get(
             offeringDefinition.treatment,
           );
-          const supervisor = supervisors.get(offeringDefinition.supervisor);
-          if (!studentTreatment || !supervisor) {
+          if (!studentTreatment) {
             throw new Error(`Lipsește o asociere pentru slotul ${definition.key}.`);
           }
           const offering = await transaction.studentAvailabilitySlotOffering.upsert({
@@ -925,7 +866,6 @@ async function main() {
               slotId: slot.id,
               studentProfileId: studentProfile.id,
               studentTreatmentId: studentTreatment.id,
-              supervisorId: supervisor.id,
               removedAt: null,
             },
             create: {
@@ -936,15 +876,11 @@ async function main() {
               slotId: slot.id,
               studentProfileId: studentProfile.id,
               studentTreatmentId: studentTreatment.id,
-              supervisorId: supervisor.id,
               removedAt: null,
             },
           });
           offerings.set(`${definition.key}:${offeringDefinition.treatment}`, {
             id: offering.id,
-            supervisorName: [supervisor.academicTitle, supervisor.fullName]
-              .filter(Boolean)
-              .join(" "),
           });
         }
       }
@@ -1031,7 +967,7 @@ async function main() {
           treatmentNameSnapshot: studentTreatment.treatment.name,
           locationNameSnapshot: slot.location.name,
           locationAddressSnapshot: slot.location.address,
-          supervisorNameSnapshot: offering.supervisorName,
+          studentUniversitySnapshot: studentProfile.university,
           status: definition.status,
           version: 1,
           statusReason: definition.statusReason ?? null,
@@ -1200,7 +1136,6 @@ async function main() {
         activeLocationCount: locations.size,
         activeTreatmentCount: treatmentSpecs.filter((item) => !item.deletedAt)
           .length,
-        activeSupervisorCount: supervisors.size,
         activeCalendarCount: selectedSlots.filter((item) => !item.isCancelled)
           .length,
         hiddenCancelledCalendarCount: selectedSlots.filter(
@@ -1224,7 +1159,7 @@ async function main() {
     `${result.appointmentCount} programări, ${result.activeCalendarCount} apariții vizibile și ${result.hiddenCancelledCalendarCount} apariție anulată ascunsă.`,
   );
   console.log(
-    `${result.activeTreatmentCount} tratamente, ${result.activeLocationCount} locații și ${result.activeSupervisorCount} supervizori activi, plus câte o resursă arhivată din fiecare tip.`,
+    `${result.activeTreatmentCount} tratamente, ${result.activeLocationCount} locații active, plus câte o resursă arhivată din fiecare tip.`,
   );
   console.log(
     `${result.unreadPatientNotifications} notificări necitite pentru pacient și ${result.unreadStudentNotifications} pentru student.`,

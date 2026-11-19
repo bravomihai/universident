@@ -15,7 +15,7 @@ async function studentProfileId(userId: string) {
 }
 
 export async function GET(request: Request) {
-  const authorization = await authorizeAccountRequest(request, { roles: [UserRole.STUDENT] });
+  const authorization = await authorizeAccountRequest(request, { requireCurrentPolicy: true, roles: [UserRole.STUDENT] });
   if (!authorization.ok) return authorization.response;
   const student = await studentProfileId(authorization.user.id);
   if (!student) return Response.json({ error: "Completează profilul profesional." }, { status: 404 });
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authorization = await authorizeAccountRequest(request, { verifyOrigin: true, roles: [UserRole.STUDENT] });
+  const authorization = await authorizeAccountRequest(request, { requireCurrentPolicy: true, verifyOrigin: true, roles: [UserRole.STUDENT] });
   if (!authorization.ok) return authorization.response;
   const student = await studentProfileId(authorization.user.id);
   if (!student) return Response.json({ error: "Completează profilul profesional." }, { status: 404 });

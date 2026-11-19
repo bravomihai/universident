@@ -14,7 +14,7 @@ const appointment: AppointmentCardSource = {
   scheduledStartsAt: "2026-09-08T10:00:00Z", scheduledEndsAt: "2026-09-08T11:00:00Z",
   patientNameSnapshot: "Maria Pacient", studentNameSnapshot: "Andrei Student", patientAgeAtAppointment: 27,
   treatmentNameSnapshot: "Consultație", locationNameSnapshot: "Clinica Universitară", locationAddressSnapshot: "Strada Clinicilor 12, Cluj-Napoca",
-  supervisorNameSnapshot: "Prof. Ana Supervizor", patientNote: "Mesaj privat de programare", statusReason: null,
+  studentUniversitySnapshot: "UMF Cluj-Napoca", patientNote: "Mesaj privat de programare", statusReason: null,
   patientProfile: {
     profileSlug: "pacient-privat", profileImage: { id: "patient-photo", updatedAt: new Date("2026-09-01T00:00:00Z") },
     user: { reviewsReceived: [{ rating: 5 }, { rating: 3 }] },
@@ -22,7 +22,7 @@ const appointment: AppointmentCardSource = {
   studentProfile: {
     publicSlug: "andrei-student", isPublished: true, university: "UMF Cluj-Napoca", studyYear: 4,
     profileImage: { id: "student-photo", updatedAt: new Date("2026-09-01T00:00:00Z") },
-    user: { role: "STUDENT", emailVerified: true, reviewsReceived: [{ rating: 5 }] },
+    user: { role: "STUDENT", emailVerified: true, signupPolicyVersion: null, signupPolicyConfirmedAt: null, _count: { policyConfirmations: 1 }, reviewsReceived: [{ rating: 5 }] },
   },
   reviews: [],
 };
@@ -52,6 +52,7 @@ test("the patient sees the student's snapshot name and public profile; the stude
 test("unavailable student profiles retain snapshot identity without a broken link or private image", () => {
   const cases = [
     { ...appointment.studentProfile, isPublished: false },
+    { ...appointment.studentProfile, user: { ...appointment.studentProfile.user, _count: { policyConfirmations: 0 } } },
     { ...appointment.studentProfile, publicSlug: null },
     { ...appointment.studentProfile, university: "" },
     { ...appointment.studentProfile, studyYear: 0 },
@@ -92,11 +93,11 @@ test("details have exactly one clickable profile and preserve the requested four
     assert.match(markup, /ui-card-interactive/);
     assert.match(markup, /sm:grid-cols-2/);
     assert.ok(markup.includes(`href="${counterpart.href}"`));
-    const positions = [counterpart.name, "Profesor supervizor", "Locație", "Mesajul pacientului"].map((label) => markup.indexOf(label));
+    const positions = [counterpart.name, "Supervizare", "Locație", "Mesajul pacientului"].map((label) => markup.indexOf(label));
     assert.ok(positions.every((position) => position >= 0));
     assert.deepEqual(positions, [...positions].sort((a, b) => a - b));
     assert.ok(markup.includes(appointment.locationAddressSnapshot));
-    assert.ok(markup.includes(appointment.supervisorNameSnapshot));
+    assert.ok(markup.includes("Tratament supervizat de un cadru didactic UMF Cluj-Napoca"));
     assert.ok(markup.includes(appointment.patientNote!));
   }
 });
@@ -130,7 +131,7 @@ test("summary cards keep only the detail link and cancel action, with the requir
     assert.match(markup, /href="\/cont\/programari\/programare-test"/);
     assert.ok(markup.indexOf("Vezi detaliile") < markup.indexOf("Anulează"));
     for (const visible of [counterpart.name, "Confirmată", "Nou", appointment.treatmentNameSnapshot, appointment.locationNameSnapshot, "13:00–14:00", "2026"]) assert.ok(markup.includes(visible));
-    for (const omitted of [appointment.patientNote!, appointment.supervisorNameSnapshot, "Vezi recenziile", "Trimite recenzia"]) assert.equal(markup.includes(omitted), false);
+    for (const omitted of [appointment.patientNote!, "Tratament supervizat de un cadru didactic UMF Cluj-Napoca", "Vezi recenziile", "Trimite recenzia"]) assert.equal(markup.includes(omitted), false);
   }
 });
 

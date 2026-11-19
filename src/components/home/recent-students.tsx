@@ -1,16 +1,11 @@
-import { GraduationCap, MapPin, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import Link from "@/components/navigation/app-link";
 import { headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
-import { ProfileAvatar } from "@/components/ui/profile-avatar";
-import { Card } from "@/components/ui/card";
-import { clickableCardClassName, clickableCardIndicatorClassName, clickableCardLinkClassName } from "@/components/ui/clickable-card-styles";
+import { PublicStudentProfileCard } from "@/components/public-students/public-student-profile-card";
 import { auth } from "@/lib/auth";
 import { UserRole } from "@/generated/prisma/enums";
 import { getRecentPublicStudents } from "@/lib/public-students/recent-public-students";
-import { publicStudentProfileHref } from "@/lib/public-students/public-student-profile-navigation";
-
-const refreshedDate = new Intl.DateTimeFormat("ro-RO", { day: "numeric", month: "short", timeZone: "Europe/Bucharest" });
 
 export async function RecentStudents() {
   const requestHeaders = await headers();
@@ -29,16 +24,10 @@ export async function RecentStudents() {
   return (
     <div className="home-profiles-grid">
       {profiles.map((profile) => (
-        <Link href={publicStudentProfileHref(profile.publicSlug)} key={profile.publicSlug} className={clickableCardLinkClassName}>
-          <Card className={`home-profile-card ${clickableCardClassName}`}>
-            <div className="home-profile-top"><ProfileAvatar name={profile.name} imageUrl={profile.imageUrl} className="size-16 text-xl" /><span className="home-study-year">Anul {profile.studyYear}</span></div>
-            <h3>{profile.name}</h3>
-            <p className="home-profile-meta"><GraduationCap aria-hidden="true" />{profile.university}</p>
-            <p className="home-profile-meta"><MapPin aria-hidden="true" />{profile.cities.join(" · ")}</p>
-            <div className="home-treatment-tags">{profile.treatments.slice(0, 2).map((treatment) => <span key={treatment}>{treatment}</span>)}</div>
-            <div className="home-profile-bottom"><span>Actualizat <time dateTime={profile.refreshedAt}>{refreshedDate.format(new Date(profile.refreshedAt))}</time></span><span className={`home-card-arrow ${clickableCardIndicatorClassName}`} aria-hidden="true">&gt;</span></div>
-          </Card>
-        </Link>
+        <PublicStudentProfileCard
+          key={profile.publicSlug}
+          student={{ ...profile, treatments: profile.treatments.slice(0, 2) }}
+        />
       ))}
     </div>
   );

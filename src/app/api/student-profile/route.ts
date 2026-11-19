@@ -14,6 +14,7 @@ type StudentProfileBody = {
     universitySlug?: unknown;
     studyYear?: unknown;
     bio?: unknown;
+    showCompletedAppointmentsCount?: unknown;
 };
 
 const allowedBodyFields = new Set([
@@ -21,6 +22,7 @@ const allowedBodyFields = new Set([
     "universitySlug",
     "studyYear",
     "bio",
+    "showCompletedAppointmentsCount",
 ]);
 
 export async function PUT(request: Request) {
@@ -81,6 +83,7 @@ export async function PUT(request: Request) {
         typeof body !== "object" ||
         body === null ||
         Array.isArray(body) ||
+        ("showCompletedAppointmentsCount" in body && typeof body.showCompletedAppointmentsCount !== "boolean") ||
         Object.keys(body).some(
             (field) => !allowedBodyFields.has(field),
         )
@@ -160,6 +163,10 @@ export async function PUT(request: Request) {
         },
     });
 
+    const visibility = typeof body.showCompletedAppointmentsCount === "boolean"
+        ? { showCompletedAppointmentsCount: body.showCompletedAppointmentsCount }
+        : {};
+
     async function saveProfile(publicSlug: string | null) {
         return prisma.$transaction(async (transaction) => {
             const savedProfile = await transaction.studentProfile.upsert({
@@ -171,6 +178,7 @@ export async function PUT(request: Request) {
                     university: universityShortName,
                     studyYear,
                     bio: bio || null,
+                    ...visibility,
                 },
                 create: {
                     userId: userId,
@@ -178,6 +186,7 @@ export async function PUT(request: Request) {
                     university: universityShortName,
                     studyYear,
                     bio: bio || null,
+                    ...visibility,
                 },
             });
 

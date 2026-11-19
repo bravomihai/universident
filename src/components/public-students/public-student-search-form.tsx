@@ -3,13 +3,15 @@ import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import type { PublicCatalogOption } from "@/lib/public-students/public-student-service";
 
 type PublicStudentSearchFormProps = {
   treatments: PublicCatalogOption[];
   cities: PublicCatalogOption[];
-  selectedTreatmentSlug: string;
-  selectedCitySlug: string;
+  selectedTreatmentSlug?: string;
+  selectedCitySlug?: string;
+  className?: string;
 };
 
 const selectClassName =
@@ -18,8 +20,9 @@ const selectClassName =
 export function PublicStudentSearchForm({
   treatments,
   cities,
-  selectedTreatmentSlug,
-  selectedCitySlug,
+  selectedTreatmentSlug = "",
+  selectedCitySlug = "",
+  className,
 }: PublicStudentSearchFormProps) {
   const hasSelection = selectedTreatmentSlug || selectedCitySlug;
 
@@ -27,7 +30,8 @@ export function PublicStudentSearchForm({
     <form
       action="/studenti"
       method="get"
-      className="public-search-form grid gap-4 rounded-2xl border bg-card p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end"
+      aria-label="Caută studenți"
+      className={cn("public-search-form grid gap-4 rounded-2xl border bg-card p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end", className)}
     >
       <div className="space-y-2">
         <Label htmlFor="student-search-treatment">Tratament</Label>

@@ -7,15 +7,12 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   ArchivedStudentLocationCard,
-  ArchivedStudentSupervisorCard,
   ArchivedStudentTreatmentCard,
   type ArchivedStudentLocationCardData,
-  type ArchivedStudentSupervisorCardData,
   type ArchivedStudentTreatmentCardData,
 } from "@/components/student/student-archived-resource-card";
 import {
   ArchivedLocationRestoreDialog,
-  ArchivedSupervisorRestoreDialog,
   ArchivedTreatmentRestoreDialog,
 } from "@/components/student/student-archived-resource-dialogs";
 import { useCardFeedback } from "@/components/student/use-card-feedback";
@@ -25,14 +22,12 @@ import { Card, CardContent } from "@/components/ui/card";
 type StudentArchivedResourcesManagerProps = {
   initialLocations: ArchivedStudentLocationCardData[];
   initialTreatments: ArchivedStudentTreatmentCardData[];
-  initialSupervisors: ArchivedStudentSupervisorCardData[];
   hasStudentProfile: boolean;
 };
 
 type RestoreCandidate =
   | { kind: "location"; resource: ArchivedStudentLocationCardData }
-  | { kind: "treatment"; resource: ArchivedStudentTreatmentCardData }
-  | { kind: "supervisor"; resource: ArchivedStudentSupervisorCardData };
+  | { kind: "treatment"; resource: ArchivedStudentTreatmentCardData };
 
 type PendingRestore = {
   kind: RestoreCandidate["kind"];
@@ -44,7 +39,6 @@ type RestoreApiResponse = {
   message?: string;
   restoredLocation?: { id: string };
   restoredTreatment?: { id: string };
-  restoredSupervisor?: { id: string };
 };
 
 function feedbackKey(kind: RestoreCandidate["kind"], resourceId: string) {
@@ -64,34 +58,27 @@ function restoreEndpoint(candidate: RestoreCandidate) {
   if (candidate.kind === "location") {
     return `/api/student-locations/${resourceId}/restore`;
   }
-  if (candidate.kind === "treatment") {
-    return `/api/student-treatments/${resourceId}/restore`;
-  }
-  return `/api/student-supervisors/${resourceId}/restore`;
+  return `/api/student-treatments/${resourceId}/restore`;
 }
 
 function genericRestoreError(kind: RestoreCandidate["kind"]) {
   if (kind === "location") return "Locația nu a putut fi restaurată.";
-  if (kind === "treatment") return "Tratamentul nu a putut fi restaurat.";
-  return "Profesorul supervizor nu a putut fi restaurat.";
+  return "Tratamentul nu a putut fi restaurat.";
 }
 
 function genericRestoreSuccess(kind: RestoreCandidate["kind"]) {
   if (kind === "location") return "Locația a fost restaurată.";
-  if (kind === "treatment") return "Tratamentul a fost restaurat.";
-  return "Profesorul supervizor a fost restaurat.";
+  return "Tratamentul a fost restaurat.";
 }
 
 export function StudentArchivedResourcesManager({
   initialLocations,
   initialTreatments,
-  initialSupervisors,
   hasStudentProfile,
 }: StudentArchivedResourcesManagerProps) {
   const router = useRouter();
   const [locations, setLocations] = useState(initialLocations);
   const [treatments, setTreatments] = useState(initialTreatments);
-  const [supervisors, setSupervisors] = useState(initialSupervisors);
   const [restoreCandidate, setRestoreCandidate] =
     useState<RestoreCandidate | null>(null);
   const [pendingRestore, setPendingRestore] =
@@ -140,9 +127,7 @@ export function StudentArchivedResourcesManager({
       const restoredId =
         candidate.kind === "location"
           ? result.restoredLocation?.id
-          : candidate.kind === "treatment"
-            ? result.restoredTreatment?.id
-            : result.restoredSupervisor?.id;
+          : result.restoredTreatment?.id;
 
       if (!response.ok || restoredId !== resourceId) {
         showFeedback(resourceFeedbackKey, {
@@ -156,12 +141,8 @@ export function StudentArchivedResourcesManager({
         setLocations((current) =>
           current.filter((resource) => resource.id !== resourceId),
         );
-      } else if (candidate.kind === "treatment") {
-        setTreatments((current) =>
-          current.filter((resource) => resource.id !== resourceId),
-        );
       } else {
-        setSupervisors((current) =>
+        setTreatments((current) =>
           current.filter((resource) => resource.id !== resourceId),
         );
       }
@@ -181,7 +162,7 @@ export function StudentArchivedResourcesManager({
   }
 
   const hasArchivedResources =
-    locations.length > 0 || treatments.length > 0 || supervisors.length > 0;
+    locations.length > 0 || treatments.length > 0;
 
   return (
     <>
@@ -197,7 +178,7 @@ export function StudentArchivedResourcesManager({
           </h1>
         </div>
         <p className="max-w-2xl text-muted-foreground">
-          Consultă tratamentele, locațiile și profesorii supervizori arhivați.
+          Consultă tratamentele și locațiile arhivate.
           Resursele pot fi restaurate folosind regulile fiecărei categorii.
         </p>
       </div>
@@ -233,7 +214,7 @@ export function StudentArchivedResourcesManager({
             </span>
             <h2 className="text-lg font-semibold">Nu ai resurse arhivate.</h2>
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-              Tratamentele, locațiile și supervizorii arhivați vor apărea aici.
+              Tratamentele și locațiile arhivate vor apărea aici.
             </p>
           </CardContent>
         </Card>
@@ -300,35 +281,6 @@ export function StudentArchivedResourcesManager({
           )}
         </section>
 
-        <section aria-labelledby="archived-supervisors-title" className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="archived-supervisors-title" className="text-xl font-semibold tracking-tight">
-              Supervizori
-            </h2>
-            <span className="text-sm text-muted-foreground">{supervisors.length}</span>
-          </div>
-          {supervisors.length > 0 ? (
-            <div className="space-y-4">
-              {supervisors.map((supervisor) => {
-                const key = feedbackKey("supervisor", supervisor.id);
-                return (
-                  <ArchivedStudentSupervisorCard
-                    key={supervisor.id}
-                    supervisor={supervisor}
-                    isPending={pendingRestore?.kind === "supervisor" && pendingRestore.resourceId === supervisor.id}
-                    isDisabled={pendingRestore !== null}
-                    feedback={feedbackById[key] ?? null}
-                    onRestore={(resource) => openRestoreDialog({ kind: "supervisor", resource })}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <p className="rounded-xl border border-dashed bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
-              Nu ai supervizori arhivați.
-            </p>
-          )}
-        </section>
       </div>
 
       <ArchivedLocationRestoreDialog
@@ -345,14 +297,6 @@ export function StudentArchivedResourcesManager({
         onCancel={() => setRestoreCandidate(null)}
         onConfirm={() => {
           if (restoreCandidate?.kind === "treatment") void restoreResource(restoreCandidate);
-        }}
-      />
-      <ArchivedSupervisorRestoreDialog
-        supervisorName={restoreCandidate?.kind === "supervisor" ? restoreCandidate.resource.fullName : null}
-        isPending={pendingRestore !== null}
-        onCancel={() => setRestoreCandidate(null)}
-        onConfirm={() => {
-          if (restoreCandidate?.kind === "supervisor") void restoreResource(restoreCandidate);
         }}
       />
     </>

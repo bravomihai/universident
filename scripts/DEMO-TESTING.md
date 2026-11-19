@@ -36,7 +36,7 @@ folosește studentul tău existent, nu aceste identități de catalog.
 - **280 de locații**, două pentru fiecare student; 20 de studenți au a doua
   locație într-un alt oraș. Numele și adresele clinicilor sunt explicit fictive.
 - **840 de intervale** de 3–5 ore, șase per student, la ore diferite în următoarele
-  1–55 de zile. Fiecare interval oferă tratamentele studentului cu supervizor și
+  1–55 de zile. Fiecare interval oferă tratamentele studentului și
   durate de 30–120 de minute, astfel încât calendarul să poată genera programări reale.
 - Profiluri publicate și verificate, ani de studiu 1–6, universități din catalog,
   descrieri de lungimi diferite sau absente și actualizări cu 5–995 de
@@ -57,6 +57,16 @@ ofertele manuale pe intervale demo și suprapunerile cu intervale manuale. Folos
 Scrierile sunt atomice într-o tranzacție, iar `--dry-run` rămâne complet read-only.
 
 ## Verificare și populare
+
+`make demo_data` rulează scenariul complet și scrie în baza locală pentru
+conturile existente și verificate `pacient@dev.com` și `student@dev.com`.
+Pentru a folosi alte opțiuni, transmite-le în `ARGS`. Ele înlocuiesc argumentele
+implicite ale țintei.
+
+```bash
+make demo_data
+make demo_data ARGS='--patient-email=pacient@dev.com --student-email=student@dev.com --scenario=booking --dry-run'
+```
 
 Modul complet adaugă și cele 140 de profiluri, pe lângă scenariile existente.
 Din rădăcina proiectului:
@@ -80,7 +90,7 @@ scriptul refuză să transfere istoricul demo către alt pacient sau student.
 
 `--dry-run` verifică ținta, conturile, cataloagele și conflictele fără scrieri.
 Popularea completează profilurile, publică studentul și configurează tratamente,
-locații și supervizori demonstrativi. Resursele care corespund cheilor din script
+locații demonstrative. Resursele care corespund cheilor din script
 sunt readuse la valorile demo; folosește această comandă doar în baza de test.
 Datele relative la ziua curentă se regenerează la fiecare rulare.
 
@@ -126,7 +136,7 @@ expirate și nu mai blochează fluxul. Datele din afara setului demo pot avea pr
 2. Ca student: `/cont`, ordinea cardurilor, publicare/retragere, actualizare manuală
    și cooldown. Studentul propriu nu apare în rezultatele căutării din sesiunea sa.
 3. Profiluri: nume, descriere, fotografii opționale și afișarea lor în cont/public.
-4. Resurse: creare, editare, arhivare/restaurare pentru tratamente, locații și supervizori.
+4. Resurse: creare, editare, arhivare/restaurare pentru tratamente și locații.
 5. Calendar: interval nou, oferte, serie recurentă cu sfârșit explicit, mutare,
    excepție, anulare și selector zi/săptămână pe mobil.
 6. Programări: cerere în așteptare, confirmare, cereri suprapuse, retragere,

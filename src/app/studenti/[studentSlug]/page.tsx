@@ -10,7 +10,6 @@ import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputa
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BackLink } from "@/components/ui/back-link";
 import { formatStudentCancellationReputation } from "@/lib/appointments/student-reputation-label";
-import { publicStudentLocationKey } from "@/lib/public-students/public-student-location-key";
 import { getPublicStudentProfile } from "@/lib/public-students/public-student-service";
 import { getSeoStudentProfile } from "@/lib/seo/public-data";
 import { studentProfileMetadata } from "@/lib/seo/metadata";
@@ -97,7 +96,7 @@ export default async function PublicStudentProfilePage({
                 {studentStudyDescription(profile.university, profile.studyYear)}
               </span>
             </p>
-            <RatingStars {...profile.reviewData.summary} />
+            <RatingStars {...profile.reviewData.summary} completedAppointmentsCount={profile.completedAppointmentsCount} />
           </div>
         </header>
 
@@ -121,14 +120,9 @@ export default async function PublicStudentProfilePage({
         <ProfileReviewList data={profile.reviewData} title="Recenziile studentului" />
 
         <section id="tratamente" aria-labelledby="public-profile-treatments" className="scroll-mt-24 space-y-5">
-          <div>
-            <h2 id="public-profile-treatments" className="text-2xl font-semibold tracking-tight">
-              Tratamente și locații
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Alege o locație pentru a vedea orele disponibile pentru tratament.
-            </p>
-          </div>
+          <h2 id="public-profile-treatments" className="text-2xl font-semibold tracking-tight">
+            Tratamente și locații
+          </h2>
 
           <div className="grid gap-5 lg:grid-cols-2">
             {orderedTreatments.map((treatment) => {
@@ -162,12 +156,13 @@ export default async function PublicStudentProfilePage({
 
                     <ul className="space-y-3">
                       {treatment.locations.map((location) => (
-                        <li key={publicStudentLocationKey(location)}>
+                        <li key={location.routeKey}>
                           <PublicStudentLocationCard
                             studentSlug={profile.publicSlug}
                             treatmentSlug={treatment.slug}
                             treatmentName={treatment.name}
                             location={location}
+                            university={profile.university}
                           />
                         </li>
                       ))}

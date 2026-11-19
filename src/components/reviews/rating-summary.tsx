@@ -1,6 +1,7 @@
 import Link from "@/components/navigation/app-link";
 
 import { Button } from "@/components/ui/button";
+import { completedAppointmentCountLabel } from "@/lib/public-students/public-student-directory-order";
 import { cn } from "@/lib/utils";
 
 export type RatingSummaryValue = {
@@ -11,8 +12,9 @@ export type RatingSummaryValue = {
 export function RatingStars({
   averageRating,
   reviewCount,
+  completedAppointmentsCount = null,
   className,
-}: RatingSummaryValue & { className?: string }) {
+}: RatingSummaryValue & { completedAppointmentsCount?: number | null; className?: string }) {
   const roundedRating = Math.round(averageRating ?? 0);
   const reviewLabel = reviewCount === 1 ? "1 recenzie" : `${reviewCount} recenzii`;
   return (
@@ -25,6 +27,9 @@ export function RatingStars({
       </span>
       <span className="text-sm font-medium">
         {reviewCount ? `${averageRating?.toFixed(1)} · ${reviewLabel}` : "0 recenzii"}
+        {completedAppointmentsCount !== null ? (
+          <span className="whitespace-nowrap">{" · "}{completedAppointmentCountLabel(completedAppointmentsCount)}</span>
+        ) : null}
       </span>
     </span>
   );

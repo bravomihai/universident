@@ -21,6 +21,8 @@ import {
 import { ageOnDate } from "@/lib/availability/bucharest-time";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
 import { parsePatientProfileInput } from "@/lib/patient/patient-profile-input";
+import { policyConfirmations } from "@/lib/account/policy-confirmations";
+import { publiclyEligibleStudentProfileWhere } from "@/lib/student-publication/student-publication-readiness";
 import { prisma } from "@/lib/prisma";
 import { withChatSlugRetry } from "@/lib/chat/slug";
 import {
@@ -124,6 +126,11 @@ function privateAppointmentInclude(userId: string) {
             ...appointmentInclude.studentProfile.select.user.select,
             role: true,
             emailVerified: true,
+            signupPolicyVersion: true,
+            signupPolicyConfirmedAt: true,
+            _count: { select: { policyConfirmations: { where: {
+              policy: "studentDeclaration", version: policyConfirmations.studentDeclaration.version,
+            } } } },
           },
         },
       },
@@ -433,7 +440,7 @@ export async function createAppointmentRequest(
             status: "ACTIVE",
             startsAt: { lte: input.startsAt },
             endsAt: { gt: input.startsAt },
-            studentProfile: { publicSlug: studentSlug, isPublished: true },
+            studentProfile: { ...publiclyEligibleStudentProfileWhere(), publicSlug: studentSlug },
             studentLocation: { deletedAt: null, city: { isActive: true } },
             OR: [
               { seriesId: null },
@@ -447,7 +454,6 @@ export async function createAppointmentRequest(
               where: { removedAt: null },
               include: {
                 studentTreatment: { include: { treatment: true } },
-                supervisor: true,
               },
             },
             appointments: {
@@ -466,8 +472,7 @@ export async function createAppointmentRequest(
         if (
           !offering ||
           offering.studentTreatment.deletedAt ||
-          !offering.studentTreatment.treatment.isActive ||
-          offering.supervisor.deletedAt
+          !offering.studentTreatment.treatment.isActive
         ) {
           throw new AppointmentDomainError("SLOT_UNAVAILABLE", "Tratamentul nu mai este disponibil în acest interval.");
         }
@@ -478,7 +483,7 @@ export async function createAppointmentRequest(
           endsAt: slot.endsAt,
           treatmentDurationMinutes: offering.studentTreatment.durationMinutes,
           offeredDurationsMinutes: slot.offerings
-            .filter((item) => !item.studentTreatment.deletedAt && !item.supervisor.deletedAt)
+            .filter((item) => !item.studentTreatment.deletedAt)
             .map((item) => item.studentTreatment.durationMinutes),
           occupied: slot.appointments.map((appointment) => ({
             startsAt: appointment.scheduledStartsAt,
@@ -536,10 +541,7 @@ export async function createAppointmentRequest(
             treatmentNameSnapshot: offering.studentTreatment.treatment.name,
             locationNameSnapshot: slot.studentLocation.name,
             locationAddressSnapshot: slot.studentLocation.address,
-            supervisorNameSnapshot: [
-              offering.supervisor.academicTitle,
-              offering.supervisor.fullName,
-            ].filter(Boolean).join(" "),
+            studentUniversitySnapshot: slot.studentProfile.university,
             statusChangedByUserId: patientUser.id,
             pendingExpiresAt: new Date(Math.min(
               now.getTime() + PENDING_REQUEST_LIFETIME_MS,

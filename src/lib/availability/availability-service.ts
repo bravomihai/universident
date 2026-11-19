@@ -33,7 +33,6 @@ import {
   locationResourceLockKey,
   lockSchedulingKeys,
   studentCalendarLockKey,
-  supervisorResourceLockKey,
   treatmentResourceLockKey,
 } from "@/lib/scheduling/locks";
 import { runSerializableTransaction } from "@/lib/scheduling/transaction";
@@ -65,7 +64,6 @@ function slotInclude(now: Date) {
       where: { removedAt: null },
       include: {
         studentTreatment: { include: { treatment: true } },
-        supervisor: true,
       },
       orderBy: { studentTreatment: { treatment: { name: "asc" as const } } },
     },
@@ -95,13 +93,12 @@ function slotInclude(now: Date) {
   } satisfies Prisma.StudentAvailabilitySlotInclude;
 }
 
-type OfferingInput = { studentTreatmentId: string; supervisorId: string };
+type OfferingInput = { studentTreatmentId: string };
 
 function configurationLockKeys(studentLocationId: string, offerings: OfferingInput[]) {
   return [
     locationResourceLockKey(studentLocationId),
     ...offerings.map((item) => treatmentResourceLockKey(item.studentTreatmentId)),
-    ...offerings.map((item) => supervisorResourceLockKey(item.supervisorId)),
   ];
 }
 
@@ -125,22 +122,10 @@ async function validateConfiguration(
     },
     select: { id: true, durationMinutes: true, treatment: { select: { name: true } } },
   });
-  const supervisors = await transaction.studentSupervisor.findMany({
-    where: {
-      id: { in: offerings.map((item) => item.supervisorId) },
-      studentProfileId,
-      deletedAt: null,
-    },
-    select: { id: true },
-  });
-  if (
-    !location ||
-    treatments.length !== offerings.length ||
-    supervisors.length !== new Set(offerings.map((item) => item.supervisorId)).size
-  ) {
+  if (!location || treatments.length !== offerings.length) {
     throw new AvailabilityDomainError(
       "RESOURCE_NOT_FOUND",
-      "Locația, tratamentele sau supervizorii selectați nu mai sunt disponibili.",
+      "Locația sau tratamentele selectate nu mai sunt disponibile.",
     );
   }
   const treatmentThatDoesNotFit = treatments.find(
@@ -235,7 +220,7 @@ async function resolveActiveAppointments(
 }
 
 export async function getStudentAvailabilityCatalog(studentProfileId: string) {
-  const [locations, treatments, supervisors] = await Promise.all([
+  const [locations, treatments] = await Promise.all([
     prisma.studentLocation.findMany({
       where: { studentProfileId, deletedAt: null, city: { isActive: true } },
       orderBy: [{ city: { name: "asc" } }, { name: "asc" }],
@@ -250,13 +235,8 @@ export async function getStudentAvailabilityCatalog(studentProfileId: string) {
         treatment: { select: { name: true, slug: true } },
       },
     }),
-    prisma.studentSupervisor.findMany({
-      where: { studentProfileId, deletedAt: null },
-      orderBy: { fullName: "asc" },
-      select: { id: true, fullName: true, academicTitle: true },
-    }),
   ]);
-  return { locations, treatments, supervisors };
+  return { locations, treatments };
 }
 
 export async function listStudentAvailability(

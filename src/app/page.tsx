@@ -1,13 +1,14 @@
-import Link from "@/components/navigation/app-link";
 import { Suspense } from "react";
 import { headers } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { CalendarDays, ClipboardCheck, GraduationCap, Search, ShieldCheck, UserRound } from "lucide-react";
 import { ToothHero } from "@/components/home/tooth-hero";
 import { HowItWorksCard } from "@/components/home/how-it-works-card";
 import { StudentJoinLink } from "@/components/home/student-join-link";
 import { RecentStudents, RecentStudentsLoading } from "@/components/home/recent-students";
-import { Button } from "@/components/ui/button";
+import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
+import { getPublicStudentCatalog } from "@/lib/public-students/public-student-service";
 import { NavigationLink } from "@/components/ui/navigation-link";
 import { homeMetadata } from "@/lib/seo/metadata";
 import { PublicQuestions } from "@/components/home/public-questions";
@@ -16,6 +17,17 @@ import { homeStructuredData } from "@/lib/seo/structured-data";
 import "@/components/home/home.css";
 
 export const generateMetadata = homeMetadata;
+
+async function HomeStudentSearch() {
+  let catalog;
+  try {
+    catalog = await getPublicStudentCatalog();
+  } catch (error) {
+    unstable_rethrow(error);
+    return <p className="mt-5 text-sm text-muted-foreground">Căutarea este momentan indisponibilă.</p>;
+  }
+  return <PublicStudentSearchForm treatments={catalog.treatments} cities={catalog.cities} className="mt-5" />;
+}
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -26,7 +38,7 @@ export default async function Home() {
         <div className="home-hero-inner">
           <h1 id="home-title">
             Practică pentru studenți.
-            <span>Îngrijire gratuită pentru pacienți.</span>
+            <span>Îngrijire pentru pacienți.</span>
           </h1>
           <ToothHero />
           <div className="home-hero-details">
@@ -34,15 +46,9 @@ export default async function Home() {
               <ShieldCheck aria-hidden="true" />
               <span>Tratamente realizate sub supervizare.</span>
             </p>
-            <p className="home-hero-description">
-              Găsește un student la medicină dentară în orașul tău, alege tratamentul de care ai nevoie și fă-ți o programare.
-            </p>
-            <div className="home-hero-actions">
-              <Button asChild size="lg" className="home-primary-action">
-                <Link href="/studenti">Găsește un student <span aria-hidden="true">&gt;</span></Link>
-              </Button>
-              <NavigationLink className="home-how-action" href="#cum-functioneaza">Cum funcționează</NavigationLink>
-            </div>
+            <Suspense fallback={<p role="status" className="mt-5 text-sm text-muted-foreground">Se încarcă filtrele…</p>}>
+              <HomeStudentSearch />
+            </Suspense>
           </div>
         </div>
       </section>
@@ -76,7 +82,7 @@ export default async function Home() {
                 <span className="home-booking-step-icon"><UserRound aria-hidden="true" /></span>
                 <h4>Descoperă profilurile</h4>
                 <p>
-                  Cunoaște studentul, consultă recenziile și vezi cine supervizează tratamentul.
+                  Cunoaște studentul și consultă recenziile de pe profil.
                 </p>
               </li>
               <li>
@@ -99,12 +105,12 @@ export default async function Home() {
               <li>
                 <span className="home-booking-step-icon"><ClipboardCheck aria-hidden="true" /></span>
                 <h4>Adaugă resursele</h4>
-                <p>Configurează tratamentele pe care le oferi, supraveghetorii și locațiile în care lucrezi.</p>
+                <p>Configurează tratamentele pe care le oferi și locațiile în care lucrezi.</p>
               </li>
               <li>
                 <span className="home-booking-step-icon"><CalendarDays aria-hidden="true" /></span>
                 <h4>Setează disponibilitatea</h4>
-                <p>Adaugă intervale în calendar și alege locația, tratamentele și supraveghetorul pentru fiecare tratament.</p>
+                <p>Adaugă intervale în calendar și alege locația și tratamentele pentru fiecare interval.</p>
               </li>
               <li>
                 <span className="home-booking-step-icon"><GraduationCap aria-hidden="true" /></span>

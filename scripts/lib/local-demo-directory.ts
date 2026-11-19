@@ -1,3 +1,4 @@
+import { policyConfirmations } from "../../src/lib/account/policy-confirmations";
 import type { Prisma } from "../../src/generated/prisma/client";
 import { addLocalDays, localDateForInstant, utcInstantForBucharestLocal } from "../../src/lib/availability/bucharest-time";
 
@@ -42,7 +43,6 @@ export type DemoDirectoryPlan = {
   users: Prisma.UserCreateManyInput[];
   profiles: Prisma.StudentProfileCreateManyInput[];
   locations: Prisma.StudentLocationCreateManyInput[];
-  supervisors: Prisma.StudentSupervisorCreateManyInput[];
   treatments: Prisma.StudentTreatmentCreateManyInput[];
   slots: Prisma.StudentAvailabilitySlotCreateManyInput[];
   offerings: Prisma.StudentAvailabilitySlotOfferingCreateManyInput[];
@@ -94,7 +94,7 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
   const lastNames = ["Popescu", "Ionescu", "Dumitrescu", "Stan", "Marin", "Rusu", "Dobre", "Munteanu", "Toma", "Petrescu", "Lazăr", "Neagu", "Voicu", "Matei"];
   const today = localDateForInstant(now);
   const plan: DemoDirectoryPlan = {
-    users: [], profiles: [], locations: [], supervisors: [], treatments: [], slots: [], offerings: [], coverage: [],
+    users: [], profiles: [], locations: [], treatments: [], slots: [], offerings: [], coverage: [],
   };
   const coverage = new Map<string, { city: string; treatment: string; students: Set<string> }>();
 
@@ -104,7 +104,7 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
     const universities = catalog.universities.filter((university) => university.city === city.name)
       .sort((left, right) => left.shortName.localeCompare(right.shortName));
     const name = `${firstNames[index % firstNames.length]} ${lastNames[Math.floor(index / firstNames.length)]} (Demo)`;
-    plan.users.push({ id: identity.id, name, email: identity.email, emailVerified: true, role: "STUDENT" });
+    plan.users.push({ id: identity.id, name, email: identity.email, emailVerified: true, role: "STUDENT", signupPolicyVersion: policyConfirmations.studentDeclaration.version, signupPolicyConfirmedAt: now });
     plan.profiles.push({
       id: identity.profileId, userId: identity.id, publicSlug: identity.publicSlug,
       university: universities[index % universities.length].shortName, studyYear: index % 6 + 1,
@@ -114,12 +114,6 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
       isPublished: true, publishedAt: now,
       // Keep the original 100 students' refresh distribution unchanged when adding a cohort.
       lastRefreshedAt: new Date(now.getTime() - (5 + (index * 37 % BASE_DIRECTORY_COUNT) * 10) * 60_000),
-    });
-    const supervisorId = `${identity.prefix}-supervisor`;
-    plan.supervisors.push({
-      id: supervisorId, studentProfileId: identity.profileId,
-      fullName: index % 2 === 0 ? "Alexandra Pavel (Demo)" : "Dan Georgescu (Demo)",
-      academicTitle: index % 2 === 0 ? "Conf. dr." : "Șef lucr. dr.", deletedAt: null,
     });
     const secondCity = !isClujGingival && index % 5 === 0
       ? cities[(cities.findIndex((candidate) => candidate.id === city.id) + 1) % cities.length]
@@ -167,7 +161,7 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
       for (const offering of offerings) {
         plan.offerings.push({
           id: `${slotId}-${offering.treatmentId}`, slotId, studentProfileId: identity.profileId,
-          studentTreatmentId: offering.id, supervisorId, removedAt: null,
+          studentTreatmentId: offering.id, removedAt: null,
         });
       }
     }

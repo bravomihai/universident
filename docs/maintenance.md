@@ -10,7 +10,7 @@ Verificarea comutatorului este la nivel de `server`, înainte de alegerea rutelo
 
 Aceste fișiere nu activează automat mentenanța. Verifică mai întâi configurația reală cu `sudo nginx -T`, numai într-un terminal de încredere: rezultatul poate conține configurație privată. Identifică toate blocurile HTTPS care servesc aplicația și include-urile lor. Păstrează certificatele, regulile pentru reînnoirea lor, redirecționările HTTP și antetele existente. Dacă există deja un handler `error_page 503` sau o locație cu același nume, integrează explicit configurațiile înainte de a continua.
 
-Folosește checkout-ul de producție și proiectul Compose existente, cu aceleași opțiuni de mediu și același nume de proiect. Dacă VPS-ul încă folosește vechiul nume `compose.production.yaml`, adaptează numele în comenzile de mai jos; nu crea un al doilea proiect Compose.
+Folosește checkout-ul de producție și proiectul Compose existente, cu aceleași opțiuni de mediu și același nume de proiect. Comenzile de mai jos folosesc profilul `prod` din `compose.yaml`. Pentru un checkout mai vechi, înlocuiește `--profile prod` cu `-f` urmat de numele fișierului Compose de producție existent.
 
 Setează variabila **de repository** GitHub `VPS_DEPLOY_ENABLED=false` și confirmă că nu există un deploy în curs. Această variabilă nu oprește un deploy deja început și nici comenzile manuale de deploy. Dacă există CDN/proxy cu cache în fața Nginx, dezactivează cache-ul pentru perioada suspendării și invalidează răspunsurile vechi, apoi verifică domeniul public.
 
@@ -59,9 +59,9 @@ Toate trebuie să returneze `503`, `Retry-After: 3600` și `Cache-Control: no-st
 După confirmarea răspunsurilor, din directorul proiectului Compose existent oprește mai întâi workerul de email, apoi aplicația:
 
 ```bash
-docker compose -f compose-production.yaml stop chat-email-worker
-docker compose -f compose-production.yaml stop app
-docker compose -f compose-production.yaml ps -a
+docker compose --profile prod stop chat-email-worker
+docker compose --profile prod stop app
+docker compose --profile prod ps -a
 ```
 
 Nginx rămâne pornit și afișează pagina chiar dacă aplicația este oprită. Serviciul `db` și volumul PostgreSQL rămân în loc. Nu folosi `down -v`, resetări sau ștergeri de volume pentru suspendare. Programările existente nu sunt anulate de această operațiune; mesajele email deja trimise nu pot fi retrase.
@@ -73,8 +73,8 @@ Dacă aplicația rămâne pornită pentru verificări locale pe VPS, comutatorul
 Pentru repornirea **aceleiași versiuni**, pornește aplicația și așteaptă starea sănătoasă, apoi pornește workerul:
 
 ```bash
-docker compose -f compose-production.yaml start --wait --wait-timeout 180 app
-docker compose -f compose-production.yaml start --wait --wait-timeout 180 chat-email-worker
+docker compose --profile prod start --wait --wait-timeout 180 app
+docker compose --profile prod start --wait --wait-timeout 180 chat-email-worker
 curl --fail --silent --show-error http://127.0.0.1:3000/api/health
 ```
 

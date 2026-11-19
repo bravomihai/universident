@@ -1,9 +1,11 @@
-import { SearchX, UsersRound } from "lucide-react";
+import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "@/components/navigation/app-link";
 
+import { PublicStudentProfileCard } from "@/components/public-students/public-student-profile-card";
+import { PublicStudentDirectorySort } from "@/components/public-students/public-student-directory-sort";
 import { PublicStudentResultCard } from "@/components/public-students/public-student-result-card";
 import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
 import { PublicStudentPagination } from "@/components/public-students/public-student-pagination";
@@ -11,6 +13,8 @@ import { PublicSearchLinks } from "@/components/public-students/public-search-li
 import { Card, CardContent } from "@/components/ui/card";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
+import { listPublicStudentDirectory } from "@/lib/public-students/public-student-directory";
+import { parseStudentDirectorySort, publicStudentCountLabel, publicStudentDirectoryHref } from "@/lib/public-students/public-student-directory-order";
 import { publicStudentSearchHref } from "@/lib/public-students/public-student-search-pagination";
 import {
   getPublicStudentCatalog,
@@ -21,7 +25,6 @@ import { parseStudentsQuery, studentSearchMetadata } from "@/lib/seo/student-sea
 import { getSeoSearchCombinations } from "@/lib/seo/public-data";
 import { StructuredData } from "@/components/seo/structured-data";
 import { studentSearchStructuredData } from "@/lib/seo/structured-data";
-import { studentSearchIntroduction } from "@/lib/seo/public-answers";
 
 type StudentsPageSearchParams = Promise<
   Record<string, string | string[] | undefined>
@@ -71,19 +74,25 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     Array.isArray(params.tratament) ||
     Array.isArray(params.oras);
   const hasCompleteSelection = Boolean(treatment && city);
+  const sort = parseStudentDirectorySort(params.sortare);
+  const excludedUserId = session?.user.role === UserRole.STUDENT ? session.user.id : undefined;
+  const directory = !hasRequestedFilters && !hasInvalidFilter
+    ? await listPublicStudentDirectory({ page, sort, excludedUserId })
+    : null;
 
   const search =
-    treatment && city
+    treatment && city && !hasInvalidFilter
       ? await searchPublicStudents({
           treatmentSlug: treatment.slug,
           citySlug: city.slug,
           page,
-          excludedUserId:
-            session?.user.role === UserRole.STUDENT
-              ? session.user.id
-              : undefined,
+          excludedUserId,
         })
       : null;
+
+  if (directory && page > directory.totalPages) {
+    redirect(publicStudentDirectoryHref(directory.totalPages, sort));
+  }
 
   if (search && page > search.totalPages) {
     redirect(publicStudentSearchHref(treatment!.slug, city!.slug, search.totalPages));
@@ -94,15 +103,11 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       <StructuredData data={session ? null : studentSearchStructuredData({
         params, treatment, city, results: search?.results ?? [], pageSize: PUBLIC_STUDENTS_PAGE_SIZE,
       })} />
-      <div className="w-full max-w-6xl space-y-8">
-        <header className="app-page-heading max-w-3xl space-y-3">
-          <p className="app-eyebrow">ÎNGRIJIRE, APROAPE DE TINE</p>
+      <div className="w-full max-w-6xl space-y-6 sm:space-y-8">
+        <header>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            {treatment && city ? `${treatment.name} în ${city.name}` : "Găsește tratamentul potrivit în orașul tău"}
+            {treatment && city ? `${treatment.name} în ${city.name}` : "Studenți înscriși"}
           </h1>
-          <p className="text-muted-foreground">
-            {studentSearchIntroduction(treatment, city, Boolean(search?.totalResults))}
-          </p>
         </header>
 
         <PublicStudentSearchForm
@@ -112,25 +117,34 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           selectedCitySlug={city?.slug ?? ""}
         />
 
-        {!hasRequestedFilters && !hasInvalidFilter ? <PublicSearchLinks /> : null}
+        {directory ? (
+          <section aria-label="Studenți înscriși" className="space-y-5">
+            {directory.results.length > 0 ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {publicStudentCountLabel(directory.totalResults)}
+                  </p>
+                  <PublicStudentDirectorySort sort={sort} />
+                </div>
+                <ul className="grid gap-3 min-[360px]:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+                  {directory.results.map((student) => (
+                    <li key={student.publicSlug}><PublicStudentProfileCard student={student} directory /></li>
+                  ))}
+                </ul>
+                <PublicStudentPagination page={page} totalPages={directory.totalPages} sort={sort} />
+              </>
+            ) : (
+              <Card className="border-dashed bg-muted/15">
+                <CardContent className="py-6 text-center text-muted-foreground">Momentan nu există profiluri publicate.</CardContent>
+              </Card>
+            )}
+          </section>
+        ) : null}
 
         <section aria-live="polite" aria-atomic="false">
-          {!hasCompleteSelection && !hasInvalidFilter ? (
-            <Card className="border-dashed bg-muted/15">
-              <CardContent className="flex flex-col items-center py-12 text-center">
-                <span className="mb-4 inline-flex size-12 items-center justify-center rounded-full border bg-background">
-                  <UsersRound className="size-5" aria-hidden="true" />
-                </span>
-                <h2 className="text-lg font-semibold">
-                  {hasRequestedFilters
-                    ? "Completează ambele filtre"
-                    : "Alege tratamentul și orașul"}
-                </h2>
-                <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                  Căutarea pornește după ce selectezi un tratament și un oraș.
-                </p>
-              </CardContent>
-            </Card>
+          {hasRequestedFilters && !hasCompleteSelection && !hasInvalidFilter ? (
+            <p className="text-sm text-muted-foreground">Completează ambele filtre.</p>
           ) : null}
 
           {hasInvalidFilter ? (
@@ -148,23 +162,18 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
           {search && treatment && city ? (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-2xl font-semibold tracking-tight">
-                    {treatment.name} în {city.name}
+              {search.totalResults > 0 ? (
+                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                  <h2 className="text-lg font-semibold">
+                    {publicStudentCountLabel(search.totalResults, true)}
                   </h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {search.totalResults === 1
-                      ? "1 student găsit"
-                      : `${search.totalResults} studenți găsiți`}
-                  </p>
+                  {search.totalPages > 1 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Pagina {search.page} din {search.totalPages}
+                    </p>
+                  ) : null}
                 </div>
-                {search.totalPages > 1 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Pagina {search.page} din {search.totalPages}
-                  </p>
-                ) : null}
-              </div>
+              ) : null}
 
               {search.results.length > 0 ? (
                 <div className="grid gap-5 lg:grid-cols-2">
@@ -205,6 +214,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             </div>
           ) : null}
         </section>
+        {directory && page === 1 && sort === "recent" ? <PublicSearchLinks /> : null}
       </div>
     </main>
   );
