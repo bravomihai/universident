@@ -43,6 +43,7 @@ const blocks = profiles.filter((profile) => profile.id !== "profile-14").map((pr
 const reviewRows = [
   { profile: profiles[1], rating: 4, publishedAt: now },
   { profile: profiles[2], rating: 5, publishedAt: now },
+  { profile: profiles[2], rating: 4, publishedAt: now },
   { profile: profiles[3], rating: 5, publishedAt: null },
 ].map(({ profile, rating, publishedAt }, index) => ({
   id: "review-fixture-" + index,

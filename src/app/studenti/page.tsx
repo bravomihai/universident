@@ -25,6 +25,9 @@ import { parseStudentsQuery, studentSearchMetadata } from "@/lib/seo/student-sea
 import { getSeoSearchCombinations } from "@/lib/seo/public-data";
 import { StructuredData } from "@/components/seo/structured-data";
 import { studentSearchStructuredData } from "@/lib/seo/structured-data";
+import { cn } from "@/lib/utils";
+
+import studentCardLayout from "@/components/public-students/public-student-card-layout.module.css";
 
 type StudentsPageSearchParams = Promise<
   Record<string, string | string[] | undefined>
@@ -175,12 +178,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               {search.results.length > 0 ? (
                 <div className="grid gap-5 lg:grid-cols-2">
                   {search.results.map((student) => (
-                    <div key={student.publicSlug} className="flex flex-col gap-2">
+                    <div key={student.publicSlug} className={cn("flex flex-col gap-2", studentCardLayout.searchItem)}>
                       <PublicStudentResultCard student={student} treatmentSlug={treatment.slug} />
                       <Link
                         href={`/studenti/${encodeURIComponent(student.publicSlug)}`}
                         prefetch={false}
-                        className="card-adjacent text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                        className={cn("card-adjacent text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4", studentCardLayout.searchProfileLink)}
                       >
                         Vezi profilul: {student.name} <span aria-hidden="true">&gt;</span>
                       </Link>

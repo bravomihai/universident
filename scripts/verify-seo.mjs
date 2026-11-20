@@ -187,7 +187,9 @@ await withServer('production', async (get) => {
     const hidden = cards.find((match) => match[1] === "0");
     assert.ok(visible?.[2]);
     assert.ok(hidden?.[2]);
-    assert.match(visible[2].replace(/<[^>]*>/g, ""), /5\.0 ·(?:&nbsp;|\s)24 de programări finalizate/);
+    assert.match(visible[2], /aria-label="4\.5 din 5 stele"/);
+    assert.equal((visible[2].match(/clip-path:inset/g) ?? []).length, 1);
+    assert.match(visible[2], /<\/span><\/div><p\b[^>]*>24 de programări finalizate<\/p>/);
     assert.doesNotMatch(visible[2], /\d+ recenzi[ei]/);
     assert.match(hidden[2], /aria-label="Fără recenzii"/);
     assert.doesNotMatch(hidden[2], /\d+ recenzi[ei]|programări finalizate/);

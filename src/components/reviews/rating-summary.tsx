@@ -1,3 +1,5 @@
+import { Star } from "lucide-react";
+
 import Link from "@/components/navigation/app-link";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +22,7 @@ export function RatingStars({
   showReviewCount?: boolean;
   className?: string;
 }) {
-  const roundedRating = Math.round(averageRating ?? 0);
+  const halfStars = Math.round((averageRating ?? 0) * 2);
   const averageLabel = reviewCount > 0 ? averageRating?.toFixed(1) : undefined;
   const reviewLabel = reviewCount === 1 ? "1 recenzie" : `${reviewCount} recenzii`;
   const ratingLabel = showReviewCount
@@ -29,10 +31,21 @@ export function RatingStars({
   return (
     <span className={cn("inline-flex flex-wrap items-center gap-2", className)}>
       <span
-        className="text-lg tracking-wider text-orange-500"
+        role="img"
+        className="inline-flex shrink-0 items-center gap-0.5 text-lg text-orange-500"
         aria-label={averageLabel ? `${averageLabel} din 5 stele` : "Fără recenzii"}
       >
-        {"★".repeat(roundedRating)}{"☆".repeat(5 - roundedRating)}
+        {Array.from({ length: 5 }, (_, index) => {
+          const fill = halfStars - index * 2;
+          return (
+            <span key={index} className="relative size-[1em]" aria-hidden="true">
+              <Star className={cn("size-full", fill >= 2 && "fill-current")} />
+              {fill === 1 ? (
+                <Star className="absolute inset-0 size-full fill-current [clip-path:inset(0_50%_0_0)]" />
+              ) : null}
+            </span>
+          );
+        })}
       </span>
       {ratingLabel || completedAppointmentsCount !== null ? (
         <span className="text-sm font-medium">

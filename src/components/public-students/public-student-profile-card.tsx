@@ -1,12 +1,14 @@
 import { GraduationCap, MapPin } from "lucide-react";
 
 import Link from "@/components/navigation/app-link";
-import { RatingStars, type RatingSummaryValue } from "@/components/reviews/rating-summary";
+import { PublicStudentCardFooter } from "@/components/public-students/public-student-card-footer";
+import type { RatingSummaryValue } from "@/components/reviews/rating-summary";
 import { Card } from "@/components/ui/card";
-import { clickableCardClassName, clickableCardIndicatorClassName, clickableCardLinkClassName } from "@/components/ui/clickable-card-styles";
+import { clickableCardClassName, clickableCardLinkClassName } from "@/components/ui/clickable-card-styles";
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
 import { publicStudentProfileHref } from "@/lib/public-students/public-student-profile-navigation";
 import { cn } from "@/lib/utils";
+import layout from "./public-student-card-layout.module.css";
 import styles from "./public-student-profile-card.module.css";
 
 type ProfileCardStudent = {
@@ -39,39 +41,34 @@ export function PublicStudentProfileCard({
   heading?: "h2" | "h3";
 }) {
   return (
-    <Link href={publicStudentProfileHref(student.publicSlug)} prefetch={directory ? false : undefined} className={clickableCardLinkClassName}>
-      <Card className={cn(clickableCardClassName, styles.card, directory && styles.compact)}>
-        <div className={styles.top}>
-          <ProfileAvatar name={student.name} imageUrl={student.imageUrl} className={styles.avatar} />
-          <span className={styles.year}>Anul {student.studyYear}</span>
-        </div>
-        <Heading className={styles.name}>{student.name}</Heading>
-        <p className={styles.meta}><GraduationCap aria-hidden="true" />{student.university}</p>
-        {student.cities.length > 0 ? (
-          <p className={styles.meta}><MapPin aria-hidden="true" />{student.cities.join(" · ")}</p>
-        ) : null}
-        {student.bio ? <p className={cn(styles.bio, "line-clamp-3")}>{student.bio}</p> : null}
-        {student.treatments.length > 0 ? (
-          <ul className={styles.treatments}>
-            {student.treatments.map((treatment) => <li key={treatment}>{treatment}</li>)}
-          </ul>
-        ) : null}
-        <div className={styles.bottom}>
-          <div className={styles.bottomDetails}>
-            {student.refreshedAt ? (
-              <span>Actualizat <time dateTime={student.refreshedAt}>{refreshedDate.format(new Date(student.refreshedAt))}</time></span>
-            ) : null}
-            {student.rating ? (
-              <RatingStars
-                {...student.rating}
-                completedAppointmentsCount={student.completedAppointmentsCount}
-                showReviewCount={false}
-                className="gap-y-0"
-              />
-            ) : null}
+    <Link href={publicStudentProfileHref(student.publicSlug)} prefetch={directory ? false : undefined} className={cn(clickableCardLinkClassName, layout.frame)}>
+      <Card className={cn(clickableCardClassName, layout.frame, styles.card, directory && styles.compact)}>
+        <div>
+          <div className={styles.top}>
+            <ProfileAvatar name={student.name} imageUrl={student.imageUrl} className={styles.avatar} />
+            <span className={styles.year}>Anul {student.studyYear}</span>
           </div>
-          <span className={cn(styles.arrow, clickableCardIndicatorClassName)} aria-hidden="true">&gt;</span>
+          <Heading className={styles.name}>{student.name}</Heading>
+          <p className={styles.meta}><GraduationCap aria-hidden="true" />{student.university}</p>
+          {student.cities.length > 0 ? (
+            <p className={styles.meta}><MapPin aria-hidden="true" />{student.cities.join(" · ")}</p>
+          ) : null}
+          {student.bio ? <p className={cn(styles.bio, "line-clamp-3")}>{student.bio}</p> : null}
+          {student.treatments.length > 0 ? (
+            <ul className={styles.treatments}>
+              {student.treatments.map((treatment) => <li key={treatment}>{treatment}</li>)}
+            </ul>
+          ) : null}
         </div>
+        <PublicStudentCardFooter
+          lead={student.refreshedAt ? (
+            <span>Actualizat <time dateTime={student.refreshedAt}>{refreshedDate.format(new Date(student.refreshedAt))}</time></span>
+          ) : null}
+          rating={student.rating}
+          completedAppointmentsCount={student.completedAppointmentsCount}
+          className={styles.bottom}
+          arrowClassName={styles.arrow}
+        />
       </Card>
     </Link>
   );

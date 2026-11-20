@@ -33,17 +33,11 @@
 .compact .treatments { margin-bottom: 1rem; }
 .treatments > li { min-width: 0; padding: .25rem .5rem; border-radius: .45rem; background: var(--muted); font-size: .8125rem; overflow-wrap: anywhere; }
 .bottom {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: .5rem;
   padding-top: 1rem;
   border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  margin-top: auto;
   font-size: .8125rem;
   color: var(--muted-foreground);
 }
-.bottomDetails { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
 .arrow {
   display: inline-flex;
   align-items: center;
