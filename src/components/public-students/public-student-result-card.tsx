@@ -126,6 +126,7 @@ export function PublicStudentResultCard({
               <RatingStars
                 {...student.rating}
                 completedAppointmentsCount={student.completedAppointmentsCount}
+                showReviewCount={false}
                 className="gap-y-0"
               />
             </div>

@@ -67,6 +67,7 @@ export default async function StudentBookingPage({ params, searchParams }: Props
             <RatingSummaryLink
               summary={profile.reviewData.summary}
               completedAppointmentsCount={profile.completedAppointmentsCount}
+              showReviewCount={false}
               href={publicStudentProfileHref(profile.publicSlug, {
                 section: "recenzii",
               })}

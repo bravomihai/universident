@@ -65,6 +65,7 @@ export function PublicStudentProfileCard({
               <RatingStars
                 {...student.rating}
                 completedAppointmentsCount={student.completedAppointmentsCount}
+                showReviewCount={false}
                 className="gap-y-0"
               />
             ) : null}

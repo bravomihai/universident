@@ -173,7 +173,25 @@ await withServer('production', async (get) => {
   assert.match(shownCount.body, /24 de programări finalizate/);
   const hiddenCount = await get("/studenti/student-verificare-0");
   assert.doesNotMatch(hiddenCount.body, /30 de programări finalizate/);
-  assert.match((await get("/")).body, /<form[^>]*action="\/studenti"/);
+  const home = await get("/");
+  assert.match(home.body, /<form[^>]*action="\/studenti"/);
+  for (const result of [
+    home,
+    await get("/studenti"),
+    await get("/studenti?tratament=igienizare&oras=cluj-napoca"),
+  ]) {
+    assert.equal(result.response.status, 200);
+    const cards = [...result.body.matchAll(/<a\b[^>]*href="\/studenti\/student-verificare-([02])(?:\/programare\/[^"]+)?"[^>]*>([\s\S]*?)<\/a>/g)]
+      .filter((match) => match[0].includes("ui-card-link"));
+    const visible = cards.find((match) => match[1] === "2");
+    const hidden = cards.find((match) => match[1] === "0");
+    assert.ok(visible?.[2]);
+    assert.ok(hidden?.[2]);
+    assert.match(visible[2].replace(/<[^>]*>/g, ""), /5\.0 ·(?:&nbsp;|\s)24 de programări finalizate/);
+    assert.doesNotMatch(visible[2], /\d+ recenzi[ei]/);
+    assert.match(hidden[2], /aria-label="Fără recenzii"/);
+    assert.doesNotMatch(hidden[2], /\d+ recenzi[ei]|programări finalizate/);
+  }
   const empty = await get('/studenti?tratament=consultatie&oras=iasi');
   metadata(empty.body, `${publicOrigin}/studenti?tratament=consultatie&oras=iasi`, false);
   assert.deepEqual(structuredData(empty.body), []);

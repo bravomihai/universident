@@ -9,7 +9,7 @@ export function PublicStudentDirectoryGrid({
   heading?: "h2" | "h3";
 }) {
   return (
-    <ul className="grid gap-3 min-[360px]:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
       {students.map((student) => (
         <li key={student.publicSlug}>
           <PublicStudentProfileCard student={student} directory heading={heading} />
