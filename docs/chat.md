@@ -56,6 +56,12 @@ Delivery uses persistent batches, per-recipient/conversation locks, 60-second le
 
 Monitor queue age, failed batches, worker availability, and provider quota. Do not log message text, credentials, or raw provider responses. History has no automatic deletion; retention, export, and deletion procedures must cover it before processing real patient data.
 
+## Appointment emails
+
+The same worker sends the patient an email when their request is confirmed or rejected. A confirmed appointment schedules a student reminder for the appointment's scheduled end. The patient receives a review invitation once the student marks the appointment completed. The worker skips review reminders if the recipient has already completed the required action. Emails link to the signed-in appointments page and exclude participant names, treatment information, and rejection reasons.
+
+For new chat and appointment emails, the worker records the Resend email ID when available. The database's `SENT` status and `sentAt` timestamp reflect acceptance by Resend. Open the email in the Resend dashboard to inspect the delivery timeline and receiving server's response.
+
 ## Worker health
 
 `node scripts/chat-email-worker.mjs --healthcheck` reads local status without calling providers. Exit code 0 indicates healthy processing; code 1 indicates processing errors, status older than 120 seconds, permanently failed batches, or eligible batches delayed more than five minutes without an active lease. Normal shutdown records `STOPPED`.

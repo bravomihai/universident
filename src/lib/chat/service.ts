@@ -160,11 +160,15 @@ export async function sendChatMessage(slug: string, actor: Actor, input: { text:
         where: { appointmentId_recipientUserId: { appointmentId: fresh.id, recipientUserId } },
         create: { appointmentId: fresh.id, recipientUserId }, update: {},
       });
-      const pending = await db.chatEmailBatch.findFirst({ where: { mailboxId: mailbox.id, status: "PENDING" } });
-      const batch = pending ?? await db.chatEmailBatch.create({ data: { mailboxId: mailbox.id, dueAt: nextEmailDueAt(new Date(), mailbox.lastSentAt) } });
+      const pending = await db.chatEmailBatch.findFirst({ where: { mailboxId: mailbox.id, status: "PENDING" }, select: { id: true } });
+      const createdAt = new Date();
+      const batch = pending ?? await db.chatEmailBatch.create({
+        data: { mailboxId: mailbox.id, dueAt: nextEmailDueAt(createdAt, mailbox.lastSentAt) },
+        select: { id: true },
+      });
       return db.chatMessage.create({ data: {
         appointmentId: fresh.id, senderUserId: actor.id, recipientUserId,
-        clientId: input.clientId, text: input.text, moderationVersion: MODERATION_PROMPT_VERSION, emailBatchId: batch.id,
+        clientId: input.clientId, text: input.text, createdAt, moderationVersion: MODERATION_PROMPT_VERSION, emailBatchId: batch.id,
       } });
     });
     return messageDto(message, actor.id);

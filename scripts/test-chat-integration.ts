@@ -204,8 +204,13 @@ try {
   await processChatEmails(deliver, future);
   assert.equal(calls, 0, "read messages must not generate email");
   const second = await sendChatMessage(slug, patient, input("Mai am o întrebare despre programare."), allow);
-  const secondBatch = (await db.chatMessage.findUniqueOrThrow({ where: { id: second.id } })).emailBatchId!;
-  await processChatEmails(async (payload) => { received.push(payload); throw new Error("simulated network failure"); }, future);
+  const secondRecord = await db.chatMessage.findUniqueOrThrow({ where: { id: second.id } });
+  const secondBatch = secondRecord.emailBatchId!;
+  const studentEligibleAt = secondRecord.createdAt.getTime() + 180_000;
+  await processChatEmails(deliver, new Date(studentEligibleAt - 1));
+  assert.equal(calls, 0, "the student must not be emailed before three minutes");
+  await processChatEmails(async (payload) => { received.push(payload); throw new Error("simulated network failure"); }, new Date(studentEligibleAt));
+  assert.equal(received[0]?.to, student.email, "the student becomes eligible at three minutes");
   const newDuringRetry = await sendChatMessage(slug, patient, input("Mulțumesc pentru ajutor."), allow);
   assert.notEqual((await db.chatMessage.findUniqueOrThrow({ where: { id: newDuringRetry.id } })).emailBatchId, secondBatch);
   const retryTime = new Date(future.getTime() + 65_000);
@@ -236,6 +241,7 @@ try {
   assert.equal((await db.chatEmailBatch.findUniqueOrThrow({ where: { id: incomingBatch } })).dueAt.getTime(), newerRecord.createdAt.getTime() + 180_000);
   await processChatEmails(deliver, new Date(newerRecord.createdAt.getTime() + 180_000));
   assert.equal(calls, 3, "an unread message becomes eligible at exactly three minutes");
+  assert.equal(received.at(-1)?.to, patient.email, "the patient receives the same unread email");
   assert.deepEqual(await getChatEmailQueueStatus(), { failedBatches: 0, overdueBatches: 0 });
   await db.chatEmailBatch.update({ where: { id: incomingBatch }, data: { status: "FAILED", lastErrorCode: "RETRIES_EXHAUSTED" } });
   assert.deepEqual(await getChatEmailQueueStatus(), { failedBatches: 1, overdueBatches: 0 }, "exhausted batches remain visible even when no retry is due");

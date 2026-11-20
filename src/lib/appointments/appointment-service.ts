@@ -12,6 +12,7 @@ import type {
   parseAppointmentReviewInput,
   parseCreateAppointmentInput,
 } from "@/lib/appointments/appointment-input";
+import { queueAppointmentEmails } from "@/lib/appointments/appointment-email-queue";
 import { appointmentNotificationAcknowledgementWhere } from "@/lib/appointments/appointment-notification";
 import { appointmentReviewIsAllowed } from "@/lib/appointments/appointment-presentation";
 import {
@@ -862,6 +863,12 @@ export async function actOnAppointment(
           ]);
         }
 
+        if (status === AppointmentStatus.REJECTED) {
+          await queueAppointmentEmails(transaction, appointment.id, [
+            { kind: "REJECTED", dueAt: now },
+          ]);
+        }
+
         if (status === AppointmentStatus.COMPLETED || status === AppointmentStatus.NO_SHOW) {
           await transaction.appointmentReview.create({
             data: {
@@ -876,10 +883,17 @@ export async function actOnAppointment(
           });
           if (status === AppointmentStatus.COMPLETED) {
             await publishAppointmentReviews(transaction, appointment.id, now);
+            await queueAppointmentEmails(transaction, appointment.id, [
+              { kind: "PATIENT_REVIEW", dueAt: now },
+            ]);
           }
         }
 
         if (status === AppointmentStatus.CONFIRMED) {
+          await queueAppointmentEmails(transaction, appointment.id, [
+            { kind: "CONFIRMED", dueAt: now },
+            { kind: "STUDENT_REVIEW", dueAt: appointment.scheduledEndsAt },
+          ]);
           const supersededCandidates = await transaction.appointment.findMany({
             where: {
               id: { not: appointment.id },

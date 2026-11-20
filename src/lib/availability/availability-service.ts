@@ -26,6 +26,7 @@ import {
   ensureStudentSeriesMaterializedThrough,
   materializeSeriesThrough,
 } from "@/lib/availability/materializer";
+import { queueAppointmentEmails } from "@/lib/appointments/appointment-email-queue";
 import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment-service";
 import { prisma } from "@/lib/prisma";
 import {
@@ -216,6 +217,11 @@ async function resolveActiveAppointments(
         createdAt: now,
       },
     });
+    if (pending) {
+      await queueAppointmentEmails(transaction, appointment.id, [
+        { kind: "REJECTED", dueAt: now },
+      ]);
+    }
   }
 }
 

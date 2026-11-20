@@ -330,6 +330,7 @@ model Appointment {
   statusChangedByUser  User?                           @relation("AppointmentStatusChangedBy", fields: [statusChangedByUserId], references: [id], onDelete: SetNull)
   reviews              AppointmentReview[]
   notifications        AppointmentNotification[]
+  emails               AppointmentEmail[]
   chatMessages         ChatMessage[]
   chatMailboxes        ChatMailbox[]
 
@@ -355,6 +356,45 @@ model AppointmentNotification {
   @@index([recipientUserId, createdAt])
   @@index([appointmentId, recipientUserId])
   @@map("appointment_notification")
+}
+
+enum AppointmentEmailKind {
+  CONFIRMED
+  REJECTED
+  STUDENT_REVIEW
+  PATIENT_REVIEW
+}
+
+enum AppointmentEmailStatus {
+  PENDING
+  SENDING
+  SENT
+  SKIPPED
+  FAILED
+}
+
+model AppointmentEmail {
+  id              String                 @id @default(cuid())
+  appointmentId   String
+  kind            AppointmentEmailKind
+  status          AppointmentEmailStatus @default(PENDING)
+  dueAt           DateTime               @db.Timestamptz(3)
+  attempts        Int                    @default(0)
+  firstAttemptAt  DateTime?              @db.Timestamptz(3)
+  leaseToken      String?
+  leaseUntil      DateTime?              @db.Timestamptz(3)
+  recipientEmail  String?
+  fromEmail       String?
+  appointmentsUrl String?
+  sentAt          DateTime?              @db.Timestamptz(3)
+  resendEmailId   String?
+  lastErrorCode   String?                @db.VarChar(64)
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, kind])
+  @@index([status, dueAt])
+  @@map("appointment_email")
 }
 
 model AppointmentReview {
@@ -569,6 +609,7 @@ model ChatEmailBatch {
   fromEmail String?
   conversationUrl String?
   sentAt DateTime? @db.Timestamptz(3)
+  resendEmailId String?
   lastErrorCode String? @db.VarChar(64)
   mailbox ChatMailbox @relation(fields: [mailboxId], references: [id], onDelete: Restrict)
   messages ChatMessage[]
