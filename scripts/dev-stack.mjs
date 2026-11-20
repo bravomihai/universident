@@ -15,7 +15,7 @@ async function compose(...args) {
   if (code !== 0) throw new Error(`Docker Compose failed (${args[0]}).`);
 }
 
-async function deployMigrations() {
+async function prepareLocalDatabase() {
   const { default: nextEnv } = await import("@next/env");
   const { loadEnvConfig, resetEnv } = nextEnv;
   const databaseUrl = loadEnvConfig(process.cwd(), true).combinedEnv.DATABASE_URL;
@@ -31,17 +31,20 @@ async function deployMigrations() {
     || url.pathname !== "/universident"
     || url.searchParams.has("host")
   ) {
-    console.log("Skipping automatic migrations for DATABASE_URL outside the local Compose database.");
+    console.log("Skipping automatic database setup for DATABASE_URL outside the local Compose database.");
     return;
   }
 
   url.hostname = "127.0.0.1";
-  const command = spawn("npm", ["run", "db:deploy"], {
-    env: { ...process.env, DATABASE_URL: url.href },
-    stdio: "inherit",
-  });
-  const [code] = await once(command, "exit");
-  if (code !== 0) throw new Error("Could not apply local database migrations.");
+  const env = { ...process.env, DATABASE_URL: url.href };
+  for (const [task, errorMessage] of [
+    ["db:deploy", "Could not apply local database migrations."],
+    ["db:seed", "Could not seed the local database catalogs."],
+  ]) {
+    const command = spawn("npm", ["run", task], { env, stdio: "inherit" });
+    const [code] = await once(command, "exit");
+    if (code !== 0) throw new Error(errorMessage);
+  }
 }
 
 async function stopApp() {
@@ -135,7 +138,7 @@ try {
   await compose("stop", "db-dev");
   if (shouldStart) {
     await compose("up", "-d", "--wait", "--wait-timeout", "180", "db-dev");
-    await deployMigrations();
+    await prepareLocalDatabase();
     await startApp(port);
     console.log(`The local app is running at http://localhost:${port}. Log file: ${logPath}`);
   }

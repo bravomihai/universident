@@ -1,7 +1,7 @@
 .PHONY: dev dev-stop prod demo_data pacient student
 
 prod_compose = docker compose -f compose.yaml --profile prod --profile tools
-demo_pacient_email := pacient@dev.dev
+demo_pacient_email := patient@dev.dev
 demo_student_email := student@dev.dev
 # Explicit email selectors in ARGS take precedence over these defaults.
 demo_args = --patient-email=$(demo_pacient_email) --student-email=$(demo_student_email) $(ARGS)

@@ -58,7 +58,7 @@ Scrierile sunt atomice într-o tranzacție, iar `--dry-run` rămâne complet rea
 
 ## Verificare și populare
 
-Pentru conturile locale implicite `pacient@dev.dev` și `student@dev.dev`, alege
+Pentru conturile locale implicite `patient@dev.dev` și `student@dev.dev`, alege
 parolele și creează conturile înainte de a rula scenariile:
 
 ```bash

@@ -28,7 +28,7 @@ With Make installed, `.env` configured from [`.env.example`](.env.example), and 
 make dev
 ```
 
-On Linux or WSL, `make dev` starts PostgreSQL at `127.0.0.1:5432`, applies pending Prisma migrations to the local Compose database, then runs Next.js with hot reload and the chat email worker in the background. Running it again restarts all three and retains the PostgreSQL volume. Use `make dev-stop` to stop them and `.local-dev/app.log` to inspect application and worker logs. A custom `DATABASE_URL` outside the local Compose database requires separately managed migrations.
+On Linux or WSL, `make dev` starts PostgreSQL at `127.0.0.1:5432`, applies pending Prisma migrations to the local Compose database, seeds the treatment, city, and university catalogs, then runs Next.js with hot reload and the chat email worker in the background. Running it again restarts all three and retains the PostgreSQL volume. Use `make dev-stop` to stop them and `.local-dev/app.log` to inspect application and worker logs. A custom `DATABASE_URL` outside the local Compose database requires separately managed migrations and catalog seeding.
 
 The worker requires `CHAT_WORKER_SECRET` (at least 32 characters) and the configured local application URL. Email delivery also requires `RESEND_API_KEY` and `EMAIL_FROM`. Use `npm run dev` to run Next.js and the worker in the foreground with an already running database.
 
