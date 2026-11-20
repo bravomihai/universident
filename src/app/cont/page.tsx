@@ -438,7 +438,7 @@ export default async function AccountPage() {
         {studentData ? (
           <section
             aria-label="Administrare profesională"
-            className="grid gap-4 md:grid-cols-3"
+            className="grid gap-4 md:grid-cols-2"
           >
             <DashboardLinkCard
               href="/cont/tratamente"
