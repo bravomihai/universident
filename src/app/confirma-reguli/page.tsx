@@ -14,12 +14,13 @@ export const metadata = { title: "Confirmări pentru cont", robots: privateRobot
 export default async function AccountConfirmationsPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const query = await searchParams;
   const chatDestination = safeChatReturnTo(query.next);
+  const next = chatDestination ?? (query.next === "acasa" ? "acasa" : null);
   const session = await requireAccountPageSession(chatDestination ?? undefined);
   const accountPolicy = await missingAccountPolicy(session.user);
   const chatPolicy = chatDestination ? chatPolicyForRole(session.user.role) : null;
   const policy = accountPolicy ?? (chatPolicy && !await hasConfirmedPolicy(session.user.id, chatPolicy) ? chatPolicy : null);
 
-  if (!policy) redirect(chatDestination ?? (query.next === "acasa" ? "/" : "/cont"));
+  if (!policy) redirect(chatDestination ?? (next === "acasa" ? "/" : "/cont"));
 
   const confirmation = policyConfirmations[policy];
   const profile = policy === "studentDeclaration"
@@ -47,7 +48,7 @@ export default async function AccountConfirmationsPage({ searchParams }: { searc
             {policy === "patientPrivacy" ? "Citește informarea despre datele personale" : "Citește regulile și află cum sunt verificate mesajele"}
           </Link>
         )}
-        <PolicyConfirmationForm key={confirmation.version} version={confirmation.version} text={confirmation.text} />
+        <PolicyConfirmationForm key={confirmation.version} version={confirmation.version} text={confirmation.text} next={next} />
       </div>
     </AuthFormCard>
   );

@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { Client } from "pg";
 import { hashPassword } from "better-auth/crypto";
+import type { AccountPolicyConfirmation } from "../src/generated/prisma/client";
 import { policyConfirmations, signUpPolicyHeader } from "../src/lib/account/policy-confirmations";
 
 // Always create a fresh local database. Never run fixtures against the configured database.
@@ -57,7 +58,11 @@ try {
   assert.equal(await db.user.count({ where: { email: "unsigned@example.invalid" } }), 0);
   const signIn = (email: string, password: string) => authPost(new Request(`${authOrigin}/api/auth/sign-in/email`, {
     method: "POST",
-    headers: { "content-type": "application/json", origin: authOrigin },
+    headers: {
+      "content-type": "application/json",
+      origin: authOrigin,
+      "x-forwarded-for": email === patient.email ? "192.0.2.1" : "192.0.2.2",
+    },
     body: JSON.stringify({ email, password }),
   }));
   assert.equal((await signIn(patient.email, `${testPassword}-incorrect`)).status, 401);
@@ -78,6 +83,10 @@ try {
       method: "POST", headers: { "content-type": "application/json", cookie, origin },
       body: JSON.stringify({ confirmed, version }),
     });
+    const confirmationForm = (fields: Record<string, string>) => new Request(authOrigin + "/api/confirmari-cont", {
+      method: "POST", headers: { cookie, origin: authOrigin },
+      body: new URLSearchParams(fields),
+    });
     const accountPolicy = user.role === "PATIENT" ? policyConfirmations.patientPrivacy : policyConfirmations.studentDeclaration;
     const chatPolicy = user.role === "PATIENT" ? policyConfirmations.patientChat : policyConfirmations.studentChat;
     const wrongChatPolicy = user.role === "PATIENT" ? policyConfirmations.studentChat : policyConfirmations.patientChat;
@@ -85,11 +94,32 @@ try {
     assert.equal((await confirm(confirmationRequest(wrongChatPolicy.version))).status, 400);
     assert.equal((await confirm(confirmationRequest(accountPolicy.version, false))).status, 400);
     assert.equal((await confirm(confirmationRequest(accountPolicy.version, true, "https://example.invalid"))).status, 403);
-    assert.equal((await confirm(confirmationRequest(accountPolicy.version))).status, 204);
+    const next = "/cont/mesaje/0123456789ab";
+    const confirmationLocation = "/confirma-reguli?" + new URLSearchParams({ next });
+    assert.equal((await confirm(confirmationForm({ next }))).status, 400);
+    const accountFormResponse = await confirm(confirmationForm({ confirmedPolicy: accountPolicy.version, next }));
+    assert.equal(accountFormResponse.status, 303);
+    assert.equal(accountFormResponse.headers.get("location"), confirmationLocation);
     assert.equal((await chatUnread(chatRequest())).status, 403);
+    const chatFormResponse = await confirm(confirmationForm({ confirmedPolicy: chatPolicy.version, next }));
+    assert.equal(chatFormResponse.status, 303);
+    assert.equal(chatFormResponse.headers.get("location"), confirmationLocation);
+    const savedConfirmations: AccountPolicyConfirmation[] = await db.accountPolicyConfirmation.findMany({
+      where: { userId: user.id },
+      orderBy: { policy: "asc" },
+    });
+    assert.deepEqual(savedConfirmations.map(({ version }) => version).sort(), [accountPolicy.version, chatPolicy.version].sort());
     assert.equal((await confirm(confirmationRequest(chatPolicy.version))).status, 204);
-    assert.equal((await confirm(confirmationRequest(chatPolicy.version))).status, 204);
-    assert.equal((await db.accountPolicyConfirmation.findMany({ where: { userId: user.id } })).length, 2);
+    const retriedFormResponse = await confirm(confirmationForm({
+      confirmedPolicy: chatPolicy.version,
+      next: "//example.invalid",
+    }));
+    assert.equal(retriedFormResponse.status, 303);
+    assert.equal(retriedFormResponse.headers.get("location"), "/confirma-reguli");
+    assert.deepEqual(await db.accountPolicyConfirmation.findMany({
+      where: { userId: user.id },
+      orderBy: { policy: "asc" },
+    }), savedConfirmations);
     assert.equal((await chatUnread(chatRequest())).status, 200);
     const foreignOrigin = await authPost(new Request(`${authOrigin}/api/auth/sign-out`, {
       method: "POST", headers: { cookie, origin: "https://untrusted.example.invalid" },
@@ -101,6 +131,10 @@ try {
     assert.equal(logout.status, 200);
     const loggedOut = await authGet(new Request(`${authOrigin}/api/auth/get-session`, { headers: { cookie } }));
     assert.equal(await loggedOut.json(), null, "sign-out must invalidate the stored session");
+    const laterLogin = await signIn(user.email, testPassword);
+    assert.equal(laterLogin.status, 200);
+    const freshCookie = laterLogin.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
+    assert.equal((await chatUnread(new Request(chatRequest(), { headers: { cookie: freshCookie } }))).status, 200);
   }
   console.log("PASS: credential sign-in, participant roles, origin checks and session invalidation.");
 
