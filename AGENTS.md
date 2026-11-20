@@ -4,10 +4,12 @@
 
 - Universident is a Romanian-language marketplace that connects adult patients with dentistry students working under a supervisor.
 - Preserve the existing Next.js App Router, React, TypeScript, Prisma/PostgreSQL, Better Auth, shadcn/Radix, Tailwind, and FullCalendar architecture.
-- Keep user-facing copy in Romanian and keep the existing visual language unless the user explicitly requests a redesign.
+- Keep application copy in Romanian and preserve the existing visual language unless the user explicitly requests a redesign.
 - Prefer readable Romanian routes and dynamic slugs. Follow the API shapes and naming conventions already present in `src/app/api`.
 
 ## Commands
+
+Write script prompts, help text, status messages, warnings, and errors in English, including output from Make targets and deployment scripts.
 
 Run commands from the repository root:
 
