@@ -22,13 +22,13 @@ Next.js, React, TypeScript, PostgreSQL, Prisma, Better Auth, Tailwind CSS, shadc
 
 ## Local development
 
-With Make installed, `.env` configured from [`.env.example`](.env.example), and the local database prepared, run these commands from the repository root:
+With Make installed, `.env` configured from [`.env.example`](.env.example), and dependencies installed with `npm ci`, run this command from the repository root:
 
 ```bash
 make dev
 ```
 
-On Linux or WSL, `make dev` starts PostgreSQL at `127.0.0.1:5432`, then runs Next.js with hot reload and the chat email worker in the background. Running it again restarts all three and retains the PostgreSQL volume. Use `make dev-stop` to stop them and `.local-dev/app.log` to inspect application and worker logs.
+On Linux or WSL, `make dev` starts PostgreSQL at `127.0.0.1:5432`, applies pending Prisma migrations to the local Compose database, then runs Next.js with hot reload and the chat email worker in the background. Running it again restarts all three and retains the PostgreSQL volume. Use `make dev-stop` to stop them and `.local-dev/app.log` to inspect application and worker logs. A custom `DATABASE_URL` outside the local Compose database requires separately managed migrations.
 
 The worker requires `CHAT_WORKER_SECRET` (at least 32 characters) and the configured local application URL. Email delivery also requires `RESEND_API_KEY` and `EMAIL_FROM`. Use `npm run dev` to run Next.js and the worker in the foreground with an already running database.
 
@@ -38,7 +38,7 @@ Use `npm run dev:web` for Next.js alone, or `npm run chat:emails` to start the w
 
 Docker Compose automatically finds [`compose.yaml`](compose.yaml). Select the environment with `--profile dev` or `--profile prod`. Each environment uses its own PostgreSQL volume. If you have local data from the old development configuration, export it from the old database and import it into the new development database.
 
-On the production host, `make prod` builds the production images, starts PostgreSQL on the internal Docker network, checks migration status, and starts Next.js and the chat email worker. The [deployment guide](docs/deployment.md#manual-production-start) covers configuration and migration ordering.
+On the production host, `make prod` builds the production images, starts PostgreSQL on the internal Docker network, applies migrations if the Prisma schema is empty, checks migration status, and starts Next.js and the chat email worker. The [deployment guide](docs/deployment.md#manual-production-start) covers configuration and migration ordering.
 
 ## Documentation
 
