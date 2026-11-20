@@ -11,14 +11,18 @@ const accountTypes = {
 } as const;
 
 async function main() {
-  const target = process.argv[2];
+  const [, , target, defaultEmail] = process.argv;
   if (target !== "pacient" && target !== "student") {
     throw new Error("Choose the pacient or student Make target.");
   }
 
-  const [, emailInput, password] = /^\s*(\S+)[ \t]([\s\S]+)$/.exec(process.env.ARGS ?? "") ?? [];
+  const args = process.env.ARGS ?? "";
+  const passwordFlag = "--password=";
+  const [emailInput, password] = args.startsWith(passwordFlag)
+    ? [defaultEmail, args.slice(passwordFlag.length)]
+    : /^\s*(\S+)[ \t]([\s\S]+)$/.exec(args)?.slice(1) ?? [];
   if (!emailInput || !password) {
-    throw new Error(`Usage: make ${target} ARGS='email password'`);
+    throw new Error(`Usage: make ${target} ARGS='--password=password' or ARGS='email password'`);
   }
 
   const email = emailInput.toLowerCase();

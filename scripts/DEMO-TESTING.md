@@ -58,14 +58,22 @@ Scrierile sunt atomice într-o tranzacție, iar `--dry-run` rămâne complet rea
 
 ## Verificare și populare
 
-`make demo_data` rulează scenariul complet și scrie în baza locală pentru
-conturile existente și verificate `pacient@dev.com` și `student@dev.com`.
-Pentru a folosi alte opțiuni, transmite-le în `ARGS`. Ele înlocuiesc argumentele
-implicite ale țintei.
+Pentru conturile locale implicite `pacient@dev.dev` și `student@dev.dev`, alege
+parolele și creează conturile înainte de a rula scenariile:
 
 ```bash
+make pacient ARGS='--password=<parola-pacient>'
+make student ARGS='--password=<parola-student>'
 make demo_data
-make demo_data ARGS='--patient-email=pacient@dev.com --student-email=student@dev.com --scenario=booking --dry-run'
+make demo_data ARGS='--scenario=booking --dry-run'
+```
+
+Pentru o altă adresă, folosește `ARGS='email parola'` la crearea contului.
+Apoi indică adresele când rulezi scenariile. Opțiunile `--patient-email` și
+`--student-email` înlocuiesc adresa implicită pentru rolul respectiv.
+
+```bash
+make demo_data ARGS='--patient-email=pacient@example.test --student-email=student@example.test --scenario=booking --dry-run'
 ```
 
 Modul complet adaugă și cele 140 de profiluri, pe lângă scenariile existente.

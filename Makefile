@@ -1,8 +1,10 @@
 .PHONY: dev dev-stop prod demo_data pacient student
 
 prod_compose = docker compose -f compose.yaml --profile prod --profile tools
-# Use the existing verified local demo accounts unless ARGS is supplied.
-demo_args = $(if $(strip $(ARGS)),$(ARGS),--patient-email=pacient@dev.com --student-email=student@dev.com)
+demo_pacient_email := pacient@dev.dev
+demo_student_email := student@dev.dev
+# Explicit email selectors in ARGS take precedence over these defaults.
+demo_args = --patient-email=$(demo_pacient_email) --student-email=$(demo_student_email) $(ARGS)
 
 dev dev-stop:
 	@mkdir -p -m 700 .local-dev
@@ -33,4 +35,4 @@ demo_data:
 # Pass credentials as data so Make and the shell leave password characters untouched.
 pacient student: private override export ARGS := $(value ARGS)
 pacient student:
-	@./node_modules/.bin/tsx scripts/create-local-account.ts $@
+	@./node_modules/.bin/tsx scripts/create-local-account.ts $@ "$(demo_$@_email)"
