@@ -863,9 +863,9 @@ export async function actOnAppointment(
           ]);
         }
 
-        if (status === AppointmentStatus.REJECTED) {
+        if (status === AppointmentStatus.REJECTED || status === AppointmentStatus.CANCELLED_BY_PATIENT) {
           await queueAppointmentEmails(transaction, appointment.id, [
-            { kind: "REJECTED", dueAt: now },
+            { kind: status, dueAt: now },
           ]);
         }
 

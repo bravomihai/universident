@@ -27,6 +27,10 @@ const emailCopy = {
     subject: "Cererea ta a fost refuzată pe Universident",
     message: "Cererea ta de programare a fost refuzată. Poți vedea detaliile în cont.",
   },
+  CANCELLED_BY_PATIENT: {
+    subject: "Pacientul a anulat o programare pe Universident",
+    message: "Pacientul a anulat o programare. Poți vedea detaliile în cont.",
+  },
   STUDENT_REVIEW: {
     subject: "Înregistrează rezultatul programării pe Universident",
     message: "Ora de final a programării a trecut. Înregistrează rezultatul și lasă o recenzie în cont.",
@@ -68,13 +72,15 @@ function eligibleRecipient(appointment: EmailAppointment | null, kind: Appointme
   const canSend = {
     CONFIRMED: appointment.status === "CONFIRMED",
     REJECTED: appointment.status === "REJECTED",
+    CANCELLED_BY_PATIENT: appointment.status === "CANCELLED_BY_PATIENT",
     STUDENT_REVIEW: appointment.status === "CONFIRMED" && appointment.scheduledEndsAt <= now &&
       !hasAppointmentReview(appointment, "STUDENT"),
     PATIENT_REVIEW: appointment.status === "COMPLETED" && !hasAppointmentReview(appointment, "PATIENT"),
   };
 
   if (!canSend[kind]) return null;
-  const profile = kind === "STUDENT_REVIEW" ? appointment.studentProfile : appointment.patientProfile;
+  const forStudent = kind === "STUDENT_REVIEW" || kind === "CANCELLED_BY_PATIENT";
+  const profile = forStudent ? appointment.studentProfile : appointment.patientProfile;
   return profile.user.emailVerified ? profile.user.email : null;
 }
 

@@ -58,7 +58,7 @@ Monitor queue age, failed batches, worker availability, and provider quota. Do n
 
 ## Appointment emails
 
-The same worker sends the patient an email when their request is confirmed or rejected. A confirmed appointment schedules a student reminder for the appointment's scheduled end. The patient receives a review invitation once the student marks the appointment completed. The worker skips review reminders if the recipient has already completed the required action. Emails link to the signed-in appointments page and exclude participant names, treatment information, and rejection reasons.
+The same worker sends the patient an email when their request is confirmed or rejected. The student receives an email if the patient cancels a confirmed appointment or withdraws a pending request. A confirmed appointment schedules a student reminder for the appointment's scheduled end. The patient receives a review invitation once the student marks the appointment completed. The worker skips review reminders if the recipient has already completed the required action. Emails link to the signed-in appointments page and exclude participant names, treatment information, and rejection reasons.
 
 For new chat and appointment emails, the worker records the Resend email ID when available. The database's `SENT` status and `sentAt` timestamp reflect acceptance by Resend. Open the email in the Resend dashboard to inspect the delivery timeline and receiving server's response.
 

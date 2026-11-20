@@ -276,7 +276,32 @@ try {
   await db.chatSendAttempt.createMany({ data: Array.from({ length: 20 }, () => ({ userId: patient.id })) });
   await assert.rejects(sendChatMessage(slug, patient, input("Prea multe încercări"), allow), code("RATE_LIMITED"));
   await db.chatSendAttempt.deleteMany();
-  console.log("PASS: isolated database tests — access, moderation, idempotency, read receipts, privacy, email grouping/retries/leases/cooldown, closure and pagination.");
+  const { actOnAppointment } = await import("../src/lib/appointments/appointment-service");
+  const { processAppointmentEmails } = await import("../src/lib/appointments/appointment-email-worker");
+  for (const target of [appointment, pending]) {
+    await actOnAppointment(target.routeSlug, patient, {
+      action: "CANCEL",
+      expectedVersion: target.version,
+      reason: "Nu mai sunt disponibil la ora programată.",
+      rating: null,
+      comment: null,
+    });
+  }
+  const cancellationEmails: Array<{ to: string; kind: string; url: string }> = [];
+  const deliverCancellation = async ({ to, kind, url }: (typeof cancellationEmails)[number]) => {
+    cancellationEmails.push({ to, kind, url });
+    return "fake-resend-cancellation-email";
+  };
+  assert.equal((await processAppointmentEmails(deliverCancellation)).sent, 2);
+  assert.equal((await processAppointmentEmails(deliverCancellation)).sent, 0, "cancellation emails are sent once");
+  for (const email of cancellationEmails) {
+    assert.deepEqual(email, {
+      to: student.email,
+      kind: "CANCELLED_BY_PATIENT",
+      url: authOrigin + "/cont/programari",
+    });
+  }
+  console.log("PASS: isolated database tests — access, moderation, idempotency, read receipts, privacy, chat email delivery, appointment cancellation emails, closure and pagination.");
   if (process.env.CHAT_KEEP_TEST_DB === "1") {
     const config = Object.fromEntries(["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "CHAT_WORKER_SECRET", "RESEND_API_KEY", "EMAIL_FROM", "OPENAI_API_KEY"].map((key) => [key, process.env[key] ?? ""]));
     config.CHAT_TEST_PASSWORD = testPassword;
