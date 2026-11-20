@@ -16,6 +16,9 @@ const directory = mkdtempSync(join(tmpdir(), "universident-maintenance-test-"));
 chmodSync(directory, 0o755);
 const binary = process.env.MAINTENANCE_NGINX_BINARY;
 const nginxRoot = binary ? directory : "/maintenance-test";
+// Keep container-owned runtime files out of the host fixture.
+const nginxRuntime = binary ? directory : "/tmp";
+const nginxErrorLog = binary ? join(directory, "error.log") : "stderr";
 const label = `universident-maintenance-${randomUUID()}`;
 let processHandle;
 let container;
@@ -51,16 +54,16 @@ try {
   // More specific API/static locations must not bypass the server-level guard.
   const application = 'add_header X-Test-App "synthetic" always; return 200 "synthetic app";';
   writeFileSync(join(directory, "nginx.conf"), `
-pid ${nginxRoot}/nginx.pid;
-error_log ${nginxRoot}/error.log warn;
+pid ${nginxRuntime}/nginx.pid;
+error_log ${nginxErrorLog} warn;
 events { worker_connections 64; }
 http {
   access_log off;
-  client_body_temp_path ${nginxRoot}/client-body;
-  proxy_temp_path ${nginxRoot}/proxy-temp;
-  fastcgi_temp_path ${nginxRoot}/fastcgi-temp;
-  uwsgi_temp_path ${nginxRoot}/uwsgi-temp;
-  scgi_temp_path ${nginxRoot}/scgi-temp;
+  client_body_temp_path ${nginxRuntime}/client-body;
+  proxy_temp_path ${nginxRuntime}/proxy-temp;
+  fastcgi_temp_path ${nginxRuntime}/fastcgi-temp;
+  uwsgi_temp_path ${nginxRuntime}/uwsgi-temp;
+  scgi_temp_path ${nginxRuntime}/scgi-temp;
   # Exercise hosts that otherwise cache negative file lookups for one minute.
   open_file_cache max=100 inactive=60s;
   open_file_cache_valid 60s;
@@ -94,7 +97,7 @@ http {
     const endpoint = command("docker", ["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"]);
     assert.match(endpoint, /^(unix:\/\/|npipe:\/\/)/, "Only a local Docker daemon is allowed");
     container = command("docker", ["run", "--detach", "--rm", "--label", `universident.maintenance-test=${label}`,
-      "--publish", "127.0.0.1::8080", "--mount", `type=bind,src=${directory},dst=${nginxRoot}`,
+      "--publish", "127.0.0.1::8080", "--mount", `type=bind,src=${directory},dst=${nginxRoot},readonly`,
       "nginx:1.28-alpine", "nginx", "-c", `${nginxRoot}/nginx.conf`, "-g", "daemon off;"]);
     assert.match(container, /^[0-9a-f]{64}$/);
     const mapping = command("docker", ["port", container, "8080/tcp"]);
@@ -111,7 +114,14 @@ http {
     } catch { /* The isolated nginx process is still starting. */ }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  assert.ok(ready, `nginx did not start: ${readFileSync(join(directory, "error.log"), "utf8")}`);
+  if (!ready) {
+    if (binary) {
+      assert.fail(`nginx did not start: ${readFileSync(nginxErrorLog, "utf8")}`);
+    }
+    const logs = spawnSync("docker", ["logs", container], { encoding: "utf8", timeout: 5_000 });
+    const details = logs.error?.message ?? (logs.stderr + logs.stdout).trim();
+    assert.fail(`nginx did not start: ${details}`);
+  }
 
   for (const path of ["/", "/studenti", "/api/health", "/_next/static/test.js", "/api/auth/test"]) {
     const response = await request(base, path);
