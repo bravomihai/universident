@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "@/components/navigation/app-link";
 
-import { PublicStudentProfileCard } from "@/components/public-students/public-student-profile-card";
+import { PublicStudentDirectoryGrid } from "@/components/public-students/public-student-directory-grid";
 import { PublicStudentDirectorySort } from "@/components/public-students/public-student-directory-sort";
 import { PublicStudentResultCard } from "@/components/public-students/public-student-result-card";
 import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
@@ -128,11 +128,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                   </p>
                   <PublicStudentDirectorySort sort={sort} />
                 </div>
-                <ul className="grid gap-3 min-[360px]:grid-cols-2 lg:grid-cols-4 lg:gap-4">
-                  {directory.results.map((student) => (
-                    <li key={student.publicSlug}><PublicStudentProfileCard student={student} directory /></li>
-                  ))}
-                </ul>
+                <PublicStudentDirectoryGrid students={directory.results} />
                 <PublicStudentPagination page={page} totalPages={directory.totalPages} sort={sort} />
               </>
             ) : (

@@ -29,9 +29,15 @@ const refreshedDate = new Intl.DateTimeFormat("ro-RO", {
   timeZone: "Europe/Bucharest",
 });
 
-export function PublicStudentProfileCard({ student, directory = false }: { student: ProfileCardStudent; directory?: boolean }) {
-  const Heading = directory ? "h2" : "h3";
-
+export function PublicStudentProfileCard({
+  student,
+  directory = false,
+  heading: Heading = directory ? "h2" : "h3",
+}: {
+  student: ProfileCardStudent;
+  directory?: boolean;
+  heading?: "h2" | "h3";
+}) {
   return (
     <Link href={publicStudentProfileHref(student.publicSlug)} prefetch={directory ? false : undefined} className={clickableCardLinkClassName}>
       <Card className={cn(clickableCardClassName, styles.card, directory && styles.compact)}>

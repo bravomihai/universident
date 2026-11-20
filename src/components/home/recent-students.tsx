@@ -1,38 +1,33 @@
-import { RefreshCw } from "lucide-react";
-import Link from "@/components/navigation/app-link";
-import { headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
-import { PublicStudentProfileCard } from "@/components/public-students/public-student-profile-card";
-import { auth } from "@/lib/auth";
-import { UserRole } from "@/generated/prisma/enums";
-import { getRecentPublicStudents } from "@/lib/public-students/recent-public-students";
+import { PublicStudentDirectoryGrid } from "@/components/public-students/public-student-directory-grid";
+import { Card, CardContent } from "@/components/ui/card";
+import { listPublicStudentDirectory } from "@/lib/public-students/public-student-directory";
 
-export async function RecentStudents() {
-  const requestHeaders = await headers();
-  let profiles;
+const HOME_STUDENT_LIMIT = 8;
+
+export async function RecentStudents({ excludedUserId }: { excludedUserId?: string }) {
+  let directory;
   try {
-    const session = await auth.api.getSession({ headers: requestHeaders });
-    profiles = await getRecentPublicStudents(session?.user.role === UserRole.STUDENT ? session.user.id : undefined);
+    directory = await listPublicStudentDirectory({ page: 1, sort: "recent", excludedUserId });
   } catch (error) {
     unstable_rethrow(error);
-    console.error("Recent public profiles unavailable:", error instanceof Error ? error.name : "UnknownError");
-    return <p className="home-profile-empty">Profilurile nu se pot încărca momentan. <Link href="/studenti">Încearcă o căutare &gt;</Link></p>;
+    console.error("Home public profiles unavailable:", error instanceof Error ? error.name : "UnknownError");
+    return <p className="home-profile-empty">Profilurile nu se pot încărca momentan.</p>;
   }
-  if (!profiles.length) {
-    return <div className="home-profile-empty"><RefreshCw className="size-5" aria-hidden="true" /><p>Profilurile actualizate cu intervale disponibile vor apărea aici.</p><Link href="/studenti">Caută după tratament și oraș &gt;</Link></div>;
+
+  if (!directory.results.length) {
+    return (
+      <Card className="border-dashed bg-muted/15">
+        <CardContent className="py-6 text-center text-muted-foreground">
+          Momentan nu există profiluri publicate.
+        </CardContent>
+      </Card>
+    );
   }
-  return (
-    <div className="home-profiles-grid">
-      {profiles.map((profile) => (
-        <PublicStudentProfileCard
-          key={profile.publicSlug}
-          student={{ ...profile, treatments: profile.treatments.slice(0, 2) }}
-        />
-      ))}
-    </div>
-  );
+
+  return <PublicStudentDirectoryGrid students={directory.results.slice(0, HOME_STUDENT_LIMIT)} heading="h3" />;
 }
 
 export function RecentStudentsLoading() {
-  return <p className="home-profile-empty" role="status">Se încarcă profilurile actualizate recent…</p>;
+  return <p className="home-profile-empty" role="status">Se încarcă profilurile…</p>;
 }

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
+import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { CalendarDays, CircleHelp, ClipboardCheck, GraduationCap, Search, ShieldCheck, UserRound } from "lucide-react";
 import { ToothHero } from "@/components/home/tooth-hero";
@@ -46,6 +47,7 @@ async function HomeStudentSearch() {
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
+  const excludedUserId = session?.user.role === UserRole.STUDENT ? session.user.id : undefined;
   return (
     <main id="main-content" className="home-page">
       <StructuredData data={homeStructuredData()} />
@@ -75,7 +77,9 @@ export default async function Home() {
           </div>
           <NavigationLink className="home-browse-action" href="/studenti">Vezi toți studenții</NavigationLink>
         </div>
-        <Suspense fallback={<RecentStudentsLoading />}><RecentStudents /></Suspense>
+        <Suspense fallback={<RecentStudentsLoading />}>
+          <RecentStudents excludedUserId={excludedUserId} />
+        </Suspense>
       </section>
 
       <section className="home-section home-how" aria-labelledby="how-title">
