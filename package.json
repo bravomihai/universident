@@ -19,6 +19,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "demo:seed": "tsx scripts/seed-local-demo.ts",
+    "email:student-declaration": "node --conditions=react-server --import tsx scripts/send-student-declaration-reminders.ts",
     "postinstall": "prisma generate",
     "chat:emails": "node --env-file=.env scripts/chat-email-worker.mjs"
   },

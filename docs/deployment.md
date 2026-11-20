@@ -132,6 +132,24 @@ For an application-independent HTTP 503 page, reversible nginx flag, app/worker 
 
 From the production checkout with Make installed and the server `.env` configured, run `make prod`. It takes the same lock as the VPS release script, validates Compose, builds the images, starts PostgreSQL while retaining its existing container, and applies migrations when the Prisma schema is empty. It checks migration status before starting the app and worker. For an existing schema with pending or failed migrations, follow the procedure below before rerunning `make prod`.
 
+## One-time student declaration reminder
+
+Run the following from the production checkout while the database is running to see the recipient count and Romanian email preview. The command uses the existing migrator image to reach the database.
+
+```bash
+mkdir -p .local-dev
+docker compose --profile prod --profile tools run --rm --no-deps \
+  --user "$(id -u):$(id -g)" \
+  --volume "$PWD/scripts:/app/scripts:ro" \
+  --volume "$PWD/src/lib:/app/src/lib:ro" \
+  --volume "$PWD/tsconfig.json:/app/tsconfig.json:ro" \
+  --volume "$PWD/.env:/app/.env:ro" \
+  --volume "$PWD/.local-dev:/app/.local-dev" \
+  migrate node --conditions=react-server --import tsx scripts/send-student-declaration-reminders.ts
+```
+
+Append `--send` only when ready to send. The Resend API key in the VPS `.env` must permit sending from `no-reply@mail.universident.ro`. Keep the campaign directory under `.local-dev` on the same host so a rerun can skip prior attempts. If a send stops with an uncertain result, check the request in Resend Logs before manually clearing the matching attempt file for a retry.
+
 ## Manual migrations, failure recovery, and rollback
 
 If status blocks a deployment, inspect pending SQL, verify the database identity and backup, and review compatibility with the currently running app. Stop automatic releases while preparing changes. Apply approved migrations manually in the same checkout under the shared lock, **before** the next service update. For example, after reviewing the exact checked-out commit:
