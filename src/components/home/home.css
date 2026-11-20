@@ -200,3 +200,6 @@
 @media (max-width: 479px) {
   .home-profiles-grid { grid-template-columns: 1fr; }
 }
+@media (width < 340px) {
+  .home-hero-note { font-size: clamp(.8125rem, calc(5vw - .125rem), .9375rem); }
+}

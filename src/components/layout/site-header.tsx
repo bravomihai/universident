@@ -27,7 +27,7 @@ export async function SiteHeader() {
 
   return (
     <header className="site-header border-b border-border/60">
-      <div className="mx-auto flex min-h-18 w-full max-w-6xl items-center gap-2 px-4 sm:min-h-20 sm:gap-4 sm:px-6">
+      <div className="mx-auto flex min-h-18 w-full max-w-6xl items-center gap-2 px-4 min-[340px]:max-[365px]:gap-1 min-[340px]:max-[365px]:px-3 sm:min-h-20 sm:gap-4 sm:px-6">
         <SiteBrand />
 
         <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-1 max-[420px]:shrink-0 sm:gap-2">
