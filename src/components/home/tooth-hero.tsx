@@ -16,7 +16,6 @@ export function ToothHero() {
     const anchor = viewport?.parentElement;
     const content = anchor?.parentElement;
     const title = content?.querySelector("h1");
-    const details = content?.querySelector(".home-hero-details");
     if (!viewport || !anchor || !content || !title) return;
 
     const desktopLayout = window.matchMedia("(width > 1023px)");
@@ -58,8 +57,14 @@ export function ToothHero() {
         title.style.setProperty("--home-title-offset-x", `${titleOffset.toFixed(2)}px`);
       }
 
-      const search = desktopLayout.matches ? details?.querySelector("form") : null;
-      const leftContentRight = Math.max(textRight + titleOffset, search?.getBoundingClientRect().right ?? 0);
+      let leftContentRight = textRight + titleOffset;
+      if (desktopLayout.matches) {
+        // Keep the desktop canvas aligned to the left column as the heading wraps.
+        const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const canvasClearance = viewport.offsetWidth + 2 * rootFontSize;
+        const columnRight = Math.min(titleBounds.right, contentBounds.right - canvasClearance);
+        leftContentRight = Math.max(leftContentRight, columnRight);
+      }
       const toothCenter = (leftContentRight + contentBounds.right) / 2;
       const anchorCenter = bounds.left + bounds.width / 2;
       viewport.style.setProperty("--tooth-offset-x", `${(toothCenter - anchorCenter).toFixed(2)}px`);
@@ -70,7 +75,6 @@ export function ToothHero() {
     observer.observe(title);
     observer.observe(anchor);
     observer.observe(content);
-    if (details) observer.observe(details);
     window.addEventListener("resize", alignToVisibleText);
     document.fonts.addEventListener("loadingdone", alignToVisibleText);
     void document.fonts.ready.then(alignToVisibleText);

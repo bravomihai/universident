@@ -53,14 +53,16 @@ export default async function Home() {
       <StructuredData data={homeStructuredData()} />
       <section className="home-hero" aria-labelledby="home-title">
         <div className="home-hero-inner">
-          <p className="home-hero-note card-adjacent">
-            <ShieldCheck aria-hidden="true" />
-            <span>Tratamente realizate sub supervizare.</span>
-          </p>
-          <h1 id="home-title">
-            Practică pentru studenți.
-            <span>Îngrijire pentru pacienți.</span>
-          </h1>
+          <div className="home-hero-intro">
+            <p className="home-hero-note card-adjacent">
+              <ShieldCheck aria-hidden="true" />
+              <span>Tratamente realizate sub supervizare.</span>
+            </p>
+            <h1 id="home-title">
+              Practică pentru studenți.
+              <span>Îngrijire pentru pacienți.</span>
+            </h1>
+          </div>
           <ToothHero />
           <div className="home-hero-details">
             <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Se încarcă filtrele…</p>}>
