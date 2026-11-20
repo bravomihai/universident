@@ -16,6 +16,10 @@ prod:
 		$(prod_compose) config --quiet; \
 		$(prod_compose) build app migrate chat-email-worker; \
 		$(prod_compose) up -d --no-recreate --wait --wait-timeout 180 db; \
+		db_empty="$$( $(prod_compose) run --rm --no-deps -T migrate node scripts/prod-db-empty.mjs)"; \
+		if [ "$$db_empty" = true ]; then \
+			$(prod_compose) run --rm --no-deps -T migrate; \
+		fi; \
 		if ! $(prod_compose) run --rm --no-deps -T migrate npx --no-install prisma migrate status >/dev/null 2>&1; then \
 			printf '%s\n' 'Database migration status is not clean. See docs/deployment.md.' >&2; \
 			exit 1; \

@@ -6,7 +6,7 @@ The workflow updates the existing VPS checkout, builds with `compose.yaml` and t
 
 The application uses Next.js standalone output, npm lockfiles, Node 24, and Prisma/PostgreSQL. The existing Dockerfile provides `runner` and `migrator` targets. Production Compose defines `db`, `app`, `chat-email-worker`, and the tools-profile `migrate` service, with a persistent PostgreSQL volume and loopback application port 3000.
 
-CI tests fresh migrations in disposable databases. Production only checks migration status; operators apply reviewed migrations separately. The workflow updates an established installation and does not bootstrap infrastructure. See [dependency security](dependency-security.md) for audit policy and known tooling limitations.
+CI tests fresh migrations in disposable databases. The production workflow checks migration status on an established installation. Operators apply reviewed migrations separately. Use the manual production start to bootstrap an empty Prisma schema. See [dependency security](dependency-security.md) for audit policy and known tooling limitations.
 
 ## Triggers and checks
 
@@ -130,7 +130,7 @@ For an application-independent HTTP 503 page, reversible nginx flag, app/worker 
 
 ## Manual production start
 
-From the production checkout with Make installed and the server `.env` configured, run `make prod`. It takes the same lock as the VPS release script, validates Compose, builds the images, starts PostgreSQL while retaining its existing container, and checks migration status before starting the app and worker. For a new database or pending migrations, follow the procedure below before rerunning `make prod`.
+From the production checkout with Make installed and the server `.env` configured, run `make prod`. It takes the same lock as the VPS release script, validates Compose, builds the images, starts PostgreSQL while retaining its existing container, and applies migrations when the Prisma schema is empty. It checks migration status before starting the app and worker. For an existing schema with pending or failed migrations, follow the procedure below before rerunning `make prod`.
 
 ## Manual migrations, failure recovery, and rollback
 

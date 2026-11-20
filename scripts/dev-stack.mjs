@@ -15,6 +15,35 @@ async function compose(...args) {
   if (code !== 0) throw new Error(`Docker Compose failed (${args[0]}).`);
 }
 
+async function deployMigrations() {
+  const { default: nextEnv } = await import("@next/env");
+  const { loadEnvConfig, resetEnv } = nextEnv;
+  const databaseUrl = loadEnvConfig(process.cwd(), true).combinedEnv.DATABASE_URL;
+  resetEnv();
+
+  const url = URL.canParse(databaseUrl) ? new URL(databaseUrl) : null;
+  if (!url || !["postgres:", "postgresql:"].includes(url.protocol)) {
+    throw new Error("Set DATABASE_URL to a valid PostgreSQL URL.");
+  }
+  if (
+    !["127.0.0.1", "localhost"].includes(url.hostname)
+    || (url.port || "5432") !== "5432"
+    || url.pathname !== "/universident"
+    || url.searchParams.has("host")
+  ) {
+    console.log("Skipping automatic migrations for DATABASE_URL outside the local Compose database.");
+    return;
+  }
+
+  url.hostname = "127.0.0.1";
+  const command = spawn("npm", ["run", "db:deploy"], {
+    env: { ...process.env, DATABASE_URL: url.href },
+    stdio: "inherit",
+  });
+  const [code] = await once(command, "exit");
+  if (code !== 0) throw new Error("Could not apply local database migrations.");
+}
+
 async function stopApp() {
   const connection = createConnection(socketPath);
   connection.resume();
@@ -106,6 +135,7 @@ try {
   await compose("stop", "db-dev");
   if (shouldStart) {
     await compose("up", "-d", "--wait", "--wait-timeout", "180", "db-dev");
+    await deployMigrations();
     await startApp(port);
     console.log(`The local app is running at http://localhost:${port}. Log file: ${logPath}`);
   }
