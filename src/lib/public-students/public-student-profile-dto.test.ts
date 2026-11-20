@@ -10,6 +10,7 @@ const profile = {
   university: "Universitate",
   studyYear: 4,
   bio: null,
+  showCompletedAppointmentsCount: false,
   profileImage: null,
   appointments: [],
 };
@@ -62,15 +63,22 @@ test("public student DTO exposes the cancellation count without private appointm
       patientNote: "Private note",
     }],
   };
-  const result = createPublicStudentProfile(source, [], reviewData);
+  const result = createPublicStudentProfile(source, [], reviewData, 28);
   assert.ok(result);
   assert.equal(result.cancellationsLast10, 1);
+  assert.equal(result.completedAppointmentsCount, null);
   assert.deepEqual(Object.keys(result).sort(), [
     "name", "imageUrl", "publicSlug", "university", "studyYear", "bio",
-    "treatments", "reviewData", "cancellationsLast10",
+    "treatments", "reviewData", "cancellationsLast10", "completedAppointmentsCount",
   ].sort());
   assert.equal(JSON.stringify(result).includes("Private"), false);
   assert.equal(JSON.stringify(result).includes("private"), false);
+});
+
+test("public student DTO exposes the completed count only for profiles that opt in", () => {
+  const source = { ...profile, showCompletedAppointmentsCount: true };
+  assert.equal(createPublicStudentProfile(source, [], reviewData, 12)?.completedAppointmentsCount, 12);
+  assert.equal(createPublicStudentProfile(source, [], reviewData, 0)?.completedAppointmentsCount, 0);
 });
 
 test("public student DTO still requires a public slug", () => {

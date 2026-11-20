@@ -1,0 +1,66 @@
+.card { min-width: 0; gap: 0; padding: var(--card-spacing); }
+.top { display: flex; align-items: start; justify-content: space-between; gap: .5rem; margin-bottom: 1.25rem; }
+.top .avatar { width: 4rem; height: 4rem; font-size: 1.25rem; }
+.year {
+  padding: .3rem .6rem;
+  border-radius: .65rem;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-size: .8125rem;
+  white-space: nowrap;
+}
+.card .name {
+  margin-bottom: .7rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.meta {
+  display: flex;
+  align-items: start;
+  gap: .4rem;
+  margin-bottom: .35rem;
+  color: var(--muted-foreground);
+  font-size: .875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.meta svg { width: 1rem; height: 1rem; flex-shrink: 0; margin-top: .2rem; }
+.bio { margin-top: .6rem; color: var(--muted-foreground); font-size: .875rem; line-height: 1.55; overflow-wrap: anywhere; }
+.treatments { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .9rem; margin-bottom: 1.5rem; }
+.compact .treatments { margin-bottom: 1rem; }
+.treatments > li { min-width: 0; padding: .25rem .5rem; border-radius: .45rem; background: var(--muted); font-size: .8125rem; overflow-wrap: anywhere; }
+.bottom {
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-size: .8125rem;
+  color: var(--muted-foreground);
+}
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+@media (max-width: 639px) {
+  .compact { padding: 1rem; }
+  .compact .top { margin-bottom: 1rem; }
+  .compact .avatar { width: 3.25rem; height: 3.25rem; font-size: 1rem; }
+  .compact .year { padding-inline: .5rem; font-size: .75rem; }
+  .compact .name { font-size: 1rem; }
+  .compact .meta, .compact .bio { font-size: .8125rem; }
+  .compact .bottom { padding-top: .75rem; font-size: .75rem; }
+}
+
+@media (max-width: 479px) {
+  .top { align-items: center; }
+  .compact .top { align-items: start; }
+}

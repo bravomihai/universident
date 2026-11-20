@@ -100,16 +100,14 @@ function parseOfferings(value: unknown) {
   if (value.length > 30) {
     return { ok: false, error: "Poți selecta cel mult 30 de tratamente într-un interval." } as const;
   }
-  const offerings: Array<{ studentTreatmentId: string; supervisorId: string }> = [];
+  const offerings: Array<{ studentTreatmentId: string }> = [];
   for (const item of value) {
     if (!isRecord(item)) {
       return { ok: false, error: "Configurația tratamentelor nu este validă." } as const;
     }
     const treatment = parseIdentifier(item.studentTreatmentId, "Tratamentul");
     if (!treatment.ok) return treatment;
-    const supervisor = parseIdentifier(item.supervisorId, "Supervizorul");
-    if (!supervisor.ok) return supervisor;
-    offerings.push({ studentTreatmentId: treatment.data, supervisorId: supervisor.data });
+    offerings.push({ studentTreatmentId: treatment.data });
   }
   if (new Set(offerings.map((item) => item.studentTreatmentId)).size !== offerings.length) {
     return { ok: false, error: "Un tratament poate apărea o singură dată în interval." } as const;

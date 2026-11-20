@@ -1,22 +1,29 @@
 name: universident
 
-x-app-environment: &app-environment
-  NODE_ENV: production
-  DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
-  # Keep the existing connection until the restricted role has been prepared.
-  DATABASE_URL: ${APP_DATABASE_URL:-postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public}
-  BETTER_AUTH_URL: ${BETTER_AUTH_URL:?BETTER_AUTH_URL is required}
-  BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
-  RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY is required}
-  EMAIL_FROM: ${EMAIL_FROM:?EMAIL_FROM is required}
-  OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
-  OPENAI_MODERATION_MODEL: ${OPENAI_MODERATION_MODEL:-gpt-4.1-mini}
-  CHAT_WORKER_SECRET: ${CHAT_WORKER_SECRET:?CHAT_WORKER_SECRET is required}
-  PUBLIC_REQUEST_IP_HEADER: ${PUBLIC_REQUEST_IP_HEADER:-}
+x-postgres: &postgres
+  image: postgres:18.4
 
 services:
+  db-dev:
+    <<: *postgres
+    profiles: [dev]
+    environment:
+      POSTGRES_USER: universident
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: universident
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U universident -d universident"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   db:
-    image: postgres:18.4
+    <<: *postgres
+    profiles: [prod, tools]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-universident}
       POSTGRES_USER: ${POSTGRES_USER:-universident}
@@ -26,7 +33,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+        - pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
       interval: 5s
       timeout: 5s
       retries: 20
@@ -50,7 +57,7 @@ services:
       context: .
       target: migrator
     environment:
-      <<: *app-environment
+      NODE_ENV: production
       # Migrations retain the schema owner's connection after APP_DATABASE_URL changes.
       DATABASE_URL: "postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public"
     depends_on:
@@ -71,10 +78,18 @@ services:
         max-file: "5"
 
   app:
+    profiles: [prod]
     build:
       context: .
       target: runner
-    environment: *app-environment
+    env_file: ops/compose/production.env
+    environment:
+      NODE_ENV: production
+      DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
+      # Keep the existing connection until the restricted role has been prepared.
+      DATABASE_URL: ${APP_DATABASE_URL:-postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public}
+      OPENAI_MODERATION_MODEL: ${OPENAI_MODERATION_MODEL:-gpt-4.1-mini}
+      PUBLIC_REQUEST_IP_HEADER: ${PUBLIC_REQUEST_IP_HEADER:-}
     depends_on:
       db:
         condition: service_healthy
@@ -107,13 +122,14 @@ services:
         max-file: "5"
 
   chat-email-worker:
+    profiles: [prod]
     build:
       context: .
       target: runner
     command: ["node", "scripts/chat-email-worker.mjs"]
     environment:
       CHAT_WORKER_URL: http://app:3000
-      CHAT_WORKER_SECRET: ${CHAT_WORKER_SECRET:?CHAT_WORKER_SECRET is required}
+      CHAT_WORKER_SECRET: ${CHAT_WORKER_SECRET:-}
     healthcheck:
       test: ["CMD", "node", "scripts/chat-email-worker.mjs", "--healthcheck"]
       interval: 30s
@@ -137,6 +153,7 @@ services:
         max-file: "5"
 
 volumes:
+  postgres_dev_data:
   postgres_data:
 
 networks:

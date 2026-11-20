@@ -7,7 +7,7 @@ import { requireStudentPageSession } from "@/lib/student/student-page-session";
 export const metadata: Metadata = {
   title: "Resurse arhivate",
   description:
-    "Consultă și restaurează tratamentele, locațiile și supervizorii arhivați.",
+    "Consultă și restaurează tratamentele și locațiile arhivate.",
 };
 
 function serializeArchivedAt(value: Date | null) {
@@ -22,7 +22,7 @@ export default async function ArchivedResourcesPage() {
     select: { id: true },
   });
 
-  const [archivedTreatments, archivedLocations, archivedSupervisors] =
+  const [archivedTreatments, archivedLocations] =
     studentProfile
       ? await Promise.all([
           prisma.studentTreatment.findMany({
@@ -64,21 +64,8 @@ export default async function ArchivedResourcesPage() {
               },
             },
           }),
-          prisma.studentSupervisor.findMany({
-            where: {
-              studentProfileId: studentProfile.id,
-              deletedAt: { not: null },
-            },
-            orderBy: { deletedAt: "desc" },
-            select: {
-              id: true,
-              fullName: true,
-              academicTitle: true,
-              deletedAt: true,
-            },
-          }),
         ])
-      : [[], [], []];
+      : [[], []];
 
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -92,10 +79,6 @@ export default async function ArchivedResourcesPage() {
           initialLocations={archivedLocations.map((location) => ({
             ...location,
             deletedAt: serializeArchivedAt(location.deletedAt),
-          }))}
-          initialSupervisors={archivedSupervisors.map((supervisor) => ({
-            ...supervisor,
-            deletedAt: serializeArchivedAt(supervisor.deletedAt),
           }))}
         />
       </div>

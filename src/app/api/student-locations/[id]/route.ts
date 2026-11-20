@@ -4,7 +4,7 @@ import { studentLocationSelect } from "@/lib/student-locations/student-location-
 import { parseUpdateStudentLocationInput } from "@/lib/student-locations/student-location-input";
 import { authorizeStudentLocationRequest } from "@/lib/student-locations/student-location-request";
 import {
-  archiveStudentSchedulingResource,
+  archiveStudentLocation,
   ResourceArchiveDomainError,
 } from "@/lib/availability/resource-archive-service";
 import { SchedulingTemporarilyUnavailableError } from "@/lib/scheduling/transaction";
@@ -34,9 +34,7 @@ export async function DELETE(request: Request, context: Context) {
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
   try {
-    const result = await archiveStudentSchedulingResource(
-      "location",
-      auth.studentProfileId,
+    const result = await archiveStudentLocation(auth.studentProfileId,
       id,
     );
     return Response.json({ archivedLocationId: id, archivedAt: result.archivedAt });

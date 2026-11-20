@@ -9,7 +9,7 @@ import { createAppointmentRequest } from "@/lib/appointments/appointment-service
 type Context = { params: Promise<{ studentSlug: string }> };
 
 export async function POST(request: Request, context: Context) {
-  const authorization = await authorizeAccountRequest(request, { verifyOrigin: true, roles: [UserRole.PATIENT] });
+  const authorization = await authorizeAccountRequest(request, { requireCurrentPolicy: true, verifyOrigin: true, roles: [UserRole.PATIENT] });
   if (!authorization.ok) return authorization.response;
   const rateLimit = bookingUserRateLimiter.consume(authorization.user.id);
   if (!rateLimit.allowed) {

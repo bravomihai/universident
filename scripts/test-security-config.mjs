@@ -44,7 +44,7 @@ assert.ok(!process.env.DOCKER_HOST && !process.env.DOCKER_CONTEXT, "Use the veri
 assert.match(command("docker", ["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"]), /^unix:\/\//, "Only a local Unix Docker socket is allowed");
 
 for (const runtimeUrl of ["", "postgresql://universident_app:synthetic@db:5432/universident_security_test?schema=public"]) {
-  const config = JSON.parse(command("docker", ["compose", "--env-file", "/dev/null", "-f", "compose-production.yaml", "--profile", "tools", "config", "--format", "json"], {
+  const config = JSON.parse(command("docker", ["compose", "--env-file", "/dev/null", "-f", "compose.yaml", "--profile", "prod", "--profile", "tools", "config", "--format", "json"], {
     env: { ...baseEnv, APP_DATABASE_URL: runtimeUrl },
   }));
   const appUrl = new URL(config.services.app.environment.DATABASE_URL);

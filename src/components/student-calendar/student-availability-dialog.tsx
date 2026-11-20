@@ -50,7 +50,6 @@ export type StudentAvailabilitySubmission = {
   treatmentLocationId: string;
   treatmentName: string;
   locationName: string;
-  supervisorName: string;
   recurrence: StudentCalendarRecurrence;
 };
 
@@ -65,7 +64,6 @@ type StudentAvailabilityDialogProps = {
 type AvailabilityFormState = {
   treatmentId: string;
   locationId: string;
-  supervisorId: string;
   date: string;
   time: string;
   frequency: StudentCalendarRecurrenceFrequency;
@@ -94,10 +92,6 @@ function initialFormState(
   const matchingLocation = STUDENT_CALENDAR_PROTOTYPE_CATALOG.locations.find(
     (location) => location.name === initialEvent?.locationName,
   );
-  const matchingSupervisor =
-    STUDENT_CALENDAR_PROTOTYPE_CATALOG.supervisors.find(
-      (supervisor) => supervisor.name === initialEvent?.supervisorName,
-    );
   const recurrence = initialEvent?.recurrence;
 
   return {
@@ -106,9 +100,6 @@ function initialFormState(
       STUDENT_CALENDAR_PROTOTYPE_CATALOG.treatments[0].id,
     locationId:
       matchingLocation?.id ?? STUDENT_CALENDAR_PROTOTYPE_CATALOG.locations[0].id,
-    supervisorId:
-      matchingSupervisor?.id ??
-      STUDENT_CALENDAR_PROTOTYPE_CATALOG.supervisors[0].id,
     date: toDateInputValue(startsAt),
     time: toTimeInputValue(startsAt),
     frequency: recurrence?.frequency ?? "none",
@@ -127,7 +118,7 @@ function initialFormState(
 }
 
 function associationId(state: AvailabilityFormState) {
-  return `prototype:${state.treatmentId}:${state.locationId}:${state.supervisorId}`;
+  return `prototype:${state.treatmentId}:${state.locationId}`;
 }
 
 export function StudentAvailabilityDialog({
@@ -146,9 +137,6 @@ export function StudentAvailabilityDialog({
   );
   const location = STUDENT_CALENDAR_PROTOTYPE_CATALOG.locations.find(
     (option) => option.id === form.locationId,
-  );
-  const supervisor = STUDENT_CALENDAR_PROTOTYPE_CATALOG.supervisors.find(
-    (option) => option.id === form.supervisorId,
   );
   const parsedStartsAt = parseLocalDateTime(form.date, form.time);
   const recurrenceDraft: StudentCalendarRecurrenceDraft = {
@@ -176,7 +164,7 @@ export function StudentAvailabilityDialog({
     event.preventDefault();
     setErrorMessage(null);
 
-    if (!treatment || !location || !supervisor || !parsedStartsAt) {
+    if (!treatment || !location || !parsedStartsAt) {
       setErrorMessage("Completează toate câmpurile obligatorii.");
       return;
     }
@@ -213,7 +201,6 @@ export function StudentAvailabilityDialog({
       treatmentLocationId: associationId(form),
       treatmentName: treatment.name,
       locationName: location.name,
-      supervisorName: supervisor.name,
       recurrence,
     });
 
@@ -277,27 +264,6 @@ export function StudentAvailabilityDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {STUDENT_CALENDAR_PROTOTYPE_CATALOG.locations.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="calendar-supervisor">Supervizor</Label>
-              <Select
-                value={form.supervisorId}
-                onValueChange={(supervisorId) =>
-                  setForm((current) => ({ ...current, supervisorId }))
-                }
-              >
-                <SelectTrigger id="calendar-supervisor" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STUDENT_CALENDAR_PROTOTYPE_CATALOG.supervisors.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
                       {option.name}
                     </SelectItem>

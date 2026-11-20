@@ -1,4 +1,4 @@
-import { UserRole } from "@/generated/prisma/enums";
+import { publiclyEligibleStudentProfileWhere } from "@/lib/student-publication/student-publication-readiness";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -33,8 +33,7 @@ export async function GET(
       studentProfile: {
         select: {
           userId: true,
-          isPublished: true,
-          user: { select: { role: true, emailVerified: true } },
+          id: true,
         },
       },
     },
@@ -42,10 +41,10 @@ export async function GET(
 
   if (!image) return notFoundResponse();
 
-  const isPublic =
-    image.studentProfile.isPublished &&
-    image.studentProfile.user.role === UserRole.STUDENT &&
-    image.studentProfile.user.emailVerified;
+  const isPublic = Boolean(await prisma.studentProfile.findFirst({
+    where: { id: image.studentProfile.id, ...publiclyEligibleStudentProfileWhere() },
+    select: { id: true },
+  }));
 
   if (!isPublic) {
     const session = await auth.api.getSession({ headers: request.headers });

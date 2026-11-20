@@ -26,6 +26,7 @@ type StudentProfileFormProps = {
     universitySlug: string | null;
     studyYear: number;
     bio: string | null;
+    showCompletedAppointmentsCount: boolean;
   } | null;
   universities: UniversityOption[];
 };
@@ -66,6 +67,7 @@ export function StudentProfileForm({
           universitySlug,
           studyYear,
           bio,
+          showCompletedAppointmentsCount: formData.has("showCompletedAppointmentsCount"),
         }),
       });
 
@@ -175,6 +177,16 @@ export function StudentProfileForm({
           Maximum 1000 de caractere.
         </p>
       </div>
+
+      <label className="flex items-start gap-3 text-sm font-medium">
+        <input
+          type="checkbox"
+          name="showCompletedAppointmentsCount"
+          defaultChecked={initialProfile?.showCompletedAppointmentsCount ?? false}
+          className="mt-0.5 size-4 shrink-0 accent-primary"
+        />
+        Afișează numărul de programări finalizate
+      </label>
 
       {errorMessage ? (
         <p role="alert" className="text-sm text-destructive">

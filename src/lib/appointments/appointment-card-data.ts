@@ -1,3 +1,4 @@
+import { policyConfirmations } from "@/lib/account/policy-confirmations";
 import { patientProfileImageUrl } from "@/lib/patient/patient-profile-image";
 import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
 
@@ -18,7 +19,7 @@ export type AppointmentCardSource = {
   treatmentNameSnapshot: string;
   locationNameSnapshot: string;
   locationAddressSnapshot: string;
-  supervisorNameSnapshot: string;
+  studentUniversitySnapshot: string;
   patientNote: string | null;
   statusReason: string | null;
   patientProfile: {
@@ -32,7 +33,14 @@ export type AppointmentCardSource = {
     university: string;
     studyYear: number;
     profileImage: ImageReference;
-    user: { role: string; emailVerified: boolean; reviewsReceived: Rating[] };
+    user: {
+      role: string;
+      emailVerified: boolean;
+      signupPolicyVersion: string | null;
+      signupPolicyConfirmedAt: Date | string | null;
+      _count: { policyConfirmations: number };
+      reviewsReceived: Rating[];
+    };
   };
   reviews: Array<{
     authorRole: string;
@@ -47,7 +55,9 @@ export type AppointmentCardSource = {
 export function appointmentCounterpart(appointment: AppointmentCardSource, role: "PATIENT" | "STUDENT") {
   const student = appointment.studentProfile;
   const patient = appointment.patientProfile;
-  const publicStudent = Boolean(student.publicSlug && student.isPublished && student.university.trim() &&
+  const declared = student.user._count.policyConfirmations > 0 ||
+    (student.user.signupPolicyVersion === policyConfirmations.studentDeclaration.version && Boolean(student.user.signupPolicyConfirmedAt));
+  const publicStudent = Boolean(student.publicSlug && student.isPublished && declared && student.university.trim() &&
     student.studyYear >= 1 && student.studyYear <= 6 && student.user.role === "STUDENT" && student.user.emailVerified);
   const ratings = role === "PATIENT" ? student.user.reviewsReceived : patient.user.reviewsReceived;
   return {

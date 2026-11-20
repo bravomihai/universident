@@ -25,6 +25,7 @@ RUN npm run build
 
 FROM dependencies AS migrator
 
+COPY scripts/prod-db-empty.mjs ./scripts/prod-db-empty.mjs
 ENV NODE_ENV=production
 USER node
 CMD ["npm", "run", "db:deploy"]

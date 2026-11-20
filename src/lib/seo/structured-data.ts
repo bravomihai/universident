@@ -1,5 +1,5 @@
 import { canonicalUrl } from "./config";
-import { platformDescription, studentSearchIntroduction, studentStudyDescription } from "./public-answers";
+import { platformDescription, studentStudyDescription } from "./public-answers";
 import { parseStudentsQuery, type StudentsQuery } from "./student-search";
 import { publicStudentSearchHref } from "@/lib/public-students/public-student-search-pagination";
 
@@ -59,7 +59,7 @@ export function studentSearchStructuredData({ params, treatment, city, results, 
   pageSize: number;
 }): StructuredData | null {
   const query = parseStudentsQuery(params);
-  if (!query.valid) return null;
+  if (!query.valid || (!query.hasFilters && params.sortare !== undefined)) return null;
   const isDirectory = !query.hasFilters && query.page === 1;
   if (!isDirectory && (!treatment || !city || !results.length)) return null;
   const path = isDirectory ? "/studenti" : publicStudentSearchHref(treatment!.slug, city!.slug, query.page);
@@ -67,8 +67,7 @@ export function studentSearchStructuredData({ params, treatment, city, results, 
   return {
     "@context": "https://schema.org", "@type": "CollectionPage", "@id": `${url}#page`,
     url, inLanguage: "ro-RO", isPartOf: { "@id": websiteId },
-    name: isDirectory ? "Găsește tratamentul potrivit în orașul tău" : `${treatment!.name} în ${city!.name}${query.page > 1 ? ` — pagina ${query.page}` : ""}`,
-    description: studentSearchIntroduction(treatment, city, !isDirectory),
+    name: isDirectory ? "Studenți înscriși" : `${treatment!.name} în ${city!.name}${query.page > 1 ? ` — pagina ${query.page}` : ""}`,
     ...(!isDirectory ? { mainEntity: {
       "@type": "ItemList",
       itemListElement: results.map((student, index) => ({

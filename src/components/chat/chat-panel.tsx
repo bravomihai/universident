@@ -3,6 +3,8 @@
 import Link from "@/components/navigation/app-link";
 import { type SubmitEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Send, LockKeyhole } from "lucide-react";
+import { MedicalDataReportButton } from "@/components/chat/medical-data-report-button";
+import { chatRulesPath } from "@/lib/account/policy-confirmations";
 import { BackLink } from "@/components/ui/back-link";
 import { Button } from "@/components/ui/button";
 import { CHAT_MAX_LENGTH } from "@/lib/chat/policy";
@@ -155,6 +157,7 @@ export function ChatPanel({ initialData }: { initialData: ChatPageDto }) {
           <div className={cn("max-w-[90%] rounded-2xl border px-3 py-2 sm:max-w-[80%]", message.own ? "border-primary/20 bg-primary/10" : "bg-muted/40")}>
             <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{message.text}</p>
             <p className="mt-1 text-right text-[11px] text-muted-foreground"><time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</time>{message.own ? ` · ${message.readAt ? "Citit" : "Trimis"}` : ""}</p>
+            <MedicalDataReportButton endpoint={endpoint} messageId={message.id} />
           </div>
         </div>)}
       </div>
@@ -170,8 +173,8 @@ export function ChatPanel({ initialData }: { initialData: ChatPageDto }) {
         <label htmlFor="chat-message" className="sr-only">Mesajul tău</label>
         <textarea ref={input} id="chat-message" value={text} onChange={(e) => setText(e.target.value)} maxLength={CHAT_MAX_LENGTH} disabled={sending} rows={3} placeholder="Scrie un mesaj…" className="chat-input block w-full resize-none rounded-xl border bg-background p-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:text-sm" />
         <div className="chat-composer-actions mt-2 flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{text.length} / 2.000</span><Button type="submit" disabled={sending || !text.trim()}><Send className="size-4" aria-hidden="true" />{sending ? "Se verifică mesajul…" : "Trimite"}</Button></div>
-        <p className="chat-disclosure mt-3 text-xs leading-relaxed text-muted-foreground"><span className="chat-disclosure-full">Mesajele sunt verificate automat prin OpenAI înainte de trimitere. Mesajele identificate ca abuzive sunt blocate. </span><span className="chat-disclosure-short">Verificare automată prin OpenAI. </span><Link href="/cont/mesaje/despre-verificare" className="underline underline-offset-2">Despre verificare</Link></p>
       </form> : <p className="flex items-center gap-2 py-2 text-sm text-muted-foreground"><LockKeyhole className="size-4 shrink-0" aria-hidden="true" />Au trecut cele 7 zile. Istoricul rămâne disponibil pentru citire.</p>}
+      <p className="chat-disclosure mt-3 text-xs leading-relaxed text-muted-foreground">Doar detalii organizatorice. <Link href={chatRulesPath} className="underline underline-offset-2">Regulile chatului și verificarea mesajelor</Link></p>
     </div>
   </section>;
 }

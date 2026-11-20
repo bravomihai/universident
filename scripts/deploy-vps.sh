@@ -40,17 +40,22 @@ main() {
   fi
   docker compose version > /dev/null
   configure_compose() {
-    local compose_file=compose-production.yaml
+    local compose_file=compose.yaml
+    local -a profiles=(--profile prod --profile tools)
     # The runner streams the new script before the VPS checkout is updated.
-    # Accept the previous filename only for preflight on that old checkout.
-    if [[ ! -f $compose_file ]]; then
-      if [[ ${1:-} == allow-legacy && -f compose.production.yaml ]]; then
-        compose_file=compose.production.yaml
-      else
-        fail 'Missing compose-production.yaml'
-      fi
+    # Accept previous filenames only during preflight on the old checkout.
+    if [[ ! -f $compose_file && ${1:-} == allow-legacy ]]; then
+      local legacy_file
+      for legacy_file in compose-production.yaml compose.production.yaml; do
+        if [[ -f $legacy_file ]]; then
+          compose_file=$legacy_file
+          profiles=()
+          break
+        fi
+      done
     fi
-    compose=(docker compose --project-directory "$PWD" --env-file "$PWD/.env" -f "$PWD/$compose_file")
+    [[ -f $compose_file ]] || fail 'Missing compose.yaml'
+    compose=(docker compose --project-directory "$PWD" --env-file "$PWD/.env" -f "$PWD/$compose_file" "${profiles[@]}")
     "${compose[@]}" config --quiet
   }
   configure_compose allow-legacy

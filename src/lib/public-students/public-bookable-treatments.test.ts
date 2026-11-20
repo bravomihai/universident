@@ -4,7 +4,6 @@ import test from "node:test";
 import { generatePublicBookingSlots } from "@/lib/availability/public-booking-slots";
 import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
 import { getBookablePublicTreatments } from "./public-bookable-treatments";
-import { publicStudentLocationKey } from "./public-student-location-key";
 
 type Block = Parameters<typeof getBookablePublicTreatments>[0][number];
 const at = (hour: number, minute = 0) => new Date(Date.UTC(2026, 8, 8, hour, minute));
@@ -19,7 +18,7 @@ function block(overrides: Partial<Block> = {}): Block {
       city: { name: "Cluj-Napoca", slug: "cluj-napoca", isActive: true },
     },
     offerings: [{
-      id: "offering", supervisor: { fullName: "Ana Popescu", academicTitle: null },
+      id: "offering",
       studentTreatment: {
         durationMinutes: 90, description: null,
         treatment: { name: "Carii", slug: "carii", description: "Descriere", isActive: true },
@@ -91,15 +90,14 @@ test("past blocks and availability outside the calendar window do not create car
   }
 });
 
-test("profile grouping preserves different supervisors but deduplicates repeated slots", () => {
+test("profile grouping deduplicates repeated slots at the same location", () => {
   const first = block();
   const second = block({
     id: "second",
-    offerings: [{ ...first.offerings[0], id: "second-offering", supervisor: { fullName: "Andrei Ionescu", academicTitle: null } }],
+    offerings: [{ ...first.offerings[0], id: "second-offering" }],
   });
   const locations = getBookablePublicTreatments([first, first, second], now, through)[0].locations;
-  assert.equal(locations.length, 2);
-  assert.equal(new Set(locations.map(publicStudentLocationKey)).size, 2);
+  assert.deepEqual(locations.map((location) => location.routeKey), [first.studentLocation.routeKey]);
 });
 
 test("inactive cities and treatments remain absent from public profile cards", () => {

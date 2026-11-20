@@ -4,6 +4,7 @@ import { CircleHelp, LogIn, Menu, Search, UserPlus, Users } from "lucide-react";
 import Link from "@/components/navigation/app-link";
 import { usePathname } from "next/navigation";
 
+import { AccountMenuIdentity, AccountMenuItems, type AccountMenuProps } from "@/components/account/account-menu";
 import { compactHeaderIconControlClassName, headerIconControlClassName } from "@/components/layout/header-action-styles";
 import { HomeSectionLink } from "@/components/layout/home-section-link";
 import { ThemeMenuOptions } from "@/components/theme/theme-selector";
@@ -20,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 type HeaderMobileNavigationProps = {
-  isAuthenticated: boolean;
+  account?: AccountMenuProps;
 };
 
 function isCurrentPath(pathname: string, href: string) {
@@ -28,7 +29,7 @@ function isCurrentPath(pathname: string, href: string) {
 }
 
 export function HeaderMobileNavigation({
-  isAuthenticated,
+  account,
 }: HeaderMobileNavigationProps) {
   const pathname = usePathname();
   const studentsCurrent = isCurrentPath(pathname, "/studenti");
@@ -42,7 +43,7 @@ export function HeaderMobileNavigation({
           type="button"
           variant="ghost"
           size="icon"
-          className={cn(headerIconControlClassName, "shrink-0 min-[1150px]:hidden", compactHeaderIconControlClassName)}
+          className={cn(headerIconControlClassName, "shrink-0", compactHeaderIconControlClassName)}
           aria-label="Deschide navigarea principală"
           aria-controls="mobile-primary-navigation"
         >
@@ -54,11 +55,11 @@ export function HeaderMobileNavigation({
       <DropdownMenuContent
         id="mobile-primary-navigation"
         align="end"
-        className="w-[min(17rem,calc(100vw-1.5rem))] min-[1150px]:hidden"
+        className="w-[min(17rem,calc(100vw-1.5rem))]"
       >
         <DropdownMenuItem
           asChild
-          className={cn("md:hidden", studentsCurrent && "bg-accent")}
+          className={cn(studentsCurrent && "bg-accent")}
         >
           <Link
             href="/studenti"
@@ -69,9 +70,16 @@ export function HeaderMobileNavigation({
           </Link>
         </DropdownMenuItem>
 
-        {!isAuthenticated ? (
+        {account ? (
+          <DropdownMenuGroup className="min-[340px]:hidden">
+            <DropdownMenuSeparator />
+            <AccountMenuIdentity name={account.name} roleLabel={account.roleLabel} />
+            <AccountMenuItems showStudentNavigation={account.showStudentNavigation} />
+            <DropdownMenuSeparator />
+          </DropdownMenuGroup>
+        ) : (
           <>
-            <DropdownMenuSeparator className="md:hidden" />
+            <DropdownMenuSeparator className="lg:hidden" />
             <DropdownMenuItem
               asChild
               className={cn("lg:hidden", signInCurrent && "bg-accent")}
@@ -96,13 +104,13 @@ export function HeaderMobileNavigation({
                 Creează cont
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator className="lg:hidden" />
           </>
-        ) : null}
-        {!isAuthenticated ? <DropdownMenuSeparator className="lg:hidden" /> : null}
-        <DropdownMenuItem asChild>
+        )}
+        <DropdownMenuItem asChild className="min-[1150px]:hidden">
           <Link href="/echipa" aria-current={isCurrentPath(pathname, "/echipa") ? "page" : undefined}><Users aria-hidden="true" />Echipa</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild className="lg:hidden">
+        <DropdownMenuItem asChild className="md:hidden">
           <HomeSectionLink sectionId="cum-functioneaza"><CircleHelp aria-hidden="true" />Cum funcționează</HomeSectionLink>
         </DropdownMenuItem>
         <DropdownMenuGroup className="min-[420px]:hidden">

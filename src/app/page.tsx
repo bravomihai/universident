@@ -1,12 +1,16 @@
-import Link from "@/components/navigation/app-link";
 import { Suspense } from "react";
 import { headers } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
+import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
-import { CalendarDays, ClipboardCheck, GraduationCap, Search, ShieldCheck, UserRound } from "lucide-react";
+import { CalendarDays, CircleHelp, ClipboardCheck, GraduationCap, Search, ShieldCheck, UserRound } from "lucide-react";
 import { ToothHero } from "@/components/home/tooth-hero";
 import { HowItWorksCard } from "@/components/home/how-it-works-card";
 import { StudentJoinLink } from "@/components/home/student-join-link";
 import { RecentStudents, RecentStudentsLoading } from "@/components/home/recent-students";
+import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
+import { getPublicStudentCatalog } from "@/lib/public-students/public-student-service";
+import { HomeSectionLink } from "@/components/layout/home-section-link";
 import { Button } from "@/components/ui/button";
 import { NavigationLink } from "@/components/ui/navigation-link";
 import { homeMetadata } from "@/lib/seo/metadata";
@@ -17,44 +21,67 @@ import "@/components/home/home.css";
 
 export const generateMetadata = homeMetadata;
 
+async function HomeStudentSearch() {
+  let catalog;
+  try {
+    catalog = await getPublicStudentCatalog();
+  } catch (error) {
+    unstable_rethrow(error);
+    return <p className="text-sm text-muted-foreground">Căutarea este momentan indisponibilă.</p>;
+  }
+  return (
+    <PublicStudentSearchForm
+      treatments={catalog.treatments}
+      cities={catalog.cities}
+      trailingAction={
+        <Button asChild variant="outline" size="sm" className="h-(--control-height)! md:hidden">
+          <HomeSectionLink sectionId="cum-functioneaza">
+            <CircleHelp aria-hidden="true" className="max-[381px]:hidden" />
+            Cum funcționează
+          </HomeSectionLink>
+        </Button>
+      }
+    />
+  );
+}
+
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
+  const excludedUserId = session?.user.role === UserRole.STUDENT ? session.user.id : undefined;
   return (
     <main id="main-content" className="home-page">
       <StructuredData data={homeStructuredData()} />
       <section className="home-hero" aria-labelledby="home-title">
         <div className="home-hero-inner">
-          <h1 id="home-title">
-            Practică pentru studenți.
-            <span>Îngrijire gratuită pentru pacienți.</span>
-          </h1>
-          <ToothHero />
-          <div className="home-hero-details">
-            <p className="home-hero-note">
+          <div className="home-hero-intro">
+            <p className="home-hero-note card-adjacent">
               <ShieldCheck aria-hidden="true" />
               <span>Tratamente realizate sub supervizare.</span>
             </p>
-            <p className="home-hero-description">
-              Găsește un student la medicină dentară în orașul tău, alege tratamentul de care ai nevoie și fă-ți o programare.
-            </p>
-            <div className="home-hero-actions">
-              <Button asChild size="lg" className="home-primary-action">
-                <Link href="/studenti">Găsește un student <span aria-hidden="true">&gt;</span></Link>
-              </Button>
-              <NavigationLink className="home-how-action" href="#cum-functioneaza">Cum funcționează</NavigationLink>
-            </div>
+            <h1 id="home-title">
+              Practică pentru studenți.
+              <span>Îngrijire pentru pacienți.</span>
+            </h1>
+          </div>
+          <ToothHero />
+          <div className="home-hero-details">
+            <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Se încarcă filtrele…</p>}>
+              <HomeStudentSearch />
+            </Suspense>
           </div>
         </div>
       </section>
 
       <section className="home-section home-recent" aria-labelledby="recent-title">
-        <div className="home-section-heading home-heading-row">
+        <div className="home-section-heading home-heading-row heading-actions">
           <div>
-            <h2 id="recent-title">Profiluri actualizate recent</h2>
+            <h2 id="recent-title">Studenți</h2>
           </div>
           <NavigationLink className="home-browse-action" href="/studenti">Vezi toți studenții</NavigationLink>
         </div>
-        <Suspense fallback={<RecentStudentsLoading />}><RecentStudents /></Suspense>
+        <Suspense fallback={<RecentStudentsLoading />}>
+          <RecentStudents excludedUserId={excludedUserId} />
+        </Suspense>
       </section>
 
       <section className="home-section home-how" aria-labelledby="how-title">
@@ -76,7 +103,7 @@ export default async function Home() {
                 <span className="home-booking-step-icon"><UserRound aria-hidden="true" /></span>
                 <h4>Descoperă profilurile</h4>
                 <p>
-                  Cunoaște studentul, consultă recenziile și vezi cine supervizează tratamentul.
+                  Cunoaște studentul și consultă recenziile de pe profil.
                 </p>
               </li>
               <li>
@@ -99,12 +126,12 @@ export default async function Home() {
               <li>
                 <span className="home-booking-step-icon"><ClipboardCheck aria-hidden="true" /></span>
                 <h4>Adaugă resursele</h4>
-                <p>Configurează tratamentele pe care le oferi, supraveghetorii și locațiile în care lucrezi.</p>
+                <p>Configurează tratamentele pe care le oferi și locațiile în care lucrezi.</p>
               </li>
               <li>
                 <span className="home-booking-step-icon"><CalendarDays aria-hidden="true" /></span>
                 <h4>Setează disponibilitatea</h4>
-                <p>Adaugă intervale în calendar și alege locația, tratamentele și supraveghetorul pentru fiecare tratament.</p>
+                <p>Adaugă intervale în calendar și alege locația și tratamentele pentru fiecare interval.</p>
               </li>
               <li>
                 <span className="home-booking-step-icon"><GraduationCap aria-hidden="true" /></span>
