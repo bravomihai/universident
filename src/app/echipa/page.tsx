@@ -78,13 +78,9 @@ export default function TeamPage() {
   return (
     <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
       <article className="w-full max-w-6xl" aria-labelledby="team-title">
-        <header className="mb-8 space-y-4 sm:mb-10">
-          <p className="app-eyebrow">OAMENII DIN SPATELE PROIECTULUI</p>
-          <h1 id="team-title">Cine este în spatele UniversiDent?</h1>
-          <p className="max-w-3xl text-muted-foreground leading-relaxed">
-            <strong className="font-semibold text-foreground">Irina Nemeș</strong>, studentă la UMF Cluj, și{" "}
-            <strong className="font-semibold text-foreground">Nemeș Mihail</strong>, student la UTCN.
-          </p>
+        <header className="mb-8 flex items-center justify-between gap-3 sm:mb-10">
+          <h1 id="team-title" className="shrink-0">Echipa</h1>
+          <BackLink className="h-auto! min-w-0 shrink whitespace-normal break-words py-2 text-left max-sm:px-3! max-sm:text-sm!" />
         </header>
 
         <div className={styles.teamGrid}>
@@ -137,7 +133,6 @@ export default function TeamPage() {
             </div>
           </CardContent>
         </Card>
-        <BackLink className="mt-8" />
       </article>
     </main>
   );
