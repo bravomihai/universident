@@ -26,13 +26,12 @@ async function HomeStudentSearch() {
     catalog = await getPublicStudentCatalog();
   } catch (error) {
     unstable_rethrow(error);
-    return <p className="mt-5 text-sm text-muted-foreground">Căutarea este momentan indisponibilă.</p>;
+    return <p className="text-sm text-muted-foreground">Căutarea este momentan indisponibilă.</p>;
   }
   return (
     <PublicStudentSearchForm
       treatments={catalog.treatments}
       cities={catalog.cities}
-      className="mt-5"
       trailingAction={
         <Button asChild variant="outline" size="sm" className="h-(--control-height)! md:hidden">
           <HomeSectionLink sectionId="cum-functioneaza">
@@ -52,17 +51,17 @@ export default async function Home() {
       <StructuredData data={homeStructuredData()} />
       <section className="home-hero" aria-labelledby="home-title">
         <div className="home-hero-inner">
+          <p className="home-hero-note">
+            <ShieldCheck aria-hidden="true" />
+            <span>Tratamente realizate sub supervizare.</span>
+          </p>
           <h1 id="home-title">
             Practică pentru studenți.
             <span>Îngrijire pentru pacienți.</span>
           </h1>
           <ToothHero />
           <div className="home-hero-details">
-            <p className="home-hero-note">
-              <ShieldCheck aria-hidden="true" />
-              <span>Tratamente realizate sub supervizare.</span>
-            </p>
-            <Suspense fallback={<p role="status" className="mt-5 text-sm text-muted-foreground">Se încarcă filtrele…</p>}>
+            <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Se încarcă filtrele…</p>}>
               <HomeStudentSearch />
             </Suspense>
           </div>
