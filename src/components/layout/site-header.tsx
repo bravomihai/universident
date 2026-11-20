@@ -1,6 +1,6 @@
 import Link from "@/components/navigation/app-link";
 import { headers } from "next/headers";
-import { CircleHelp, Search, Users } from "lucide-react";
+import { CircleHelp, Users } from "lucide-react";
 
 import {
   HeaderAccount,
@@ -45,23 +45,12 @@ export async function SiteHeader() {
             sectionId="cum-functioneaza"
             className={cn(
               headerNeutralControlClassName,
-              "hidden shrink-0 items-center gap-2 px-3 text-sm font-medium lg:inline-flex",
+              "hidden shrink-0 items-center gap-2 px-3 text-sm font-medium md:inline-flex",
             )}
           >
             <CircleHelp className="size-4" aria-hidden="true" />
             <span>Cum funcționează</span>
           </HomeSectionLink>
-          <Link
-            href="/studenti"
-            aria-label="Găsește un student"
-            className={cn(
-              headerNeutralControlClassName,
-              "hidden shrink-0 items-center justify-center gap-2 px-3 text-sm font-medium md:inline-flex",
-            )}
-          >
-            <Search className="size-4" aria-hidden="true" />
-            <span>Găsește un student</span>
-          </Link>
 
           <HeaderAccount initialUser={initialUser} />
 

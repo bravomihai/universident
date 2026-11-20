@@ -2,7 +2,7 @@
 
 import Link from "@/components/navigation/app-link";
 import { Search } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ type PublicStudentSearchFormProps = {
   selectedTreatmentSlug?: string;
   selectedCitySlug?: string;
   className?: string;
+  trailingAction?: ReactNode;
 };
 
 export function PublicStudentSearchForm({
@@ -30,6 +31,7 @@ export function PublicStudentSearchForm({
   selectedTreatmentSlug = "",
   selectedCitySlug = "",
   className,
+  trailingAction,
 }: PublicStudentSearchFormProps) {
   const hasSelection = selectedTreatmentSlug || selectedCitySlug;
   const [invalidFilter, setInvalidFilter] = useState("");
@@ -50,10 +52,10 @@ export function PublicStudentSearchForm({
       method="get"
       aria-label="Caută studenți"
       onInvalid={handleInvalid}
-      className={cn("public-search-form grid gap-4 rounded-2xl border bg-card p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end", className)}
+      className={cn("public-search-form grid gap-4 rounded-2xl border bg-card p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-center", className)}
     >
-      <div className="space-y-2">
-        <Label htmlFor="student-search-treatment">Tratament</Label>
+      <div>
+        <Label className="sr-only" htmlFor="student-search-treatment">Tratament</Label>
         <Select
           name="tratament"
           required
@@ -79,8 +81,8 @@ export function PublicStudentSearchForm({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="student-search-city">Oraș</Label>
+      <div>
+        <Label className="sr-only" htmlFor="student-search-city">Oraș</Label>
         <Select
           name="oras"
           required
@@ -106,16 +108,22 @@ export function PublicStudentSearchForm({
         </Select>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" className="min-w-28">
-          <Search aria-hidden="true" />
-          Caută
+      <div className={cn("flex flex-wrap gap-2", trailingAction && "heading-actions justify-between md:justify-start")}>
+        <Button
+          type="submit"
+          className={cn("min-w-28", trailingAction && "max-[381px]:min-w-0")}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <Search aria-hidden="true" className="max-[381px]:hidden" />
+            <span>Caută</span>
+          </span>
         </Button>
         {hasSelection ? (
           <Button asChild variant="outline">
             <Link href="/studenti">Resetează</Link>
           </Button>
         ) : null}
+        {trailingAction}
       </div>
       {invalidFilter ? (
         <p role="alert" className="text-sm text-destructive md:col-span-full">

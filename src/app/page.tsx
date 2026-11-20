@@ -2,13 +2,15 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { CalendarDays, ClipboardCheck, GraduationCap, Search, ShieldCheck, UserRound } from "lucide-react";
+import { CalendarDays, CircleHelp, ClipboardCheck, GraduationCap, Search, ShieldCheck, UserRound } from "lucide-react";
 import { ToothHero } from "@/components/home/tooth-hero";
 import { HowItWorksCard } from "@/components/home/how-it-works-card";
 import { StudentJoinLink } from "@/components/home/student-join-link";
 import { RecentStudents, RecentStudentsLoading } from "@/components/home/recent-students";
 import { PublicStudentSearchForm } from "@/components/public-students/public-student-search-form";
 import { getPublicStudentCatalog } from "@/lib/public-students/public-student-service";
+import { HomeSectionLink } from "@/components/layout/home-section-link";
+import { Button } from "@/components/ui/button";
 import { NavigationLink } from "@/components/ui/navigation-link";
 import { homeMetadata } from "@/lib/seo/metadata";
 import { PublicQuestions } from "@/components/home/public-questions";
@@ -26,7 +28,21 @@ async function HomeStudentSearch() {
     unstable_rethrow(error);
     return <p className="mt-5 text-sm text-muted-foreground">Căutarea este momentan indisponibilă.</p>;
   }
-  return <PublicStudentSearchForm treatments={catalog.treatments} cities={catalog.cities} className="mt-5" />;
+  return (
+    <PublicStudentSearchForm
+      treatments={catalog.treatments}
+      cities={catalog.cities}
+      className="mt-5"
+      trailingAction={
+        <Button asChild variant="outline" size="sm" className="h-(--control-height)! md:hidden">
+          <HomeSectionLink sectionId="cum-functioneaza">
+            <CircleHelp aria-hidden="true" className="max-[381px]:hidden" />
+            Cum funcționează
+          </HomeSectionLink>
+        </Button>
+      }
+    />
+  );
 }
 
 export default async function Home() {
