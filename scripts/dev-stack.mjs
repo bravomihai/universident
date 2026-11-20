@@ -15,6 +15,12 @@ async function compose(...args) {
   if (code !== 0) throw new Error(`Docker Compose failed (${args[0]}).`);
 }
 
+async function runNpmTask(task, errorMessage, env = process.env) {
+  const command = spawn("npm", ["run", task], { env, stdio: "inherit" });
+  const [code] = await once(command, "exit");
+  if (code !== 0) throw new Error(errorMessage);
+}
+
 async function prepareLocalDatabase() {
   const { default: nextEnv } = await import("@next/env");
   const { loadEnvConfig, resetEnv } = nextEnv;
@@ -41,9 +47,7 @@ async function prepareLocalDatabase() {
     ["db:deploy", "Could not apply local database migrations."],
     ["db:seed", "Could not seed the local database catalogs."],
   ]) {
-    const command = spawn("npm", ["run", task], { env, stdio: "inherit" });
-    const [code] = await once(command, "exit");
-    if (code !== 0) throw new Error(errorMessage);
+    await runNpmTask(task, errorMessage, env);
   }
 }
 
@@ -134,7 +138,10 @@ try {
     if (!existsSync("node_modules/next/dist/bin/next")) throw new Error("Install dependencies with npm ci.");
   }
   await stopApp();
-  if (shouldStart) await requireFreePort(port);
+  if (shouldStart) {
+    await requireFreePort(port);
+    await runNpmTask("db:generate", "Could not generate Prisma Client.");
+  }
   await compose("stop", "db-dev");
   if (shouldStart) {
     await compose("up", "-d", "--wait", "--wait-timeout", "180", "db-dev");

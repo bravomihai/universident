@@ -15,6 +15,7 @@
     "test:maintenance": "node scripts/test-maintenance.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
     "db:validate": "prisma validate",
+    "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "demo:seed": "tsx scripts/seed-local-demo.ts",
