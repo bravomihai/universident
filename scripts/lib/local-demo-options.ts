@@ -41,10 +41,10 @@ function selectedEmail(argument: string) {
 export function assertLocalDemoDatabase(
   databaseUrl: string | undefined,
   nodeEnvironment: string | undefined,
-) {
+): asserts databaseUrl is string {
   if (!databaseUrl) throw new Error("DATABASE_URL is not set.");
   if (nodeEnvironment === "production") {
-    throw new Error("The demo seed cannot run with NODE_ENV=production.");
+    throw new Error("This command cannot run in production.");
   }
 
   let parsed: URL;
@@ -58,6 +58,6 @@ export function assertLocalDemoDatabase(
     !["postgres:", "postgresql:"].includes(parsed.protocol) ||
     !localHosts.has(parsed.hostname)
   ) {
-    throw new Error("The demo seed requires a local PostgreSQL database.");
+    throw new Error("This command requires a local PostgreSQL database.");
   }
 }

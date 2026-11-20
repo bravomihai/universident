@@ -1,4 +1,4 @@
-.PHONY: dev dev-stop prod demo_data
+.PHONY: dev dev-stop prod demo_data pacient student
 
 prod_compose = docker compose -f compose.yaml --profile prod --profile tools
 # Use the existing verified local demo accounts unless ARGS is supplied.
@@ -29,3 +29,8 @@ prod:
 
 demo_data:
 	npm run demo:seed -- $(demo_args)
+
+# Pass credentials as data so Make and the shell leave password characters untouched.
+pacient student: private override export ARGS := $(value ARGS)
+pacient student:
+	@./node_modules/.bin/tsx scripts/create-local-account.ts $@
