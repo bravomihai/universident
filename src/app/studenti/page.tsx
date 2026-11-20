@@ -122,7 +122,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           <section aria-label="Studenți înscriși" className="space-y-5">
             {directory.results.length > 0 ? (
               <>
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="card-adjacent heading-actions flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm font-medium text-muted-foreground">
                     {publicStudentCountLabel(directory.totalResults)}
                   </p>
@@ -145,7 +145,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
         <section aria-live="polite" aria-atomic="false">
           {hasRequestedFilters && !hasCompleteSelection && !hasInvalidFilter ? (
-            <p className="text-sm text-muted-foreground">Completează ambele filtre.</p>
+            <p className="card-adjacent text-sm text-muted-foreground">Completează ambele filtre.</p>
           ) : null}
 
           {hasInvalidFilter ? (
@@ -164,7 +164,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           {search && treatment && city ? (
             <div className="space-y-6">
               {search.totalResults > 0 ? (
-                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <div className="card-adjacent heading-actions flex flex-wrap items-baseline justify-between gap-3">
                   <h2 className="text-lg font-semibold">
                     {publicStudentCountLabel(search.totalResults, true)}
                   </h2>
@@ -184,7 +184,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                       <Link
                         href={`/studenti/${encodeURIComponent(student.publicSlug)}`}
                         prefetch={false}
-                        className="text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                        className="card-adjacent text-sm font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
                       >
                         Vezi profilul: {student.name} <span aria-hidden="true">&gt;</span>
                       </Link>

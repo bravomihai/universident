@@ -18,7 +18,7 @@ export function PublicStudentDirectorySort({ sort }: { sort: StudentDirectorySor
       value={sort}
       onValueChange={(value) => router.push(publicStudentDirectoryHref(1, parseStudentDirectorySort(value)))}
     >
-      <SelectTrigger aria-label="Sortează studenții" className="w-full sm:w-auto">
+      <SelectTrigger aria-label="Sortează studenții">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

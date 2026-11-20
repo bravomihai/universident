@@ -1,5 +1,6 @@
 /* Shared presentation only. Booking state colors and component behavior stay local. */
 .universident-app {
+  --card-edge-inset: .5rem;
   background-image: radial-gradient(ellipse 65rem 40rem at 100% 0, var(--page-glow), transparent);
   background-repeat: no-repeat;
   background-size: 100% 52rem;
@@ -15,6 +16,12 @@
 .app-page h1 { font-size: clamp(1.8rem, 3.2vw, 2.5rem); line-height: 1.2; font-weight: var(--weight-heading); letter-spacing: -.04em; overflow-wrap: anywhere; text-wrap: balance; }
 .app-page h2 { letter-spacing: -.02em; }
 .app-page-heading, .dashboard-heading { padding-bottom: 1.5rem; }
+:where(.home-section-heading, .card-adjacent, .app-page > :is(div, article) > header:not([class~="bg-card"])) {
+  padding-inline: var(--card-edge-inset);
+}
+.app-page > :where(div, article) > .navigation-link {
+  margin-inline: var(--card-edge-inset);
+}
 .app-eyebrow { color: var(--primary); font-size: .875rem; font-weight: var(--weight-heading); letter-spacing: .09em; margin-bottom: 1rem; }
 .universident-app input[type="file"] { max-width: 100%; }
 .app-page :is(input, textarea, select):disabled { cursor: not-allowed; }
@@ -33,6 +40,33 @@
   .site-footer-bottom { flex-direction: column; padding: 1rem 1.25rem; gap: .25rem; }
   .app-page h1 { letter-spacing: -.03em; }
   .public-search-form { padding: 1.25rem; }
+}
+@media (width < 360px) {
+  .heading-actions {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+  }
+  .heading-actions > * { max-inline-size: 100%; min-inline-size: 0; overflow-wrap: anywhere; }
+  .app-page .heading-actions h1 { font-size: clamp(1.5rem, 8vw, 1.8rem); }
+  .universident-app :is(.heading-actions, .card-actions) :is([data-slot="select-trigger"], [data-slot="button"][data-size="default"], [data-slot="button"][data-size="lg"]) {
+    font-size: clamp(.8125rem, calc(5vw - .125rem), var(--text-body));
+    padding-inline: clamp(.5rem, calc(20vw - 3.25rem), 1rem);
+  }
+  .universident-app :is(.heading-actions, .card-actions) [data-slot="button"][data-size="lg"] {
+    padding-inline: clamp(.5rem, calc(20vw - 3.25rem), 1.25rem);
+  }
+  .universident-app :is(.heading-actions, .card-actions) [data-slot="button"][data-size="sm"] {
+    font-size: clamp(.8125rem, calc(5vw - .125rem), var(--text-label));
+  }
+  .universident-app :is(.heading-actions, .card-actions) [data-slot="button"]:is([data-size="default"], [data-size="lg"], [data-size="sm"]) {
+    height: auto;
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .universident-app *, .universident-app *::before, .universident-app *::after { scroll-behavior: auto; transition-duration: 0s !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }

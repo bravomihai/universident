@@ -84,7 +84,7 @@ export function PublicStudentResultCard({
           ) : null}
 
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="heading-actions flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">{student.treatment.name}</h3>
               <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock3 className="size-4" aria-hidden="true" />

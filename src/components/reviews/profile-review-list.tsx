@@ -19,7 +19,7 @@ export function ProfileReviewList({
 }) {
   return (
     <section id="recenzii" aria-labelledby="profile-reviews-title" className="scroll-mt-24 space-y-3">
-      <div>
+      <div className="card-adjacent">
         <h2 id="profile-reviews-title" className="text-2xl font-semibold tracking-tight">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Sunt afișate numai recenziile verificate, publicate după ce au răspuns ambele persoane.

@@ -101,7 +101,7 @@ export default async function PublicStudentProfilePage({
         </header>
 
         {profile.bio ? (
-          <section aria-labelledby="public-profile-bio" className="max-w-3xl">
+          <section aria-labelledby="public-profile-bio" className="card-adjacent max-w-3xl">
             <h2 id="public-profile-bio" className="text-xl font-semibold">
               Despre student
             </h2>
@@ -120,7 +120,7 @@ export default async function PublicStudentProfilePage({
         <ProfileReviewList data={profile.reviewData} title="Recenziile studentului" />
 
         <section id="tratamente" aria-labelledby="public-profile-treatments" className="scroll-mt-24 space-y-5">
-          <h2 id="public-profile-treatments" className="text-2xl font-semibold tracking-tight">
+          <h2 id="public-profile-treatments" className="card-adjacent text-2xl font-semibold tracking-tight">
             Tratamente și locații
           </h2>
 

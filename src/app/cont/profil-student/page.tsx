@@ -90,7 +90,7 @@ export default async function StudentProfilePage() {
                     </p>
                 ) : null}
 
-                <div className="space-y-2">
+                <div className="card-adjacent space-y-2">
                     <div className="flex items-center gap-3">
                         <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
                             <GraduationCap className="size-5" aria-hidden="true" />

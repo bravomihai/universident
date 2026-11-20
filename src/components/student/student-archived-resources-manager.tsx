@@ -168,7 +168,7 @@ export function StudentArchivedResourcesManager({
     <>
       <BackLink />
 
-      <div className="space-y-2">
+      <div className="card-adjacent space-y-2">
         <div className="flex items-center gap-3">
           <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
             <Archive className="size-5" aria-hidden="true" />
@@ -222,7 +222,7 @@ export function StudentArchivedResourcesManager({
 
       <div className="grid gap-8 lg:grid-cols-3">
         <section aria-labelledby="archived-treatments-title" className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="card-adjacent heading-actions flex items-center justify-between gap-3">
             <h2 id="archived-treatments-title" className="text-xl font-semibold tracking-tight">
               Tratamente
             </h2>
@@ -252,7 +252,7 @@ export function StudentArchivedResourcesManager({
         </section>
 
         <section aria-labelledby="archived-locations-title" className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="card-adjacent heading-actions flex items-center justify-between gap-3">
             <h2 id="archived-locations-title" className="text-xl font-semibold tracking-tight">
               Locații
             </h2>

@@ -51,7 +51,7 @@ export default async function Home() {
       <StructuredData data={homeStructuredData()} />
       <section className="home-hero" aria-labelledby="home-title">
         <div className="home-hero-inner">
-          <p className="home-hero-note">
+          <p className="home-hero-note card-adjacent">
             <ShieldCheck aria-hidden="true" />
             <span>Tratamente realizate sub supervizare.</span>
           </p>
@@ -69,9 +69,9 @@ export default async function Home() {
       </section>
 
       <section className="home-section home-recent" aria-labelledby="recent-title">
-        <div className="home-section-heading home-heading-row">
+        <div className="home-section-heading home-heading-row heading-actions">
           <div>
-            <h2 id="recent-title">Profiluri actualizate recent</h2>
+            <h2 id="recent-title">Studenți</h2>
           </div>
           <NavigationLink className="home-browse-action" href="/studenti">Vezi toți studenții</NavigationLink>
         </div>
