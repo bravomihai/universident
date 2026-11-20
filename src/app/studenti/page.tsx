@@ -111,6 +111,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         </header>
 
         <PublicStudentSearchForm
+          key={`${treatment?.slug ?? ""}/${city?.slug ?? ""}`}
           treatments={catalog.treatments}
           cities={catalog.cities}
           selectedTreatmentSlug={treatment?.slug ?? ""}

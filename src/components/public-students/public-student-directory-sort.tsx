@@ -1,21 +1,31 @@
 "use client";
 
 import { useRouter } from "@/components/navigation/use-app-router";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { parseStudentDirectorySort, publicStudentDirectoryHref, studentDirectorySortOptions, type StudentDirectorySort } from "@/lib/public-students/public-student-directory-order";
 
 export function PublicStudentDirectorySort({ sort }: { sort: StudentDirectorySort }) {
   const router = useRouter();
 
   return (
-    <select
-      aria-label="Sortează studenții"
-      className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-auto"
+    <Select
       value={sort}
-      onChange={(event) => router.push(publicStudentDirectoryHref(1, parseStudentDirectorySort(event.currentTarget.value)))}
+      onValueChange={(value) => router.push(publicStudentDirectoryHref(1, parseStudentDirectorySort(value)))}
     >
-      {Object.entries(studentDirectorySortOptions).map(([value, label]) => (
-        <option key={value} value={value}>{label}</option>
-      ))}
-    </select>
+      <SelectTrigger aria-label="Sortează studenții" className="w-full sm:w-auto">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {Object.entries(studentDirectorySortOptions).map(([value, label]) => (
+          <SelectItem key={value} value={value}>{label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

@@ -379,7 +379,7 @@ export function StudentAvailabilityEditorDialog({
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
+              <Label htmlFor="availability-location" className="flex items-center gap-2">
                 <MapPin className="size-4" />
                 Locație
               </Label>
@@ -388,7 +388,7 @@ export function StudentAvailabilityEditorDialog({
                 disabled={!editable || pending}
                 onValueChange={setLocationId}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="availability-location" className="w-full">
                   <SelectValue placeholder="Alege locația" />
                 </SelectTrigger>
                 <SelectContent>
@@ -453,7 +453,7 @@ export function StudentAvailabilityEditorDialog({
             {showsRecurrence ? (
               <div className="space-y-4 rounded-xl border p-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <Label htmlFor="availability-recurrence" className="flex items-center gap-2">
                     <Repeat2 className="size-4" />
                     Repetare
                   </Label>
@@ -470,7 +470,7 @@ export function StudentAvailabilityEditorDialog({
                       }
                     }}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id="availability-recurrence" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
