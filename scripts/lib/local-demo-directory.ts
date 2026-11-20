@@ -1,6 +1,6 @@
 import { policyConfirmations } from "../../src/lib/account/policy-confirmations";
 import type { Prisma } from "../../src/generated/prisma/client";
-import { addLocalDays, localDateForInstant, utcInstantForBucharestLocal } from "../../src/lib/availability/bucharest-time";
+import { addLocalDays, ageOnDate, localDateForInstant, utcInstantForBucharestLocal } from "../../src/lib/availability/bucharest-time";
 
 const BASE_DIRECTORY_COUNT = 100;
 const CLUJ_GINGIVAL_COUNT = 40;
@@ -46,6 +46,12 @@ export type DemoDirectoryPlan = {
   treatments: Prisma.StudentTreatmentCreateManyInput[];
   slots: Prisma.StudentAvailabilitySlotCreateManyInput[];
   offerings: Prisma.StudentAvailabilitySlotOfferingCreateManyInput[];
+  history: {
+    slots: Prisma.StudentAvailabilitySlotCreateManyInput[];
+    offerings: Prisma.StudentAvailabilitySlotOfferingCreateManyInput[];
+    appointments: Prisma.AppointmentCreateManyInput[];
+    reviews: Prisma.AppointmentReviewCreateManyInput[];
+  };
   coverage: { city: string; treatment: string; profiles: number }[];
 };
 
@@ -58,6 +64,33 @@ function directoryIdentity(index: number) {
     publicSlug: `student-demo-${number}`,
     prefix: `demo-ui-directory-${number}`,
   };
+}
+
+export const demoDirectoryPatient = {
+  user: {
+    id: "demo-ui-directory-patient-user",
+    email: "patient@demo.universident.test",
+    name: "Pacient fictiv (Demo)",
+    role: "PATIENT",
+    emailVerified: true,
+  },
+  profile: {
+    id: "demo-ui-directory-patient-profile",
+    userId: "demo-ui-directory-patient-user",
+    profileSlug: "pacient-demo-catalog",
+    dateOfBirth: new Date("1992-04-18T00:00:00Z"),
+  },
+} as const;
+
+export function isDemoDirectoryPatient(user: {
+  id: string; email: string; role: string;
+  patientProfile: { id: string; profileSlug: string } | null;
+}) {
+  return user.role === demoDirectoryPatient.user.role &&
+    user.id === demoDirectoryPatient.user.id &&
+    user.email === demoDirectoryPatient.user.email &&
+    user.patientProfile?.id === demoDirectoryPatient.profile.id &&
+    user.patientProfile.profileSlug === demoDirectoryPatient.profile.profileSlug;
 }
 
 const directoryIdentities = Array.from({ length: DEMO_DIRECTORY_COUNT }, (_, index) => directoryIdentity(index));
@@ -95,17 +128,20 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
   const today = localDateForInstant(now);
   const plan: DemoDirectoryPlan = {
     users: [], profiles: [], locations: [], treatments: [], slots: [], offerings: [], coverage: [],
+    history: { slots: [], offerings: [], appointments: [], reviews: [] },
   };
   const coverage = new Map<string, { city: string; treatment: string; students: Set<string> }>();
 
   for (const [index, identity] of directoryIdentities.entries()) {
     const isClujGingival = index >= BASE_DIRECTORY_COUNT;
+    const refreshRank = index * 37 % BASE_DIRECTORY_COUNT;
+    const hasDemoHistory = refreshRank < 8;
     const city = homeCities[index];
     const universities = catalog.universities.filter((university) => university.city === city.name)
       .sort((left, right) => left.shortName.localeCompare(right.shortName));
     const name = `${firstNames[index % firstNames.length]} ${lastNames[Math.floor(index / firstNames.length)]} (Demo)`;
     plan.users.push({ id: identity.id, name, email: identity.email, emailVerified: true, role: "STUDENT", signupPolicyVersion: policyConfirmations.studentDeclaration.version, signupPolicyConfirmedAt: now });
-    plan.profiles.push({
+    const profile = {
       id: identity.profileId, userId: identity.id, publicSlug: identity.publicSlug,
       university: universities[index % universities.length].shortName, studyYear: index % 6 + 1,
       bio: index % 7 === 0 ? null : `Profil fictiv pentru testarea Universident, în ${city.name}. ${index % 2 === 0
@@ -113,8 +149,10 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
         : "Pun accent pe comunicare, prevenție și confortul pacientului pe durata consultației."}`,
       isPublished: true, publishedAt: now,
       // Keep the original 100 students' refresh distribution unchanged when adding a cohort.
-      lastRefreshedAt: new Date(now.getTime() - (5 + (index * 37 % BASE_DIRECTORY_COUNT) * 10) * 60_000),
-    });
+      lastRefreshedAt: new Date(now.getTime() - (5 + refreshRank * 10) * 60_000),
+      ...(hasDemoHistory && refreshRank % 2 === 0 ? { showCompletedAppointmentsCount: true } : {}),
+    };
+    plan.profiles.push(profile);
     const secondCity = !isClujGingival && index % 5 === 0
       ? cities[(cities.findIndex((candidate) => candidate.id === city.id) + 1) % cities.length]
       : city;
@@ -165,6 +203,57 @@ export function buildDemoDirectory(catalog: DirectoryCatalog, now: Date): DemoDi
         });
       }
     }
+    if (hasDemoHistory) {
+      const location = locations[0];
+      const offering = offerings[0];
+      const treatment = treatments.find((candidate) => candidate.id === offering.treatmentId)!;
+      const { user: patient, profile: patientProfile } = demoDirectoryPatient;
+      // Fixed dates keep the history stable while seed reruns move the future calendar.
+      for (let visit = 0; visit <= index % 3; visit += 1) {
+        const key = `${identity.prefix}-history-${visit + 1}`;
+        const day = addLocalDays("2025-01-06", index * 3 + visit);
+        const startsAt = utcInstantForBucharestLocal(day, 10 * 60);
+        const endsAt = utcInstantForBucharestLocal(day, 10 * 60 + offering.durationMinutes);
+        if (!startsAt || !endsAt) throw new Error(`Invalid demo appointment on ${day}.`);
+        const slotId = `${key}-slot`;
+        const offeringId = `${key}-offering`;
+        const appointmentId = `${key}-appointment`;
+        const confirmedAt = new Date(startsAt.getTime() - 24 * 60 * 60_000);
+        const publishedAt = new Date(endsAt.getTime() + 45 * 60_000);
+        plan.history.slots.push({
+          id: slotId, studentProfileId: profile.id, studentLocationId: location.id,
+          startsAt, endsAt, originalStartsAt: startsAt, seriesId: null, status: "ACTIVE", createdAt: confirmedAt,
+        });
+        plan.history.offerings.push({
+          id: offeringId, slotId, studentProfileId: profile.id,
+          studentTreatmentId: offering.id, createdAt: confirmedAt,
+        });
+        plan.history.appointments.push({
+          id: appointmentId, routeSlug: `${key}-completed`,
+          patientProfileId: patientProfile.id, studentProfileId: profile.id,
+          studentAvailabilitySlotId: slotId, studentAvailabilitySlotOfferingId: offeringId,
+          scheduledStartsAt: startsAt, scheduledEndsAt: endsAt,
+          patientAgeAtAppointment: ageOnDate(patientProfile.dateOfBirth, startsAt),
+          patientNameSnapshot: patient.name, studentNameSnapshot: name,
+          treatmentNameSnapshot: treatment.name, locationNameSnapshot: location.name,
+          locationAddressSnapshot: location.address, studentUniversitySnapshot: profile.university,
+          status: "COMPLETED", confirmedAt, completedAt: endsAt, statusChangedAt: endsAt,
+          statusChangedByUserId: identity.id, createdAt: confirmedAt,
+        });
+        plan.history.reviews.push(
+          {
+            id: `${key}-student-review`, appointmentId, authorRole: "STUDENT",
+            authorUserId: identity.id, targetUserId: patient.id, rating: 5,
+            submittedAt: endsAt, publishedAt, createdAt: endsAt,
+          },
+          {
+            id: `${key}-patient-review`, appointmentId, authorRole: "PATIENT",
+            authorUserId: patient.id, targetUserId: identity.id, rating: visit % 2 === 0 ? 5 : 4,
+            submittedAt: publishedAt, publishedAt, createdAt: publishedAt,
+          },
+        );
+      }
+    }
     for (const locationCity of locationCities) {
       for (const treatmentIndex of treatmentIndexes) {
         const treatment = treatments[treatmentIndex];
@@ -204,10 +293,11 @@ export function assertDemoCalendarSafe(
     throw new Error("Appointments exist on demo profile slots. The demo seed stopped to preserve them. Use the existing data or a separate local database.");
   }
   if (activeSeries > 0) throw new Error("Demo profiles have active recurring availability. The demo seed cannot modify this manually configured calendar.");
-  const ids = new Set(plan.slots.map((slot) => slot.id));
+  const plannedSlots = [...plan.slots, ...plan.history.slots];
+  const ids = new Set(plannedSlots.map((slot) => slot.id));
   for (const slot of existing) {
     if (ids.has(slot.id) || slot.status !== "ACTIVE") continue;
-    if (plan.slots.some((planned) => planned.studentProfileId === slot.studentProfileId &&
+    if (plannedSlots.some((planned) => planned.studentProfileId === slot.studentProfileId &&
       new Date(planned.startsAt) < slot.endsAt && new Date(planned.endsAt) > slot.startsAt)) {
       throw new Error("Manually configured availability overlaps a demo profile slot. The demo seed stopped without making changes.");
     }

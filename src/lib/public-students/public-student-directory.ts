@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import type { RatingSummaryValue } from "@/components/reviews/rating-summary";
 import { prisma } from "@/lib/prisma";
+import { emptyPublicStudentRating, getPublicStudentRatings } from "@/lib/public-students/public-student-ratings";
 import { PUBLIC_STUDENTS_PAGE_SIZE } from "@/lib/public-students/public-student-service";
 import type { StudentDirectorySort } from "@/lib/public-students/public-student-directory-order";
 import { isPublicDeployment } from "@/lib/seo/config";
@@ -42,19 +43,6 @@ export type PublicStudentDirectoryCardData = {
   completedAppointmentsCount: number | null;
 };
 
-async function getRatings(db: Prisma.TransactionClient, target: Prisma.AppointmentReviewWhereInput) {
-  const ratings = await db.appointmentReview.groupBy({
-    by: ["targetUserId"],
-    where: { ...target, authorRole: "PATIENT", publishedAt: { not: null } },
-    _avg: { rating: true },
-    _count: { rating: true },
-  });
-  return new Map(ratings.map((entry) => [entry.targetUserId, {
-    averageRating: entry._avg.rating,
-    reviewCount: entry._count.rating,
-  }]));
-}
-
 export async function listPublicStudentDirectory({
   page, sort, excludedUserId,
 }: {
@@ -91,7 +79,7 @@ export async function listPublicStudentDirectory({
     }
 
     const ratings = profiles.length > 0
-      ? await getRatings(db, sort === "rating"
+      ? await getPublicStudentRatings(db, sort === "rating"
         ? { target: { studentProfile: where } }
         : { targetUserId: { in: profiles.map((profile) => profile.user.id) } })
       : new Map<string, RatingSummaryValue>();
@@ -135,7 +123,7 @@ export async function listPublicStudentDirectory({
         cities: [...cities].sort((a, b) => a.localeCompare(b, "ro")),
         treatments: detail.studentTreatments.map(({ treatment }) => treatment.name).sort((a, b) => a.localeCompare(b, "ro")),
         refreshedAt: profile.lastRefreshedAt?.toISOString() ?? null,
-        rating: ratings.get(profile.user.id) ?? { averageRating: null, reviewCount: 0 },
+        rating: ratings.get(profile.user.id) ?? emptyPublicStudentRating,
         completedAppointmentsCount: profile.showCompletedAppointmentsCount ? profile._count.appointments : null,
       }];
     });

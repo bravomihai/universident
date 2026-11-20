@@ -24,8 +24,12 @@ Primele 100 își păstrează distribuția existentă. Profilurile 101–140 sun
 două locații în Cluj și șase intervale viitoare pentru acest tratament (60 min).
 Împreună cu cele 4 rezultate din setul inițial, această căutare are 44 de profiluri
 demo, înainte de eventuale rezervări sau retrageri din publicare.
-Nu au parole/conturi de autentificare, nu sunt trimise emailuri și nu sunt adăugate
-fotografii sau recenzii fictive. Pentru autentificare și confirmarea programărilor
+Unele profiluri dintre cele actualizate recent au programări finalizate și recenzii
+reciproce publicate, de la un pacient fictiv. De exemplu, `/studenti/student-demo-001`
+afișează numărul de programări finalizate. Alte profiluri demo cu programări
+finalizate afișează doar recenziile, conform setării lor de vizibilitate.
+Identitățile fictive nu au parole sau conturi de autentificare și nu primesc emailuri.
+Pentru autentificare și confirmarea programărilor
 folosește studentul tău existent, nu aceste identități de catalog.
 
 - **11 orașe**: 60 de studenți cu oraș principal Cluj-Napoca și 20 în București,
@@ -49,7 +53,8 @@ Numerele din tabel exclud conturile tale existente și reflectă setul proaspăt
 rezervările făcute ulterior reduc disponibilitatea conform regulilor aplicației.
 
 La rerulare se actualizează aceleași profiluri/resurse și se mută intervalele relativ
-la ziua curentă, fără duplicate. Dacă ai trimis o cerere pe un interval al acestor
+la ziua curentă, fără duplicate. Programările finalizate generate de script și
+intervalele lor istorice rămân la date fixe. Dacă ai trimis o cerere pe un interval al acestor
 profiluri, scriptul **se oprește fără modificări**, indiferent de starea cererii,
 pentru a păstra istoricul. La fel, refuză coliziunile de identitate, seriile active,
 ofertele manuale pe intervale demo și suprapunerile cu intervale manuale. Folosește

@@ -56,17 +56,19 @@ export function PublicStudentProfileCard({
             {student.treatments.map((treatment) => <li key={treatment}>{treatment}</li>)}
           </ul>
         ) : null}
-        {student.rating ? (
-          <RatingStars
-            {...student.rating}
-            completedAppointmentsCount={student.completedAppointmentsCount}
-            className={cn(styles.rating, "gap-y-0")}
-          />
-        ) : null}
         <div className={styles.bottom}>
-          {student.refreshedAt ? (
-            <span>Actualizat <time dateTime={student.refreshedAt}>{refreshedDate.format(new Date(student.refreshedAt))}</time></span>
-          ) : null}
+          <div className={styles.bottomDetails}>
+            {student.refreshedAt ? (
+              <span>Actualizat <time dateTime={student.refreshedAt}>{refreshedDate.format(new Date(student.refreshedAt))}</time></span>
+            ) : null}
+            {student.rating ? (
+              <RatingStars
+                {...student.rating}
+                completedAppointmentsCount={student.completedAppointmentsCount}
+                className="gap-y-0"
+              />
+            ) : null}
+          </div>
           <span className={cn(styles.arrow, clickableCardIndicatorClassName)} aria-hidden="true">&gt;</span>
         </div>
       </Card>

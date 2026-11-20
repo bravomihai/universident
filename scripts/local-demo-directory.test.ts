@@ -5,7 +5,7 @@ import { localDateForInstant } from "../src/lib/availability/bucharest-time";
 import { generatePublicBookingSlots } from "../src/lib/availability/public-booking-slots";
 import {
   assertDemoCalendarSafe, assertDemoIdentities, buildDemoDirectory,
-  demoDirectoryCities, demoDirectoryTreatments, isDemoDirectoryStudent,
+  demoDirectoryCities, demoDirectoryPatient, demoDirectoryTreatments, isDemoDirectoryPatient, isDemoDirectoryStudent,
 } from "./lib/local-demo-directory";
 import { validateDemoDirectory, writeDemoDirectory } from "./lib/local-demo-directory-store";
 
@@ -46,7 +46,7 @@ test("adding the gingival cohort preserves all generated data for the original 1
   const originalIds = new Set(plan.profiles.slice(0, 100).map((profile) => profile.id));
   const originalRows = {
     users: plan.users.slice(0, 100),
-    profiles: plan.profiles.slice(0, 100),
+    profiles: plan.profiles.slice(0, 100).map((profile) => ({ ...profile, showCompletedAppointmentsCount: undefined })),
     locations: plan.locations.filter((row) => originalIds.has(row.studentProfileId)),
     treatments: plan.treatments.filter((row) => originalIds.has(row.studentProfileId)),
     slots: plan.slots.filter((row) => originalIds.has(row.studentProfileId)),
@@ -55,6 +55,29 @@ test("adding the gingival cohort preserves all generated data for the original 1
   // Snapshot of the original cohort using the fixed catalog and current fixture schema.
   assert.equal(createHash("sha256").update(JSON.stringify(originalRows)).digest("hex"),
     "0580688a984450091246c4cb6756cc39ac35c6e63383d3894e10341af25f801e");
+});
+
+test("completed demo appointments have published reviews and cover both visibility settings", () => {
+  assert.ok(plan.history.appointments.length > 0);
+  const profilesWithHistory = plan.profiles.filter((profile) =>
+    plan.history.appointments.some((appointment) => appointment.studentProfileId === profile.id));
+  assert.ok(profilesWithHistory.some((profile) => profile.showCompletedAppointmentsCount));
+  assert.ok(profilesWithHistory.some((profile) => !profile.showCompletedAppointmentsCount));
+  assert.ok(plan.profiles.filter((profile) => profile.showCompletedAppointmentsCount)
+    .every((profile) => profilesWithHistory.includes(profile)));
+
+  for (const appointment of plan.history.appointments) {
+    assert.equal(appointment.status, "COMPLETED");
+    assert.equal(appointment.patientProfileId, demoDirectoryPatient.profile.id);
+    assert.ok(new Date(appointment.scheduledEndsAt) < now);
+    const slot = plan.history.slots.find((row) => row.id === appointment.studentAvailabilitySlotId);
+    const offering = plan.history.offerings.find((row) => row.id === appointment.studentAvailabilitySlotOfferingId);
+    assert.equal(slot?.studentProfileId, appointment.studentProfileId);
+    assert.equal(offering?.slotId, slot?.id);
+    const reviews = plan.history.reviews.filter((row) => row.appointmentId === appointment.id);
+    assert.deepEqual(reviews.map((row) => row.authorRole), ["STUDENT", "PATIENT"]);
+    assert.ok(reviews.every((row) => row.publishedAt && new Date(row.publishedAt) < now));
+  }
 });
 
 test("forty additional students offer gingival treatment in Cluj with future capacity at both locations", () => {
@@ -133,6 +156,7 @@ test("identities are stable on rerun and dates shift in Bucharest time across DS
     assert.ok(regenerated.users.every((user) => new Date(user.signupPolicyConfirmedAt!).getTime() === new Date(date).getTime()));
     assert.deepEqual(regenerated.users.map((user) => ({ ...user, signupPolicyConfirmedAt: now })), plan.users);
     assert.deepEqual(regenerated.slots.map((slot) => slot.id), plan.slots.map((slot) => slot.id));
+    assert.deepEqual(regenerated.history, plan.history);
     for (const [index, slot] of regenerated.slots.entries()) {
       assert.equal(localDateForInstant(new Date(slot.startsAt)), localDateForInstant(new Date(slot.endsAt)));
       assert.equal(new Date(slot.endsAt).getTime() - new Date(slot.startsAt).getTime(), new Date(plan.slots[index].endsAt).getTime() - new Date(plan.slots[index].startsAt).getTime());
@@ -156,6 +180,10 @@ test("original scenario selection excludes only exact demo identities", () => {
   assert.equal(isDemoDirectoryStudent({ ...candidate, id: "real-user" }), false);
   assert.equal(isDemoDirectoryStudent({ ...candidate, email: "real@example.test" }), false);
   assert.equal(isDemoDirectoryStudent({ ...candidate, studentProfile: null }), false);
+  const patient = { ...demoDirectoryPatient.user, patientProfile: demoDirectoryPatient.profile };
+  assert.equal(isDemoDirectoryPatient(patient), true);
+  assert.equal(isDemoDirectoryPatient({ ...patient, patientProfile: null }), false);
+  assert.equal(isDemoDirectoryPatient({ ...patient, email: "real@example.test" }), false);
 });
 
 test("ID, ownership and natural-key collisions are rejected; unrelated records are preserved", () => {
@@ -179,7 +207,10 @@ test("manual appointments, active series and overlapping calendar entries stop r
 
 type StoredRow = { id: string } & Record<string, unknown>;
 function memoryStore() {
-  const models = ["user", "studentProfile", "studentLocation", "studentTreatment", "studentAvailabilitySlot", "studentAvailabilitySlotOffering"];
+  const models = [
+    "user", "patientProfile", "studentProfile", "studentLocation", "studentTreatment",
+    "studentAvailabilitySlot", "studentAvailabilitySlotOffering", "appointment", "appointmentReview",
+  ];
   const tables = new Map(models.map((model) => [model, [] as StoredRow[]]));
   const calls: string[] = [];
   const client = Object.fromEntries(models.map((model) => [model, {
@@ -204,7 +235,6 @@ function memoryStore() {
       for (const row of tables.get(model)!) if (where.id.in.includes(row.id)) Object.assign(row, data);
     },
   }]));
-  client.appointment = { count: async () => 0 } as unknown as typeof client.user;
   client.studentAvailabilitySeries = { count: async () => 0 } as unknown as typeof client.user;
   return { tables, calls, client: client as unknown as Parameters<typeof validateDemoDirectory>[0] };
 }
@@ -214,9 +244,12 @@ test("preflight is read-only; first population batches writes; rerun creates no 
   const empty = await validateDemoDirectory(store.client, plan);
   assert.equal(store.calls.length, 0);
   await writeDemoDirectory(store.client, plan, empty, now);
-  assert.equal(store.calls.filter((call) => call.startsWith("create:")).length, 6);
-  assert.equal(store.tables.get("user")!.length, 140);
-  assert.equal(store.tables.get("studentAvailabilitySlot")!.length, 840);
+  assert.equal(store.calls.filter((call) => call.startsWith("create:")).length, 11);
+  assert.equal(store.tables.get("user")!.length, 141);
+  assert.equal(store.tables.get("studentAvailabilitySlot")!.length, 840 + plan.history.slots.length);
+  assert.equal(store.tables.get("appointment")!.length, plan.history.appointments.length);
+  assert.equal(store.tables.get("appointmentReview")!.length, plan.history.reviews.length);
+  const historyRows = store.tables.get("appointment")!.map((row) => ({ ...row }));
   const counts = [...store.tables].map(([model, rows]) => [model, rows.length]);
   const next = buildDemoDirectory(catalog, new Date("2026-09-08T11:00:00Z"));
   const previous = await validateDemoDirectory(store.client, next);
@@ -225,6 +258,8 @@ test("preflight is read-only; first population batches writes; rerun creates no 
   assert.deepEqual([...store.tables].map(([model, rows]) => [model, rows.length]), counts);
   assert.equal(store.calls.some((call) => call.startsWith("create:")), false);
   assert.equal(store.tables.get("studentAvailabilitySlot")![0].version, 2);
+  assert.deepEqual(store.tables.get("appointment"), historyRows);
+  assert.equal(store.tables.get("studentAvailabilitySlot")![840].status, "ACTIVE");
 });
 
 test("preflight rejects foreign email, profile slug, location key and fixture ownership", async () => {
@@ -233,6 +268,10 @@ test("preflight rejects foreign email, profile slug, location key and fixture ow
     ["studentProfile", { id: "foreign", userId: "foreign-user", publicSlug: plan.profiles[0].publicSlug }],
     ["studentLocation", { ...plan.locations[0], id: "foreign" }],
     ["studentAvailabilitySlot", { ...plan.slots[0], studentProfileId: "foreign-profile" }],
+    ["patientProfile", { ...demoDirectoryPatient.profile, id: "foreign" }],
+    ["appointment", { ...plan.history.appointments[0], id: "foreign" }],
+    ["appointment", { ...plan.history.appointments[0], patientProfileId: "foreign" }],
+    ["appointmentReview", { ...plan.history.reviews[0], id: "foreign" }],
   ] as [string, StoredRow][]) {
     const store = memoryStore();
     store.tables.get(model)!.push(row);
@@ -245,5 +284,19 @@ test("preflight preserves manually added offerings rather than removing them", a
   const store = memoryStore();
   store.tables.get("studentAvailabilitySlotOffering")!.push({ ...plan.offerings[0], id: "manual-offering" });
   await assert.rejects(validateDemoDirectory(store.client, plan), /manually added offerings/);
+  assert.equal(store.calls.length, 0);
+});
+
+test("preflight preserves an unexpected appointment on a demo slot", async () => {
+  const store = memoryStore();
+  const foreignAppointment = {
+    ...plan.history.appointments[0],
+    id: "manual-appointment",
+    routeSlug: "manual-appointment",
+  };
+  for (const slot of [plan.slots[0], plan.history.slots[0]]) {
+    store.tables.set("appointment", [{ ...foreignAppointment, studentAvailabilitySlotId: slot.id }]);
+    await assert.rejects(validateDemoDirectory(store.client, plan), /Appointments exist/);
+  }
   assert.equal(store.calls.length, 0);
 });

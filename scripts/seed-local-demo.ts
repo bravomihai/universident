@@ -18,7 +18,7 @@ import { prisma } from "../src/lib/prisma";
 import { PROFILE_REFRESH_COOLDOWN_MS } from "../src/lib/student-profile/profile-refresh";
 import { assertLocalDemoDatabase, parseLocalDemoOptions } from "./lib/local-demo-options";
 import { placeLocalDemoSlots } from "./lib/local-demo-schedule";
-import { buildDemoDirectory, isDemoDirectoryStudent, type DemoDirectoryPlan } from "./lib/local-demo-directory";
+import { buildDemoDirectory, isDemoDirectoryPatient, isDemoDirectoryStudent, type DemoDirectoryPlan } from "./lib/local-demo-directory";
 import { validateDemoDirectory, writeDemoDirectory } from "./lib/local-demo-directory-store";
 
 const DEMO_PREFIX = "demo-ui-";
@@ -114,6 +114,8 @@ function demoId(kind: string, key: string) {
 function printDirectorySummary(directory: DemoDirectoryPlan) {
   const cityCount = new Set(directory.locations.map((location) => location.cityId)).size;
   console.log(`${directory.profiles.length} fictional profiles planned for publication, ${directory.locations.length} locations, and ${directory.slots.length} future slots across ${cityCount} cities.`);
+  const visibleCountProfiles = directory.profiles.filter((profile) => profile.showCompletedAppointmentsCount).length;
+  console.log(`${directory.history.appointments.length} completed demo appointments, with counts shown for ${visibleCountProfiles} fictional students.`);
   console.log(`Search coverage for ${directory.profiles.length} demo profiles:`);
   console.table(directory.coverage.map((row) => ({ city: row.city, treatment: row.treatment, profiles: row.profiles })));
 }
@@ -178,7 +180,7 @@ async function main() {
     },
   });
 
-  const patientUsers = users.filter((user) => user.role === UserRole.PATIENT &&
+  const patientUsers = users.filter((user) => user.role === UserRole.PATIENT && !isDemoDirectoryPatient(user) &&
     (!options.patientEmail || user.email.toLowerCase() === options.patientEmail));
   const studentUsers = users.filter((user) => user.role === UserRole.STUDENT && !isDemoDirectoryStudent(user) &&
     (!options.studentEmail || user.email.toLowerCase() === options.studentEmail));

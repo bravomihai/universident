@@ -7,6 +7,7 @@ import {
 import Link from "@/components/navigation/app-link";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
+import { RatingStars } from "@/components/reviews/rating-summary";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   clickableCardClassName,
@@ -119,10 +120,17 @@ export function PublicStudentResultCard({
               </span>
             </p>
           </div>
-          <span className="mt-auto inline-flex items-center justify-between gap-3 border-t pt-4 text-sm font-semibold text-foreground">
-            Alege o programare
+          <div className="mt-auto flex items-end justify-between gap-3 border-t pt-4">
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-semibold text-foreground">Alege o programare</p>
+              <RatingStars
+                {...student.rating}
+                completedAppointmentsCount={student.completedAppointmentsCount}
+                className="gap-y-0"
+              />
+            </div>
             <span className={clickableCardIndicatorClassName} aria-hidden="true">{">"}</span>
-          </span>
+          </div>
         </CardContent>
       </Card>
     </Link>

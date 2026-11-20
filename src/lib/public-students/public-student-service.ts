@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import type { RatingSummaryValue } from "@/components/reviews/rating-summary";
 import { publiclyEligibleStudentProfileWhere } from "@/lib/student-publication/student-publication-readiness";
 import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
 import { ensureActiveSeriesMaterializedThrough, ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
@@ -9,6 +10,7 @@ import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment
 import { prisma } from "@/lib/prisma";
 import { createPublicStudentProfile } from "@/lib/public-students/public-student-profile-dto";
 import { getBookablePublicTreatments } from "@/lib/public-students/public-bookable-treatments";
+import { emptyPublicStudentRating, getPublicStudentRatings } from "@/lib/public-students/public-student-ratings";
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
 import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
@@ -42,6 +44,8 @@ export type PublicStudentSummaryDto = {
   city: PublicCatalogOption;
   firstAvailableAt: Date;
   locationCount: number;
+  rating: RatingSummaryValue;
+  completedAppointmentsCount: number | null;
 };
 export type PublicStudentProfileDto = {
   name: string;
@@ -93,7 +97,7 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
           bio: true,
           lastRefreshedAt: true,
           profileImage: { select: { id: true, updatedAt: true } },
-          user: { select: { name: true } },
+          user: { select: { id: true, name: true } },
         },
       },
       studentLocation: { include: { city: true } },
@@ -125,6 +129,8 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       firstAvailableAt: choices[0].startsAt,
       tieBreaker: `${block.studentLocation.routeKey}:${offering.id}`,
       value: {
+        userId: block.studentProfile.user.id,
+        profileId: block.studentProfile.id,
         name: block.studentProfile.user.name,
         imageUrl: studentProfileImageUrl(block.studentProfile.profileImage),
         publicSlug: block.studentProfile.publicSlug,
@@ -145,15 +151,37 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       },
     });
   }
-  const all: PublicStudentSummaryDto[] = rankUniquePublicStudents(candidates).map(
-    (student) => ({
-      ...student.value,
-      firstAvailableAt: student.firstAvailableAt,
-      locationCount: student.locationCount,
+  const ranked = rankUniquePublicStudents(candidates);
+  const totalResults = ranked.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / PUBLIC_STUDENTS_PAGE_SIZE));
+  const pageStudents = ranked.slice((page - 1) * PUBLIC_STUDENTS_PAGE_SIZE, page * PUBLIC_STUDENTS_PAGE_SIZE);
+  if (!pageStudents.length) return { results: [], totalResults, totalPages, page };
+
+  const [ratings, profilesWithVisibleCounts] = await Promise.all([
+    getPublicStudentRatings(prisma, { targetUserId: { in: pageStudents.map(({ value }) => value.userId) } }),
+    prisma.studentProfile.findMany({
+      where: {
+        id: { in: pageStudents.map(({ value }) => value.profileId) },
+        showCompletedAppointmentsCount: true,
+      },
+      select: {
+        id: true,
+        _count: { select: { appointments: { where: { status: "COMPLETED" } } } },
+      },
     }),
-  );
-  const totalResults = all.length;
-  return { results: all.slice((page - 1) * PUBLIC_STUDENTS_PAGE_SIZE, page * PUBLIC_STUDENTS_PAGE_SIZE), totalResults, totalPages: Math.max(1, Math.ceil(totalResults / PUBLIC_STUDENTS_PAGE_SIZE)), page };
+  ]);
+  const completedByProfile = new Map(profilesWithVisibleCounts.map((profile) => [profile.id, profile._count.appointments]));
+  const results = pageStudents.map<PublicStudentSummaryDto>(({ value, firstAvailableAt, locationCount }) => {
+    const { userId, profileId, ...student } = value;
+    return {
+      ...student,
+      firstAvailableAt,
+      locationCount,
+      rating: ratings.get(userId) ?? emptyPublicStudentRating,
+      completedAppointmentsCount: completedByProfile.get(profileId) ?? null,
+    };
+  });
+  return { results, totalResults, totalPages, page };
 });
 
 export const getPublicStudentProfile = cache(async (publicSlug: string) => {
