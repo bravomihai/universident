@@ -58,7 +58,8 @@ export async function processChatEmails(
   for (const candidate of candidates) {
     const claimed = await prisma.$transaction(async (db) => {
       await lockMailbox(db, candidate.mailbox.appointmentId, candidate.mailbox.recipientUserId);
-      const mailbox = await db.chatMailbox.findUniqueOrThrow({ where: { id: candidate.mailbox.id }, include: { recipient: { select: { email: true, emailVerified: true } }, appointment: { select: { chatSlug: true } } } });
+      const mailbox = await db.chatMailbox.findUnique({ where: { id: candidate.mailbox.id }, include: { recipient: { select: { email: true, emailVerified: true } }, appointment: { select: { chatSlug: true, participantDeleted: true } } } });
+      if (!mailbox || mailbox.appointment.participantDeleted) return null;
       const sending = await db.chatEmailBatch.findFirst({ where: { mailboxId: mailbox.id, status: "SENDING" }, orderBy: { createdAt: "asc" } });
       const batch = sending ?? await db.chatEmailBatch.findUnique({ where: { id: candidate.id } });
       if (!batch || !["PENDING", "SENDING"].includes(batch.status) || batch.dueAt > now || (batch.leaseUntil && batch.leaseUntil > now)) return null;

@@ -594,8 +594,8 @@ export function StudentAvailabilityEditorDialog({
                 >
                   <div>
                     <p className="font-medium">
-                      {appointment.patientNameSnapshot},{" "}
-                      {appointment.patientAgeAtAppointment} ani
+                      {appointment.patientNameSnapshot}
+                      {appointment.patientAgeAtAppointment !== null ? `, ${appointment.patientAgeAtAppointment} ani` : null}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {inputParts(new Date(appointment.scheduledStartsAt)).time}–

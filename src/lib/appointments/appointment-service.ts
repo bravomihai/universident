@@ -506,6 +506,7 @@ export async function createAppointmentRequest(
           where: {
             patientProfileId: patient.id,
             status: AppointmentStatus.COMPLETED,
+            participantDeleted: false,
             reviews: { none: { authorRole: AppointmentReviewAuthorRole.PATIENT } },
           },
           select: { routeSlug: true },
@@ -745,6 +746,9 @@ export async function actOnAppointment(
         if (appointment.version !== input.expectedVersion) {
           throw new AppointmentDomainError("STALE_VERSION", "Programarea s-a modificat. Reîncarcă pagina.");
         }
+        if (appointment.participantDeleted) {
+          throw new AppointmentDomainError("ACTION_NOT_ALLOWED", "Contul celuilalt participant a fost șters.");
+        }
         const now = new Date();
         const beforeStart = now < appointment.scheduledStartsAt;
         let status: AppointmentStatus;
@@ -759,6 +763,7 @@ export async function actOnAppointment(
             where: {
               id: { not: appointment.id },
               studentProfileId: appointment.studentProfileId,
+              participantDeleted: false,
               OR: [
                 {
                   status: AppointmentStatus.CONFIRMED,
@@ -990,6 +995,9 @@ export async function reviewAppointment(
           throw new AppointmentDomainError("APPOINTMENT_NOT_FOUND", "Programarea nu a fost găsită.");
         }
         const reviewerRole = isPatient ? "PATIENT" : "STUDENT";
+        if (appointment.participantDeleted) {
+          throw new AppointmentDomainError("REVIEW_NOT_AVAILABLE", "Contul celuilalt participant a fost șters.");
+        }
         if (!appointmentReviewIsAllowed(appointment.status, reviewerRole)) {
           throw new AppointmentDomainError(
             "REVIEW_NOT_AVAILABLE",

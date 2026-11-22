@@ -58,4 +58,12 @@ test("private appointment DTO omits internal scheduling and account IDs", () => 
   assert.equal("id" in dto.patientProfile, false);
   assert.equal("id" in dto.patientProfile.user, false);
   assert.equal("id" in dto.studentProfile.user, false);
+
+  const closed = toAppointmentApiDto({ ...appointment, participantDeleted: true, status: "CONFIRMED",
+    patientNameSnapshot: "Cont șters", patientAgeAtAppointment: null });
+  assert.equal(closed.status, "CLOSED_ACCOUNT_DELETED");
+  assert.equal(closed.patientNameSnapshot, "Cont șters");
+  assert.equal(closed.patientAgeAtAppointment, null);
+  assert.equal(closed.patientProfile.profileSlug, null);
+  assert.equal(closed.studentProfile.publicSlug, null);
 });

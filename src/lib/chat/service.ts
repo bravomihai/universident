@@ -12,7 +12,7 @@ type Actor = { id: string; role: string };
 type Database = Prisma.TransactionClient;
 const appointmentSelect = {
   id: true, routeSlug: true, chatSlug: true, status: true, confirmedAt: true, statusChangedAt: true,
-  scheduledStartsAt: true, treatmentNameSnapshot: true,
+  scheduledStartsAt: true, treatmentNameSnapshot: true, participantDeleted: true,
   patientProfile: { select: { userId: true, user: { select: { name: true } } } },
   studentProfile: { select: { userId: true, user: { select: { name: true } } } },
 } satisfies Prisma.AppointmentSelect;
@@ -57,7 +57,11 @@ export async function unreadChatCount(actor: Actor) {
 }
 
 export async function listChatConversations(actor: Actor, past = false, cursor?: string) {
-  const where = { ...ownerWhere(actor), confirmedAt: { not: null }, status: past ? { not: "CONFIRMED" as const } : "CONFIRMED" as const };
+  const where = {
+    ...ownerWhere(actor), confirmedAt: { not: null },
+    ...(past ? { OR: [{ status: { not: "CONFIRMED" } }, { participantDeleted: true }] }
+      : { status: "CONFIRMED", participantDeleted: false }),
+  } satisfies Prisma.AppointmentWhereInput;
   if (cursor && !await prisma.appointment.findFirst({ where: { ...where, ...chatSlugWhere(cursor) }, select: { id: true } })) {
     throw new ChatError("INVALID_CURSOR", "Reîncarcă lista conversațiilor.");
   }
@@ -139,7 +143,7 @@ export async function sendChatMessage(slug: string, actor: Actor, input: { text:
   };
   const existing = await duplicate();
   if (existing) return messageDto(existing, actor.id);
-  if (!chatState(appointment).canSend) throw new ChatError("CHAT_CLOSED", "Au trecut cele 7 zile. Conversația poate fi doar citită.", 409);
+  if (!chatState(appointment).canSend) throw new ChatError("CHAT_CLOSED", "Conversația poate fi doar citită.", 409);
   await consumeAttempt(actor.id);
   const verdict = await moderate(input.text);
   if (verdict.reason === "MEDICAL_DATA") {
