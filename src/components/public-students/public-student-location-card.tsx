@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/clickable-card-styles";
 import { publicStudentBookingHref } from "@/lib/public-students/public-student-booking-links";
 import type { PublicStudentLocationDto } from "@/lib/public-students/public-student-service";
+import { treatmentSupervisionLabel } from "@/lib/student-profile/supervision-label";
 import { cn } from "@/lib/utils";
 
 export function PublicStudentLocationCard({
@@ -15,19 +16,21 @@ export function PublicStudentLocationCard({
   treatmentSlug,
   treatmentName,
   location,
+  university,
 }: {
   studentSlug: string;
   treatmentSlug: string;
   treatmentName: string;
   location: PublicStudentLocationDto;
+  university: string;
 }) {
-  const supervisorName = [location.supervisor.academicTitle, location.supervisor.fullName].filter(Boolean).join(" ");
+  const supervision = treatmentSupervisionLabel(university);
   return (
     <Link
       href={publicStudentBookingHref(studentSlug, treatmentSlug, location.city.slug, location.routeKey)}
       className={clickableCardLinkClassName}
       style={{ borderRadius: "0.75rem" }}
-      aria-label={`Alege o programare pentru ${treatmentName} la ${location.name}, ${location.city.name}. Profesor supervizor: ${supervisorName}.`}
+      aria-label={`Alege o programare pentru ${treatmentName} la ${location.name}, ${location.city.name}. ${supervision}.`}
     >
       <div className={cn(clickableCardClassName, "rounded-xl border bg-muted/15 p-4")}>
         <p className="flex items-start gap-1.5 font-medium">
@@ -37,7 +40,7 @@ export function PublicStudentLocationCard({
         <p className="mt-1 pl-5 text-sm text-muted-foreground">{location.address}</p>
         <p className="mt-3 flex items-start gap-1.5 border-t pt-3 text-sm text-muted-foreground">
           <UserRound className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <span>Profesor supervizor: {supervisorName}</span>
+          <span>{supervision}</span>
         </p>
         <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-foreground">
           Alege o programare

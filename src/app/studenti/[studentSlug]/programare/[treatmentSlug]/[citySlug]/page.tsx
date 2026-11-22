@@ -66,6 +66,8 @@ export default async function StudentBookingPage({ params, searchParams }: Props
             </p>
             <RatingSummaryLink
               summary={profile.reviewData.summary}
+              completedAppointmentsCount={profile.completedAppointmentsCount}
+              showReviewCount={false}
               href={publicStudentProfileHref(profile.publicSlug, {
                 section: "recenzii",
               })}
@@ -91,6 +93,7 @@ export default async function StudentBookingPage({ params, searchParams }: Props
         <PublicBookingPanel
           key={`${profile.publicSlug}:${treatment.slug}:${city.slug}:${locationRouteKey ?? "all"}`}
           studentSlug={profile.publicSlug}
+          university={profile.university}
           treatmentSlug={treatment.slug}
           citySlug={city.slug}
           locationRouteKey={locationRouteKey}

@@ -46,11 +46,10 @@ test("booking URLs encode individual route segments and query values", () => {
 
 test("a profile location renders as one accessible link with the shared card interaction styles", () => {
   const markup = renderToStaticMarkup(createElement(PublicStudentLocationCard, {
-    studentSlug: "student", treatmentSlug: "carii", treatmentName: "Carii și obturații",
+    university: "UMF Cluj-Napoca", studentSlug: "student", treatmentSlug: "carii", treatmentName: "Carii și obturații",
     location: {
       routeKey: "a123bc", name: "Clinica", address: "Adresă",
       city: { name: "Cluj-Napoca", slug: "cluj-napoca" },
-      supervisor: { fullName: "Ana Popescu", academicTitle: "Prof. dr." },
     },
   }));
   assert.equal((markup.match(/<a\s/g) ?? []).length, 1);
@@ -59,15 +58,15 @@ test("a profile location renders as one accessible link with the shared card int
   assert.match(markup, /aria-label="Alege o programare pentru Carii și obturații la Clinica, Cluj-Napoca/);
   assert.match(markup, /ui-card-link/);
   assert.match(markup, /ui-card-interactive/);
+  assert.match(markup, /Tratament supervizat de un cadru didactic UMF Cluj-Napoca/);
 });
 
 test("location cards retain clean booking links without navigation metadata", () => {
   const markup = renderToStaticMarkup(createElement(PublicStudentLocationCard, {
-    studentSlug: "student", treatmentSlug: "carii", treatmentName: "Carii și obturații",
+    university: "UMF Cluj-Napoca", studentSlug: "student", treatmentSlug: "carii", treatmentName: "Carii și obturații",
     location: {
       routeKey: "a123bc", name: "Clinica", address: "Adresă",
       city: { name: "Cluj-Napoca", slug: "cluj-napoca" },
-      supervisor: { fullName: "Ana Popescu", academicTitle: null },
     },
   }));
   assert.match(markup, /href="\/studenti\/student\/programare\/carii\/cluj-napoca\?locatie=a123bc"/);

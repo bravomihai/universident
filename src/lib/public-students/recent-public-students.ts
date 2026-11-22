@@ -1,6 +1,6 @@
 import "server-only";
 
-import { UserRole } from "@/generated/prisma/enums";
+import { publiclyEligibleStudentProfileWhere } from "@/lib/student-publication/student-publication-readiness";
 import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment-service";
 import { ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
@@ -18,12 +18,8 @@ export async function getRecentPublicStudents(excludedUserId?: string) {
   const result: RecentPublicStudent[] = [];
   let cursor: string | undefined;
   const publicWhere = {
-    isPublished: true,
-    publicSlug: { not: null },
-    university: { not: "" },
-    studyYear: { gte: 1, lte: 6 },
+    ...publiclyEligibleStudentProfileWhere(),
     lastRefreshedAt: { not: null },
-    user: { role: UserRole.STUDENT, emailVerified: true },
     ...(excludedUserId ? { userId: { not: excludedUserId } } : {}),
     ...(isPublicDeployment() ? realStudentProfileWhere() : {}),
   } as const;
@@ -59,7 +55,7 @@ export async function getRecentPublicStudents(excludedUserId?: string) {
         id: true, studentProfileId: true, startsAt: true, endsAt: true,
         studentLocation: { select: { city: { select: { name: true } } } },
         offerings: {
-          where: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { isActive: true } }, supervisor: { deletedAt: null } },
+          where: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { isActive: true } } },
           select: { id: true, studentTreatment: { select: { durationMinutes: true, treatment: { select: { name: true } } } } },
         },
         appointments: {

@@ -1,3 +1,5 @@
+import { readJsonRequest } from "@/lib/api/request-body";
+import { missingAccountPolicy } from "@/lib/account/policy-confirmation-service";
 import { UserRole } from "@/generated/prisma/enums";
 import { authorizeAccountRequest } from "@/lib/api/account-request";
 import { domainErrorResponse } from "@/lib/api/domain-error-response";
@@ -10,10 +12,14 @@ type Context = { params: Promise<{ appointmentSlug: string }> };
 export async function POST(request: Request, context: Context) {
   const authorization = await authorizeAccountRequest(request, { verifyOrigin: true, roles: [UserRole.PATIENT, UserRole.STUDENT] });
   if (!authorization.ok) return authorization.response;
-  let body: unknown;
-  try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
   const parsed = parseAppointmentActionInput(body);
   if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
+  if (parsed.data.action === "CONFIRM" && authorization.user.role === UserRole.STUDENT && await missingAccountPolicy(authorization.user)) {
+    return Response.json({ error: "Confirmă declarația privind profilul înainte de a accepta o programare.", code: "ACCOUNT_POLICY_REQUIRED" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
   try {
     const { appointmentSlug } = await context.params;
     const appointment = await actOnAppointment(appointmentSlug, authorization.user, parsed.data);

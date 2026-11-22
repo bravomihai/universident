@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { processAppointmentEmails } from "@/lib/appointments/appointment-email-worker";
 import { processChatEmails } from "@/lib/chat/email-worker";
 
 export const runtime = "nodejs";
@@ -13,7 +14,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Acces nepermis." }, { status: 401 });
   }
   try {
-    return Response.json(await processChatEmails(), { headers: { "Cache-Control": "no-store" } });
+    const [chat, appointments] = await Promise.allSettled([processChatEmails(), processAppointmentEmails()]);
+    if (chat.status === "rejected" || appointments.status === "rejected") {
+      throw new Error("EMAIL_PROCESSING_FAILED");
+    }
+    return Response.json({
+      sent: chat.value.sent + appointments.value.sent,
+      failed: chat.value.failed + appointments.value.failed,
+      failedBatches: chat.value.failedBatches + appointments.value.failedBatches,
+      overdueBatches: chat.value.overdueBatches + appointments.value.overdueBatches,
+    }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json({ error: "Procesarea notificărilor nu este disponibilă." }, { status: 503 });
   }

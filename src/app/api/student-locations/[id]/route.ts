@@ -1,9 +1,10 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { prisma } from "@/lib/prisma";
 import { studentLocationSelect } from "@/lib/student-locations/student-location-data";
 import { parseUpdateStudentLocationInput } from "@/lib/student-locations/student-location-input";
 import { authorizeStudentLocationRequest } from "@/lib/student-locations/student-location-request";
 import {
-  archiveStudentSchedulingResource,
+  archiveStudentLocation,
   ResourceArchiveDomainError,
 } from "@/lib/availability/resource-archive-service";
 import { SchedulingTemporarilyUnavailableError } from "@/lib/scheduling/transaction";
@@ -13,7 +14,9 @@ type Context = { params: Promise<{ id: string }> };
 export async function PATCH(request: Request, context: Context) {
   const auth = await authorizeStudentLocationRequest(request, { verifyOrigin: true });
   if (!auth.ok) return auth.response;
-  let body: unknown; try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
   const parsed = parseUpdateStudentLocationInput(body); if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   if (parsed.data.cityId) {
     const city = await prisma.city.findFirst({ where: { id: parsed.data.cityId, isActive: true } });
@@ -31,9 +34,7 @@ export async function DELETE(request: Request, context: Context) {
   if (!auth.ok) return auth.response;
   const { id } = await context.params;
   try {
-    const result = await archiveStudentSchedulingResource(
-      "location",
-      auth.studentProfileId,
+    const result = await archiveStudentLocation(auth.studentProfileId,
       id,
     );
     return Response.json({ archivedLocationId: id, archivedAt: result.archivedAt });

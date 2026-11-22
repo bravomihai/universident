@@ -1,9 +1,9 @@
-import { MapPin, Stethoscope, UsersRound } from "lucide-react";
+import { MapPin, Stethoscope } from "lucide-react";
 import Link from "@/components/navigation/app-link";
 
 import { cn } from "@/lib/utils";
 
-type ProfessionalArea = "treatments" | "locations" | "supervisors";
+type ProfessionalArea = "treatments" | "locations";
 
 const professionalAreas = [
   {
@@ -18,12 +18,6 @@ const professionalAreas = [
     label: "Locații",
     icon: MapPin,
   },
-  {
-    id: "supervisors",
-    href: "/cont/supervizori",
-    label: "Supervizori",
-    icon: UsersRound,
-  },
 ] as const;
 
 type StudentProfessionalNavigationProps = {
@@ -36,7 +30,7 @@ export function StudentProfessionalNavigation({
   return (
     <nav
       aria-label="Administrare profil profesional"
-      className="professional-navigation grid grid-cols-3 gap-1 rounded-2xl border bg-muted/20 p-1"
+      className="professional-navigation grid grid-cols-2 gap-1 rounded-2xl border bg-muted/20 p-1"
     >
       {professionalAreas.map((area) => {
         const Icon = area.icon;

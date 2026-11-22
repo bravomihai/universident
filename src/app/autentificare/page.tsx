@@ -21,7 +21,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
 
   if (session) {
     redirect(
-      session.user.emailVerified ? returnTo ?? "/cont" : returnTo ? `/verifica-email?next=${encodeURIComponent(returnTo)}` : "/verifica-email",
+      session.user.emailVerified ? "/confirma-reguli" + (returnTo ? "?next=" + encodeURIComponent(returnTo) : "") : returnTo ? `/verifica-email?next=${encodeURIComponent(returnTo)}` : "/verifica-email",
     );
   }
 

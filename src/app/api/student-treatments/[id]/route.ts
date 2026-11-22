@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import {
   archiveStudentTreatment,
   StudentTreatmentDomainError,
@@ -71,16 +72,9 @@ export async function PATCH(
       );
     }
 
-    let body: unknown;
-
-    try {
-      body = await request.json();
-    } catch {
-      return Response.json(
-        { error: "Datele trimise nu sunt valide." },
-        { status: 400 },
-      );
-    }
+    const bodyResult = await readJsonRequest(request);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data;
 
     const parsedInput = parseUpdateStudentTreatmentInput(body);
 

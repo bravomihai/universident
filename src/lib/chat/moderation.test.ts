@@ -17,12 +17,17 @@ test("moderation treats messages as data and disables Responses persistence", as
         ? { results: [{ categories: { harassment: false, hate: false, violence: true } }] }
         : { status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify({ decision: "ALLOW", reason: "NONE" }) }] }] });
     }) as typeof fetch;
-    assert.deepEqual(await moderateChatMessage("Mă doare după extracție și sângerează.", request), { decision: "ALLOW", reason: "NONE" });
+    assert.deepEqual(await moderateChatMessage("Pot veni joi la ora 15 pentru extracție?", request), { decision: "ALLOW", reason: "NONE" });
     assert.equal(bodies[1].store, false);
     assert.equal(bodies[1].instructions, MODERATION_PROMPT);
     assert.equal("previous_response_id" in bodies[1], false);
     assert.equal(JSON.stringify(bodies).includes("recipient"), false);
   } finally { if (previous === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previous; }
+});
+
+test("moderation recognizes the medical data block reason", () => {
+  assert.deepEqual(parseModerationVerdict({ decision: "BLOCK", reason: "MEDICAL_DATA" }), { decision: "BLOCK", reason: "MEDICAL_DATA" });
+  assert.equal(parseModerationVerdict({ decision: "ALLOW", reason: "MEDICAL_DATA" }), null);
 });
 
 test("provider failures, refusals and truncated results fail closed without leaking provider details", async () => {

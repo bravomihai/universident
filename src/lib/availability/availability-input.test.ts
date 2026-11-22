@@ -11,7 +11,6 @@ const configuration = {
   offerings: [
     {
       studentTreatmentId: "treatment-1",
-      supervisorId: "supervisor-1",
     },
   ],
 };

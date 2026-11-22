@@ -7,7 +7,7 @@ export const publicAnswers = [
   {
     id: "cine-realizeaza-tratamentele",
     question: "Cine realizează tratamentele?",
-    answer: "Tratamentele sunt realizate de studenți la medicină dentară, sub supervizare. Pe profilul public al studentului poți vedea universitatea, anul de studiu și supervizorii asociați tratamentelor disponibile.",
+    answer: "Tratamentele sunt realizate de studenți la medicină dentară, sub supervizare. Pe profilul public al studentului poți vedea universitatea și anul de studiu declarate de student.",
   },
   {
     id: "cum-solicit-programare",
@@ -28,15 +28,4 @@ export const publicAnswers = [
 
 export function studentStudyDescription(university: string, studyYear: number) {
   return `Student la medicină dentară, anul ${studyYear} la ${university}.`;
-}
-
-export function studentSearchIntroduction(
-  treatment?: { name: string },
-  city?: { name: string },
-  hasResults = false,
-) {
-  if (treatment && city && hasResults) {
-    return `Pentru ${treatment.name.toLocaleLowerCase("ro-RO")} în ${city.name}, poți consulta mai jos studenții cu intervale disponibile pentru tratamente sub supervizare. Alegi o oră liberă și trimiți o cerere, pe care studentul trebuie să o confirme.`;
-  }
-  return "Alege tratamentul și orașul pentru a găsi studenți la medicină dentară cu ore disponibile. Tratamentele sunt realizate sub supervizare, iar cererea de programare trebuie confirmată de student.";
 }

@@ -14,10 +14,11 @@ function isChatSlugCollision(error: unknown) {
     if (Array.isArray(meta.target) && meta.target.includes("chatSlug")) return true;
     if (meta.target === "appointment_chatSlug_key") return true;
   }
-  // Prisma's PostgreSQL adapter reports quoted fields inside its cause instead.
+  // Prisma's PostgreSQL adapter reports fields or the index name inside its cause.
   const adapter = "driverAdapterError" in meta ? meta.driverAdapterError : null;
   const cause = adapter && typeof adapter === "object" && "cause" in adapter ? adapter.cause : null;
   const constraint = cause && typeof cause === "object" && "constraint" in cause ? cause.constraint : null;
+  if (constraint && typeof constraint === "object" && "index" in constraint && constraint.index === "appointment_chatSlug_key") return true;
   const fields = constraint && typeof constraint === "object" && "fields" in constraint ? constraint.fields : null;
   return Array.isArray(fields) && fields.some((field) => field === "chatSlug" || field === '"chatSlug"');
 }

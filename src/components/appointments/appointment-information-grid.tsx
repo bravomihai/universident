@@ -12,6 +12,7 @@ import type {
   AppointmentCardSource,
   AppointmentCounterpart,
 } from "@/lib/appointments/appointment-card-data";
+import { treatmentSupervisionLabel } from "@/lib/student-profile/supervision-label";
 import { cn } from "@/lib/utils";
 
 const panelClass = "h-full min-w-0 rounded-[var(--card-radius)] border bg-muted/15 p-4";
@@ -72,8 +73,8 @@ export function AppointmentInformationGrid({ appointment, counterpart }: {
           {profile}
         </Link>
       ) : profile}
-      <DetailPanel icon={ShieldCheck} title="Profesor supervizor">
-        <p className="font-medium">{appointment.supervisorNameSnapshot}</p>
+      <DetailPanel icon={ShieldCheck} title="Supervizare">
+        <p className="font-medium">{treatmentSupervisionLabel(appointment.studentUniversitySnapshot)}</p>
       </DetailPanel>
       <DetailPanel icon={MapPin} title="Locație">
         <p className="font-medium">{appointment.locationNameSnapshot}</p>

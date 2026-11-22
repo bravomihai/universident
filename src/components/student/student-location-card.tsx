@@ -11,7 +11,7 @@ export function StudentLocationCard({ location, isPending, isDisabled, feedback,
   return (
     <Card size="sm" className="h-fit self-start" aria-busy={isPending}>
       <CardHeader className="gap-1.5">
-        <div className="flex items-start justify-between gap-4">
+        <div className="heading-actions flex items-start justify-between gap-4">
           <CardTitle className="text-lg leading-snug">{location.name}</CardTitle>
           <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-foreground">
             <MapPin className="size-4 stroke-[2.5]" aria-hidden="true" />
@@ -29,7 +29,7 @@ export function StudentLocationCard({ location, isPending, isDisabled, feedback,
           </p>
         ) : null}
         <StudentCardFeedbackMessage feedback={feedback} />
-        <div className="grid grid-cols-2 gap-2 border-t pt-3">
+        <div className="card-actions grid grid-cols-2 gap-2 border-t pt-3">
           <Button asChild variant="outline" className="w-full">
             <Link href={`/cont/locatii/${location.routeKey}/editare`}><Pencil />Editare</Link>
           </Button>
