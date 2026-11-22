@@ -42,15 +42,13 @@ html { scroll-padding-top: calc(var(--site-header-height) + 1rem); }
 .universident-app [data-slot="button"][data-size="icon-sm"] { width: 2.5rem; height: 2.5rem; }
 .universident-app [data-slot="button"][data-size="icon-xs"] { width: 2rem; height: 2rem; }
 .universident-app [data-slot="button"]:disabled { cursor: not-allowed; }
-.universident-app :is([data-slot="input"], textarea, select, [data-slot="select-trigger"]) {
+.universident-app :is([data-slot="input"], textarea, [data-slot="select-trigger"]) {
   border-radius: var(--control-radius);
   font-family: inherit;
   font-size: var(--text-body);
   transition-duration: var(--motion-ui);
 }
-.universident-app [data-slot="input"]:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
-.universident-app select,
-.universident-app [data-slot="select-trigger"][data-size="default"] { min-height: var(--control-height); }
+.universident-app [data-slot="input"]:not([type="file"]):not([type="checkbox"]):not([type="radio"]) { min-height: var(--control-height); }
 .universident-app [data-slot="label"] { font-size: var(--text-label); font-weight: var(--weight-control); }
 .universident-app :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) { border-radius: var(--card-radius); border-color: var(--surface-edge); }
 .universident-app :is([data-slot="dropdown-menu-content"], [data-slot="select-content"]) { border-radius: var(--card-radius-compact); }
@@ -103,5 +101,5 @@ html { scroll-padding-top: calc(var(--site-header-height) + 1rem); }
 }
 @media (prefers-reduced-motion: reduce) {
   .universident-app .ui-card-interactive,
-  .universident-app [data-slot="button"] { transition-duration: 0s; }
+  .universident-app :is([data-slot="button"], [data-slot="select-trigger"]) { transition-duration: 0s; }
 }

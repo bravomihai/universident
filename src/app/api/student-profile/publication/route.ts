@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -113,16 +114,9 @@ export async function PUT(request: Request) {
     );
   }
 
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json(
-      { error: "Datele trimise nu sunt valide." },
-      { status: 400 },
-    );
-  }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
 
   if (!hasExactPublicationBody(body)) {
     return Response.json(

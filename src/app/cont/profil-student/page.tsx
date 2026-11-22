@@ -1,11 +1,13 @@
+import Link from "@/components/navigation/app-link";
+import { missingAccountPolicy } from "@/lib/account/policy-confirmation-service";
 import { GraduationCap } from "lucide-react";
 import type { Metadata } from "next";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
 import { StudentProfileImageForm } from "@/components/student/student-profile-image-form";
+import { CancellationReputationLabel } from "@/components/reviews/cancellation-reputation-label";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
-import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
 import { BackLink } from "@/components/ui/back-link";
 import {
     Card,
@@ -47,6 +49,7 @@ export default async function StudentProfilePage() {
                 university: true,
                 studyYear: true,
                 bio: true,
+                showCompletedAppointmentsCount: true,
                 profileImage: {
                     select: { id: true, updatedAt: true },
                 },
@@ -74,14 +77,21 @@ export default async function StudentProfilePage() {
                 normalizedProfileUniversity,
         )?.slug ?? legacyUniversitySlugs[normalizedProfileUniversity] ?? null
         : null;
+    const needsDeclaration = await missingAccountPolicy(session.user);
     const initialImageUrl = studentProfileImageUrl(profile?.profileImage);
+    const cancellationsLast10 = appointmentData.studentReputation?.cancellationsLast10 ?? 0;
 
     return (
         <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
             <div className="w-full max-w-6xl space-y-6">
                 <BackLink />
+                {needsDeclaration ? (
+                    <p className="rounded-xl border bg-muted/20 p-4 text-sm">
+                        După ce ai revizuit profilul, <Link href="/confirma-reguli" className="font-medium underline underline-offset-4">confirmă corectitudinea informațiilor &gt;</Link>
+                    </p>
+                ) : null}
 
-                <div className="space-y-2">
+                <div className="card-adjacent space-y-2">
                     <div className="flex items-center gap-3">
                         <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
                             <GraduationCap className="size-5" aria-hidden="true" />
@@ -96,6 +106,12 @@ export default async function StudentProfilePage() {
                         toate locațiile și tratamentele tale.
                     </p>
                     <RatingSummaryLink summary={reviewData.summary} href="#recenzii" />
+                    <div>
+                        <CancellationReputationLabel
+                            count={cancellationsLast10}
+                            value={formatStudentCancellationReputation(cancellationsLast10)}
+                        />
+                    </div>
                 </div>
 
                 <Card>
@@ -136,6 +152,7 @@ export default async function StudentProfilePage() {
                                         universitySlug: initialUniversitySlug,
                                         studyYear: profile.studyYear,
                                         bio: profile.bio,
+                                        showCompletedAppointmentsCount: profile.showCompletedAppointmentsCount,
                                     }
                                     : null
                             }
@@ -143,14 +160,6 @@ export default async function StudentProfilePage() {
                         />
                     </CardContent>
                 </Card>
-
-                <SchedulingReputationCard
-                    count={appointmentData.studentReputation?.cancellationsLast10 ?? 0}
-                    description="Reper calculat din ultimele 10 programări confirmate."
-                    value={formatStudentCancellationReputation(
-                        appointmentData.studentReputation?.cancellationsLast10 ?? 0,
-                    )}
-                />
 
                 <ProfileReviewList data={reviewData} title="Recenziile tale" />
             </div>

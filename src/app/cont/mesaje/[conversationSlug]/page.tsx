@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ChatInbox } from "@/components/chat/chat-inbox";
 import { ChatPanel } from "@/components/chat/chat-panel";
-import { requireAccountPageSession } from "@/lib/account/account-page-session";
+import { requireChatPageSession } from "@/lib/chat/chat-page-session";
 import { getChatPage, listChatConversations } from "@/lib/chat/service";
 import { ChatError } from "@/lib/chat/errors";
 
 export const metadata: Metadata = { title: "Conversație", robots: { index: false, follow: false } };
 export default async function ConversationPage({ params }: { params: Promise<{ conversationSlug: string }> }) {
   const { conversationSlug } = await params;
-  const session = await requireAccountPageSession(`/cont/mesaje/${encodeURIComponent(conversationSlug)}`);
+  const session = await requireChatPageSession(`/cont/mesaje/${encodeURIComponent(conversationSlug)}`);
   let data;
   try { data = await getChatPage(conversationSlug, session.user); }
   catch (error) { if (error instanceof ChatError && error.status === 404) notFound(); throw error; }

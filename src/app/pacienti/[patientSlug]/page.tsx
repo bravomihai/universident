@@ -76,7 +76,7 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
         </header>
 
         {patient.bio ? (
-          <section aria-labelledby="patient-profile-bio" className="max-w-3xl">
+          <section aria-labelledby="patient-profile-bio" className="card-adjacent max-w-3xl">
             <h2 id="patient-profile-bio" className="text-xl font-semibold">Despre pacient</h2>
             <p className="mt-3 whitespace-pre-line text-muted-foreground">{patient.bio}</p>
           </section>

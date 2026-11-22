@@ -22,6 +22,7 @@ import {
   generateOccurrences,
   OccurrenceGenerationLimitError,
 } from "@/lib/availability/recurrence";
+import { currentPolicyWhere } from "@/lib/account/policy-confirmations";
 import { prisma } from "@/lib/prisma";
 import { runSeriesOperationsIsolated } from "@/lib/availability/series-isolation";
 import {
@@ -95,7 +96,6 @@ export async function materializeSeriesThrough(
       offerings: {
         include: {
           studentTreatment: { select: { deletedAt: true, durationMinutes: true } },
-          supervisor: { select: { deletedAt: true } },
         },
       },
     },
@@ -117,7 +117,7 @@ export async function materializeSeriesThrough(
     series.studentLocation.deletedAt ||
     series.offerings.length === 0 ||
     series.offerings.some(
-      (offering) => offering.studentTreatment.deletedAt || offering.supervisor.deletedAt,
+      (offering) => offering.studentTreatment.deletedAt,
     )
   ) {
     return { skipped: "RESOURCE_INACTIVE" as const, created: 0, updated: 0, preserved: 0, occurrences: [] };
@@ -240,7 +240,6 @@ export async function materializeSeriesThrough(
               slotId: slot.id,
               studentProfileId: series.studentProfileId,
               studentTreatmentId: offering.studentTreatmentId,
-              supervisorId: offering.supervisorId,
             })),
           ),
         });
@@ -374,6 +373,7 @@ export async function ensureActiveSeriesMaterializedThrough(
         user: {
           role: UserRole.STUDENT,
           emailVerified: true,
+          ...currentPolicyWhere("studentDeclaration"),
           ...(filters.excludedUserId ? { id: { not: filters.excludedUserId } } : {}),
         },
       },
@@ -387,7 +387,6 @@ export async function ensureActiveSeriesMaterializedThrough(
             deletedAt: null,
             treatment: { slug: filters.treatmentSlug, isActive: true },
           },
-          supervisor: { deletedAt: null },
         },
       },
     },

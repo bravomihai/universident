@@ -26,10 +26,6 @@ export function treatmentResourceLockKey(treatmentId: string) {
   return `resource:treatment:${treatmentId}`;
 }
 
-export function supervisorResourceLockKey(supervisorId: string) {
-  return `resource:supervisor:${supervisorId}`;
-}
-
 export function availabilityRootLockKey(slot: { id: string; seriesId: string | null }) {
   return slot.seriesId ? seriesLockKey(slot.seriesId) : slotLockKey(slot.id);
 }
