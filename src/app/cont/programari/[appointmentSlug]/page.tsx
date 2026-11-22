@@ -93,7 +93,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
 
         <Card>
           <CardHeader className="gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="heading-actions flex flex-wrap items-center justify-between gap-3">
               <CardTitle>Programarea ta</CardTitle>
               <AppointmentStatusBadges
                 status={appointment.status}
@@ -126,7 +126,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
         {ownReview ? (
           <Card size="sm">
             <CardHeader>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="heading-actions flex flex-wrap items-center justify-between gap-3">
                 <CardTitle>Recenzia ta</CardTitle>
                 <span className="rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                   Salvată
@@ -171,7 +171,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
                 </p>
               </div>
               <div>
-                <h3 className="mb-3 flex items-center gap-2 font-medium">
+                <h3 className="card-adjacent mb-3 flex items-center gap-2 font-medium">
                   <History className="size-4 text-muted-foreground" aria-hidden="true" />Istoric între voi
                 </h3>
                 {studentPatientContext.history.length ? (

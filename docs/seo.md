@@ -34,7 +34,7 @@ Metadata is Romanian and describes supervised student care without unsupported c
 
 The sitemap includes the homepage, directory, first page of eligible searches, and published student profiles that satisfy existing visibility rules: STUDENT role, verified email, university, valid study year, and public slug. It excludes `/echipa`, private/authentication/booking pages, fixtures, and searches without real capacity. Pagination links expose subsequent result pages.
 
-Fixture detection covers `student-demo-*` slugs, `demo-ui-*` IDs, the demo email domain, and associations with the original demo slots/supervisors. Public search and recent-profile lists also exclude these profiles without modifying their records.
+Fixture detection covers `student-demo-*` slugs, `demo-ui-*` IDs, the demo email domain, and associations with the original demo slots or locations. Public search and recent-profile lists also exclude these profiles without modifying their records.
 
 Search discovery uses real capacity in the 60-day booking window, treatment duration, and the existing calendar slicing algorithm after confirmed appointments and unexpired requests are subtracted. It does not generate a Cartesian product of cities and treatments. Results retain booking links and direct public-profile links.
 

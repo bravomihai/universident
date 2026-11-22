@@ -24,8 +24,12 @@ Primele 100 își păstrează distribuția existentă. Profilurile 101–140 sun
 două locații în Cluj și șase intervale viitoare pentru acest tratament (60 min).
 Împreună cu cele 4 rezultate din setul inițial, această căutare are 44 de profiluri
 demo, înainte de eventuale rezervări sau retrageri din publicare.
-Nu au parole/conturi de autentificare, nu sunt trimise emailuri și nu sunt adăugate
-fotografii sau recenzii fictive. Pentru autentificare și confirmarea programărilor
+Unele profiluri dintre cele actualizate recent au programări finalizate și recenzii
+reciproce publicate, de la un pacient fictiv. De exemplu, `/studenti/student-demo-001`
+afișează numărul de programări finalizate. Alte profiluri demo cu programări
+finalizate afișează doar recenziile, conform setării lor de vizibilitate.
+Identitățile fictive nu au parole sau conturi de autentificare și nu primesc emailuri.
+Pentru autentificare și confirmarea programărilor
 folosește studentul tău existent, nu aceste identități de catalog.
 
 - **11 orașe**: 60 de studenți cu oraș principal Cluj-Napoca și 20 în București,
@@ -36,7 +40,7 @@ folosește studentul tău existent, nu aceste identități de catalog.
 - **280 de locații**, două pentru fiecare student; 20 de studenți au a doua
   locație într-un alt oraș. Numele și adresele clinicilor sunt explicit fictive.
 - **840 de intervale** de 3–5 ore, șase per student, la ore diferite în următoarele
-  1–55 de zile. Fiecare interval oferă tratamentele studentului cu supervizor și
+  1–55 de zile. Fiecare interval oferă tratamentele studentului și
   durate de 30–120 de minute, astfel încât calendarul să poată genera programări reale.
 - Profiluri publicate și verificate, ani de studiu 1–6, universități din catalog,
   descrieri de lungimi diferite sau absente și actualizări cu 5–995 de
@@ -49,7 +53,8 @@ Numerele din tabel exclud conturile tale existente și reflectă setul proaspăt
 rezervările făcute ulterior reduc disponibilitatea conform regulilor aplicației.
 
 La rerulare se actualizează aceleași profiluri/resurse și se mută intervalele relativ
-la ziua curentă, fără duplicate. Dacă ai trimis o cerere pe un interval al acestor
+la ziua curentă, fără duplicate. Programările finalizate generate de script și
+intervalele lor istorice rămân la date fixe. Dacă ai trimis o cerere pe un interval al acestor
 profiluri, scriptul **se oprește fără modificări**, indiferent de starea cererii,
 pentru a păstra istoricul. La fel, refuză coliziunile de identitate, seriile active,
 ofertele manuale pe intervale demo și suprapunerile cu intervale manuale. Folosește
@@ -57,6 +62,24 @@ ofertele manuale pe intervale demo și suprapunerile cu intervale manuale. Folos
 Scrierile sunt atomice într-o tranzacție, iar `--dry-run` rămâne complet read-only.
 
 ## Verificare și populare
+
+Pentru conturile locale implicite `patient@dev.dev` și `student@dev.dev`, alege
+parolele și creează conturile înainte de a rula scenariile:
+
+```bash
+make pacient ARGS='--password=<parola-pacient>'
+make student ARGS='--password=<parola-student>'
+make demo_data
+make demo_data ARGS='--scenario=booking --dry-run'
+```
+
+Pentru o altă adresă, folosește `ARGS='email parola'` la crearea contului.
+Apoi indică adresele când rulezi scenariile. Opțiunile `--patient-email` și
+`--student-email` înlocuiesc adresa implicită pentru rolul respectiv.
+
+```bash
+make demo_data ARGS='--patient-email=pacient@example.test --student-email=student@example.test --scenario=booking --dry-run'
+```
 
 Modul complet adaugă și cele 140 de profiluri, pe lângă scenariile existente.
 Din rădăcina proiectului:
@@ -80,7 +103,7 @@ scriptul refuză să transfere istoricul demo către alt pacient sau student.
 
 `--dry-run` verifică ținta, conturile, cataloagele și conflictele fără scrieri.
 Popularea completează profilurile, publică studentul și configurează tratamente,
-locații și supervizori demonstrativi. Resursele care corespund cheilor din script
+locații demonstrative. Resursele care corespund cheilor din script
 sunt readuse la valorile demo; folosește această comandă doar în baza de test.
 Datele relative la ziua curentă se regenerează la fiecare rulare.
 
@@ -126,7 +149,7 @@ expirate și nu mai blochează fluxul. Datele din afara setului demo pot avea pr
 2. Ca student: `/cont`, ordinea cardurilor, publicare/retragere, actualizare manuală
    și cooldown. Studentul propriu nu apare în rezultatele căutării din sesiunea sa.
 3. Profiluri: nume, descriere, fotografii opționale și afișarea lor în cont/public.
-4. Resurse: creare, editare, arhivare/restaurare pentru tratamente, locații și supervizori.
+4. Resurse: creare, editare, arhivare/restaurare pentru tratamente și locații.
 5. Calendar: interval nou, oferte, serie recurentă cu sfârșit explicit, mutare,
    excepție, anulare și selector zi/săptămână pe mobil.
 6. Programări: cerere în așteptare, confirmare, cereri suprapuse, retragere,

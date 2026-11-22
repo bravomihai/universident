@@ -10,6 +10,8 @@ import { PendingSubmitButton } from "@/components/auth/pending-submit-button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
+import { policyConfirmations, privacyNoticePath, signUpPolicyHeader } from "@/lib/account/policy-confirmations";
+import Link from "@/components/navigation/app-link";
 
 type SignUpFormProps = {
   accountType?: "patient" | "student";
@@ -29,11 +31,14 @@ export function SignUpForm({
   >(accountType);
 
   const isStudent = selectedAccountType === "student";
+  const policy = isStudent ? policyConfirmations.studentDeclaration : policyConfirmations.patientPrivacy;
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+
+    if (formData.get("confirmedPolicy") !== policy.version) return;
 
     const name = String(formData.get("name") ?? "");
     const email = String(formData.get("email") ?? "");
@@ -63,6 +68,7 @@ export function SignUpForm({
         {
           headers: {
             "x-universident-account-type": selectedAccountType,
+            [signUpPolicyHeader]: policy.version,
           },
         },
       );
@@ -161,6 +167,16 @@ export function SignUpForm({
               required
             />
           </AuthFormField>
+
+          <div key={policy.version} className="space-y-2 rounded-xl border bg-muted/20 p-3 text-sm">
+            {!isStudent ? (
+              <Link href={privacyNoticePath} target="_blank" className="font-medium underline underline-offset-4">Citește informarea despre datele personale</Link>
+            ) : null}
+            <label className="flex items-start gap-2">
+              <input type="checkbox" name="confirmedPolicy" value={policy.version} required className="mt-1" />
+              <span>{policy.text}</span>
+            </label>
+          </div>
 
           {!passwordMatch ? (
             <p

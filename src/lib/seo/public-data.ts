@@ -44,14 +44,13 @@ export const getSeoSearchCombinations = cache(async (treatmentSlug?: string, cit
       ...(treatmentSlug ? { offerings: { some: {
         removedAt: null,
         studentTreatment: { deletedAt: null, treatment: { isActive: true, slug: treatmentSlug } },
-        supervisor: { deletedAt: null },
       } } } : {}),
     },
     select: {
       id: true, studentProfileId: true, startsAt: true, endsAt: true,
       studentLocation: { select: { city: { select: { name: true, slug: true } } } },
       offerings: {
-        where: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { isActive: true } }, supervisor: { deletedAt: null } },
+        where: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { isActive: true } } },
         select: { id: true, studentTreatment: { select: { durationMinutes: true, treatment: { select: { name: true, slug: true } } } } },
       },
       appointments: {

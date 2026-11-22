@@ -7,14 +7,17 @@ import {
 import Link from "@/components/navigation/app-link";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
+import { PublicStudentCardFooter } from "@/components/public-students/public-student-card-footer";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   clickableCardClassName,
-  clickableCardIndicatorClassName,
   clickableCardLinkClassName,
 } from "@/components/ui/clickable-card-styles";
 import type { PublicStudentSummaryDto } from "@/lib/public-students/public-student-service";
 import { publicStudentBookingHref } from "@/lib/public-students/public-student-booking-links";
+import { cn } from "@/lib/utils";
+
+import layout from "./public-student-card-layout.module.css";
 
 type PublicStudentResultCardProps = {
   student: PublicStudentSummaryDto;
@@ -47,83 +50,86 @@ export function PublicStudentResultCard({
   return (
     <Link
       href={profileHref}
-      className={clickableCardLinkClassName}
+      className={cn(clickableCardLinkClassName, layout.frame)}
     >
-      <Card className={`public-student-card ${clickableCardClassName}`}>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-3">
-              <PublicStudentAvatar
-                name={student.name}
-                imageUrl={student.imageUrl}
-              />
-              <div className="min-w-0 space-y-1">
-                <h2 className="break-words text-lg font-semibold leading-tight">
-                  {student.name}
-                </h2>
-                <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                  <GraduationCap
-                    className="mt-0.5 size-4 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span>
-                    {student.university} · Anul {student.studyYear}
-                  </span>
-                </p>
+      <Card className={cn("public-student-card gap-0", clickableCardClassName, layout.frame)}>
+        <div className="flex flex-1 flex-col gap-(--card-spacing)">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <PublicStudentAvatar
+                  name={student.name}
+                  imageUrl={student.imageUrl}
+                />
+                <div className="min-w-0 space-y-1">
+                  <h2 className="break-words text-lg font-semibold leading-tight">
+                    {student.name}
+                  </h2>
+                  <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+                    <GraduationCap
+                      className="mt-0.5 size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {student.university} · Anul {student.studyYear}
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
+          </CardHeader>
 
-          </div>
-        </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {student.bio ? (
+              <p className="text-sm text-muted-foreground">
+                {compactBio(student.bio)}
+              </p>
+            ) : null}
 
-        <CardContent className="flex flex-1 flex-col gap-4">
-          {student.bio ? (
-            <p className="text-sm text-muted-foreground">
-              {compactBio(student.bio)}
-            </p>
-          ) : null}
-
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-semibold">{student.treatment.name}</h3>
-              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                <Clock3 className="size-4" aria-hidden="true" />
-                {student.treatment.durationMinutes} min
-              </span>
+            <div className="space-y-2">
+              <div className="heading-actions flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold">{student.treatment.name}</h3>
+                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                  <Clock3 className="size-4" aria-hidden="true" />
+                  {student.treatment.durationMinutes} min
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {student.treatment.studentDescription ??
+                  student.treatment.catalogDescription}
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {student.treatment.studentDescription ??
-                student.treatment.catalogDescription}
-            </p>
-          </div>
 
-          <div className="rounded-xl border bg-muted/15 p-3">
-            <p className="flex items-start gap-1.5 font-medium">
-              <MapPin
-                className="mt-0.5 size-4 shrink-0"
-                aria-hidden="true"
-              />
-              <span>
-                {student.locationCount === 1
-                  ? `O locație disponibilă în ${student.city.name}`
-                  : `${student.locationCount} locații disponibile în ${student.city.name}`}
-              </span>
-            </p>
-            <p className="mt-2 flex items-start gap-1.5 pl-5 text-sm text-muted-foreground">
-              <CalendarClock
-                className="mt-0.5 size-4 shrink-0"
-                aria-hidden="true"
-              />
-              <span>
-                Prima oră liberă: {availabilityFormatter.format(student.firstAvailableAt)}
-              </span>
-            </p>
-          </div>
-          <span className="mt-auto inline-flex items-center justify-between gap-3 border-t pt-4 text-sm font-semibold text-foreground">
-            Alege o programare
-            <span className={clickableCardIndicatorClassName} aria-hidden="true">{">"}</span>
-          </span>
-        </CardContent>
+            <div className="rounded-xl border bg-muted/15 p-3">
+              <p className="flex items-start gap-1.5 font-medium">
+                <MapPin
+                  className="mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                <span>
+                  {student.locationCount === 1
+                    ? `O locație disponibilă în ${student.city.name}`
+                    : `${student.locationCount} locații disponibile în ${student.city.name}`}
+                </span>
+              </p>
+              <p className="mt-2 flex items-start gap-1.5 pl-5 text-sm text-muted-foreground">
+                <CalendarClock
+                  className="mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                <span>
+                  Prima oră liberă: {availabilityFormatter.format(student.firstAvailableAt)}
+                </span>
+              </p>
+            </div>
+          </CardContent>
+        </div>
+        <PublicStudentCardFooter
+          lead={<p className="text-sm font-semibold text-foreground">Alege o programare</p>}
+          rating={student.rating}
+          completedAppointmentsCount={student.completedAppointmentsCount}
+          className={cn("mx-(--card-spacing) border-t pt-4", layout.searchFooter)}
+        />
       </Card>
     </Link>
   );

@@ -298,7 +298,6 @@ export function StudentCalendarPrototype() {
                 treatmentLocationId: submission.treatmentLocationId,
                 treatmentName: submission.treatmentName,
                 locationName: submission.locationName,
-                supervisorName: submission.supervisorName,
                 recurrence: editedEvent.recurrence,
                 isException: editedEvent.seriesId !== null || event.isException,
               }
@@ -326,7 +325,6 @@ export function StudentCalendarPrototype() {
       treatmentLocationId: submission.treatmentLocationId,
       treatmentName: submission.treatmentName,
       locationName: submission.locationName,
-      supervisorName: submission.supervisorName,
       recurrence: submission.recurrence,
       appointmentStatus: "available",
       isException: false,
@@ -636,7 +634,6 @@ export function StudentCalendarPrototype() {
                 </div>
                 <div className="flex gap-2">
                   <UserRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  <div><dt className="text-muted-foreground">Supervizor</dt><dd className="font-medium">{detailEvent.supervisorName}</dd></div>
                 </div>
                 <div className="flex gap-2 sm:col-span-2">
                   <Stethoscope className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />

@@ -22,31 +22,23 @@ Next.js, React, TypeScript, PostgreSQL, Prisma, Better Auth, Tailwind CSS, shadc
 
 ## Local development
 
-With `.env` configured from [`.env.example`](.env.example) and the local database prepared, start the development services from the repository root:
+With Make installed, `.env` configured from [`.env.example`](.env.example), and dependencies installed with `npm ci`, run this command from the repository root:
 
 ```bash
-docker compose -f compose-dev.yaml up -d --wait
-npm run dev
+make dev
 ```
 
-[`compose-dev.yaml`](compose-dev.yaml) runs only PostgreSQL, exposed at `127.0.0.1:5432` with persistent storage. `npm run dev` runs Next.js with hot reload and the chat email worker as local Node.js processes; stopping that command stops both processes. The worker requires `CHAT_WORKER_SECRET` (at least 32 characters) and the configured local application URL. Email delivery also requires `RESEND_API_KEY` and `EMAIL_FROM`.
+On Linux or WSL, `make dev` regenerates Prisma Client, starts PostgreSQL at `127.0.0.1:5432`, applies pending Prisma migrations to the local Compose database, seeds the treatment, city, and university catalogs, then runs Next.js with hot reload and the chat email worker in the background. Running it again restarts all three and retains the PostgreSQL volume. Use `make dev-stop` to stop them and `.local-dev/app.log` to inspect application and worker logs. A custom `DATABASE_URL` outside the local Compose database requires separately managed migrations and catalog seeding.
+
+The worker requires `CHAT_WORKER_SECRET` (at least 32 characters) and the configured local application URL. Email delivery also requires `RESEND_API_KEY` and `EMAIL_FROM`. Use `npm run dev` to run Next.js and the worker in the foreground with an already running database.
 
 Use `npm run dev:web` for Next.js alone, or `npm run chat:emails` to start the worker separately when the application is already running. See the [chat guide](docs/chat.md#configuration-and-processes) for worker configuration and delivery behavior.
 
-Stop the local database with:
-
-```bash
-docker compose -f compose-dev.yaml stop
-```
-
 ## Compose environments
 
-The two Compose files are independent configurations, selected explicitly with `-f`:
+Docker Compose automatically finds [`compose.yaml`](compose.yaml). Select the environment with `--profile dev` or `--profile prod`. Each environment uses its own PostgreSQL volume. If you have local data from the old development configuration, export it from the old database and import it into the new development database.
 
-- [`compose-dev.yaml`](compose-dev.yaml): local PostgreSQL; the application and worker run through npm for development.
-- [`compose.production.yaml`](compose.production.yaml): PostgreSQL, the built Next.js application, and a separate chat email worker container, with restart policies, health checks, and production container settings. PostgreSQL is reachable only inside the Docker network. The `migrate` service belongs to the `tools` profile and runs separately during deployment.
-
-Their shared PostgreSQL settings intentionally appear in both files so each environment can run independently. Follow the [deployment guide](docs/deployment.md) for production commands and migration ordering.
+On the production host, `make prod` builds the production images, starts PostgreSQL on the internal Docker network, applies migrations if the Prisma schema is empty, checks migration status, and starts Next.js and the chat email worker. The [deployment guide](docs/deployment.md#manual-production-start) covers configuration and migration ordering.
 
 ## Documentation
 

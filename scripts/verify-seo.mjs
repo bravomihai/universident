@@ -102,7 +102,7 @@ await withServer('production', async (get) => {
   assert.equal(sitemap.response.status, 200);
   assert.match(sitemap.response.headers.get('content-type'), /xml/);
   assert.match(sitemap.body, /<loc>https:\/\/universident\.ro\/studenti\?tratament=igienizare&amp;oras=cluj-napoca<\/loc>/);
-  assert.equal([...sitemap.body.matchAll(/<loc>/g)].length, 17); // home + directory + one combination + 14 real published profiles
+  assert.equal([...sitemap.body.matchAll(/<loc>/g)].length, 18); // home + directory + one combination + 15 real published profiles
   assert.doesNotMatch(sitemap.body, /demo|nepublicat|neverificat|localhost|echipa|pacienti|cont\/|consultatie|oras=iasi/);
   for (const [path, canonical] of [
     ['/', `${publicOrigin}/`], ['/studenti', `${publicOrigin}/studenti`],
@@ -153,13 +153,54 @@ await withServer('production', async (get) => {
     metadata(result.body, undefined, false);
     assert.deepEqual(structuredData(result.body), []);
   }
+  const directoryPageTwo = await get("/studenti?pagina=2");
+  assert.equal(directoryPageTwo.response.status, 200);
+  assert.match(directoryPageTwo.body, /href="\/studenti\/student-verificare-14"/); // A published profile without availability.
+  assert.match(directoryPageTwo.body, /Descriere publică fără ore disponibile/);
+  assert.match(directoryPageTwo.body, /Tratament vizibil de test/);
+  assert.doesNotMatch(directoryPageTwo.body, /Tratament (arhivat|inactiv) de test/);
+  for (const sort of ["rating", "completed"]) {
+    const sorted = await get("/studenti?sortare=" + sort);
+    assert.equal(sorted.response.status, 200);
+    const first = sorted.body.indexOf('href="/studenti/student-verificare-2"');
+    const second = sorted.body.indexOf('href="/studenti/student-verificare-1"');
+    const hidden = sorted.body.indexOf('href="/studenti/student-verificare-0"');
+    assert.ok(first >= 0 && first < second && second < hidden, sort);
+    assert.match(sorted.body, /24 de programări finalizate/);
+    assert.doesNotMatch(sorted.body, /30 de programări finalizate/);
+  }
+  const shownCount = await get("/studenti/student-verificare-2");
+  assert.match(shownCount.body, /24 de programări finalizate/);
+  const hiddenCount = await get("/studenti/student-verificare-0");
+  assert.doesNotMatch(hiddenCount.body, /30 de programări finalizate/);
+  const home = await get("/");
+  assert.match(home.body, /<form[^>]*action="\/studenti"/);
+  for (const result of [
+    home,
+    await get("/studenti"),
+    await get("/studenti?tratament=igienizare&oras=cluj-napoca"),
+  ]) {
+    assert.equal(result.response.status, 200);
+    const cards = [...result.body.matchAll(/<a\b[^>]*href="\/studenti\/student-verificare-([02])(?:\/programare\/[^"]+)?"[^>]*>([\s\S]*?)<\/a>/g)]
+      .filter((match) => match[0].includes("ui-card-link"));
+    const visible = cards.find((match) => match[1] === "2");
+    const hidden = cards.find((match) => match[1] === "0");
+    assert.ok(visible?.[2]);
+    assert.ok(hidden?.[2]);
+    assert.match(visible[2], /aria-label="4\.5 din 5 stele"/);
+    assert.equal((visible[2].match(/clip-path:inset/g) ?? []).length, 1);
+    assert.match(visible[2], /<\/span><\/div><p\b[^>]*>24 de programări finalizate<\/p>/);
+    assert.doesNotMatch(visible[2], /\d+ recenzi[ei]/);
+    assert.match(hidden[2], /aria-label="Fără recenzii"/);
+    assert.doesNotMatch(hidden[2], /\d+ recenzi[ei]|programări finalizate/);
+  }
   const empty = await get('/studenti?tratament=consultatie&oras=iasi');
   metadata(empty.body, `${publicOrigin}/studenti?tratament=consultatie&oras=iasi`, false);
   assert.deepEqual(structuredData(empty.body), []);
   const overflow = await get('/studenti?tratament=igienizare&oras=cluj-napoca&pagina=999');
   assert.equal(overflow.response.status, 307);
   assert.match(overflow.response.headers.get('location'), /pagina=2$/);
-  for (const slug of ['nepublicat', 'neverificat', 'absent']) {
+  for (const slug of ['nepublicat', 'declaratie-lipsa', 'neverificat', 'absent']) {
     const result = await get(`/studenti/${slug}`);
     assert.equal(result.response.status, 404, slug);
     assert.match(result.body, /name="robots" content="noindex/);
@@ -178,7 +219,7 @@ await withServer('production', async (get) => {
     assert.match(result.body, /name="robots" content="noindex, nofollow"/);
     assert.deepEqual(structuredData(result.body), []);
   }
-  for (const path of ['/cont', '/cont/calendar', '/cont/mesaje', '/cont/mesaje/abcdef123456', '/pacienti/pacient-fictiv']) {
+  for (const path of ['/cont', '/confirma-reguli', '/cont/calendar', '/cont/mesaje', '/cont/mesaje/abcdef123456', '/pacienti/pacient-fictiv']) {
     const result = await get(path);
     assert.equal(result.response.status, 307, path);
     assert.equal(result.response.headers.get('x-robots-tag'), 'noindex, nofollow', path);

@@ -88,7 +88,6 @@ export function navigationBackLabel(href: string): string {
     "/cont/profil-student": "Înapoi la profil",
     "/cont/tratamente": "Înapoi la tratamente",
     "/cont/locatii": "Înapoi la locații",
-    "/cont/supervizori": "Înapoi la supervizori",
     "/cont/resurse-arhivate": "Înapoi la resursele arhivate",
     "/cont/securitate": "Înapoi la securitatea contului",
   };

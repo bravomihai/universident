@@ -12,7 +12,7 @@ export function SiteBrand() {
       aria-label="Universident — pagina principală"
       className={cn(
         headerNeutralControlClassName,
-        "-ml-2 inline-flex min-w-0 shrink items-center px-2",
+        "-ml-2 inline-flex min-w-0 shrink items-center px-2 min-[340px]:max-[365px]:pr-0 sm:shrink-0",
       )}
     >
       <span className="relative block aspect-[5/1] w-44 max-w-full sm:w-52">
