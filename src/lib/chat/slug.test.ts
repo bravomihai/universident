@@ -26,3 +26,19 @@ test("a conversation-slug collision retries the transaction without retrying unr
   assert.equal(await withChatSlugRetry(async () => { if (++attempts === 1) throw adapterCollision; return "saved"; }), "saved");
   assert.equal(attempts, 2);
 });
+
+test("Prisma 7.10 index collisions retry only the conversation-slug constraint", async () => {
+  const indexedError = (index: string, code = "P2002") => ({ code, meta: { driverAdapterError: { cause: { constraint: { index } } } } });
+  const collision = indexedError("appointment_chatSlug_key");
+  let attempts = 0;
+  assert.equal(await withChatSlugRetry(async () => { if (++attempts === 1) throw collision; return "saved"; }), "saved");
+  assert.equal(attempts, 2);
+  attempts = 0;
+  await assert.rejects(withChatSlugRetry(async () => { attempts++; throw collision; }), (error) => error === collision);
+  assert.equal(attempts, 3);
+  for (const error of [indexedError("appointment_routeSlug_key"), indexedError("appointment_chatSlug_key", "P2003")]) {
+    attempts = 0;
+    await assert.rejects(withChatSlugRetry(async () => { attempts++; throw error; }), (caught) => caught === error);
+    assert.equal(attempts, 1);
+  }
+});
