@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { clickableCardIndicatorClassName } from "@/components/ui/clickable-card-styles";
 import { ProfileAvatar } from "@/components/ui/profile-avatar";
+import { appointmentDisplayStatus } from "@/lib/appointments/appointment-presentation";
 import type {
   AppointmentCardSource,
   AppointmentCounterpart,
@@ -42,7 +43,7 @@ export function AppointmentSummaryCard({
             </div>
           </div>
           <AppointmentStatusBadges
-            status={appointment.status}
+            status={appointmentDisplayStatus(appointment)}
             role={role}
             needsAttention={needsAttention}
             isUnread={isUnread}

@@ -56,7 +56,7 @@ export async function GET(
   const etag = `"${image.id}-${image.updatedAt.getTime()}"`;
   const headers = new Headers({
     "Cache-Control": isPublic
-      ? "public, max-age=31536000, immutable"
+      ? "public, no-cache, must-revalidate"
       : "private, no-store",
     "Content-Length": String(image.byteSize),
     "Content-Type": image.contentType,

@@ -1,8 +1,11 @@
+import { appointmentDisplayStatus } from "./appointment-presentation";
+
 type AppointmentApiSource = {
   routeSlug: string;
   scheduledStartsAt: Date | string;
   scheduledEndsAt: Date | string;
-  patientAgeAtAppointment: number;
+  patientAgeAtAppointment: number | null;
+  participantDeleted?: boolean;
   patientNote: string | null;
   patientNameSnapshot: string;
   studentNameSnapshot: string;
@@ -52,19 +55,19 @@ export function toAppointmentApiDto(appointment: AppointmentApiSource) {
     locationNameSnapshot: appointment.locationNameSnapshot,
     locationAddressSnapshot: appointment.locationAddressSnapshot,
     studentUniversitySnapshot: appointment.studentUniversitySnapshot,
-    status: appointment.status,
+    status: appointmentDisplayStatus(appointment),
     version: appointment.version,
     statusReason: appointment.statusReason,
     isLateCancellation: appointment.isLateCancellation,
     patientProfile: {
-      profileSlug: appointment.patientProfile.profileSlug,
+      profileSlug: appointment.participantDeleted ? null : appointment.patientProfile.profileSlug,
       user: {
         name: appointment.patientProfile.user.name,
         reviewsReceived: appointment.patientProfile.user.reviewsReceived,
       },
     },
     studentProfile: {
-      publicSlug: appointment.studentProfile.publicSlug,
+      publicSlug: appointment.participantDeleted ? null : appointment.studentProfile.publicSlug,
       university: appointment.studentProfile.university,
       studyYear: appointment.studentProfile.studyYear,
       user: {

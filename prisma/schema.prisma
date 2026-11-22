@@ -296,7 +296,8 @@ model Appointment {
   studentAvailabilitySlotOfferingId String
   scheduledStartsAt                 DateTime          @db.Timestamptz(3)
   scheduledEndsAt                   DateTime          @db.Timestamptz(3)
-  patientAgeAtAppointment           Int
+  patientAgeAtAppointment           Int?
+  participantDeleted                Boolean           @default(false)
   patientNote                       String?
   patientNameSnapshot               String            @db.VarChar(120)
   studentNameSnapshot               String            @db.VarChar(120)

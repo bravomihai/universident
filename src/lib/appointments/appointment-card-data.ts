@@ -10,12 +10,13 @@ export type AppointmentCardSource = {
   chatSlug: string;
   version: number;
   status: string;
+  participantDeleted?: boolean;
   confirmedAt?: Date | string | null;
   scheduledStartsAt: Date | string;
   scheduledEndsAt: Date | string;
   patientNameSnapshot: string;
   studentNameSnapshot: string;
-  patientAgeAtAppointment: number;
+  patientAgeAtAppointment: number | null;
   treatmentNameSnapshot: string;
   locationNameSnapshot: string;
   locationAddressSnapshot: string;
@@ -53,6 +54,11 @@ export type AppointmentCardSource = {
 // Only call for appointments already authorized by the private service. This
 // is presentation data, not a replacement for profile/image route permissions.
 export function appointmentCounterpart(appointment: AppointmentCardSource, role: "PATIENT" | "STUDENT") {
+  const label = role === "PATIENT" ? "Student" : "Pacient";
+  const name = role === "PATIENT" ? appointment.studentNameSnapshot : appointment.patientNameSnapshot;
+  if (appointment.participantDeleted) {
+    return { label, name, subtitle: "", href: null, imageUrl: null, summary: { averageRating: null, reviewCount: 0 } };
+  }
   const student = appointment.studentProfile;
   const patient = appointment.patientProfile;
   const declared = student.user._count.policyConfirmations > 0 ||
@@ -61,11 +67,11 @@ export function appointmentCounterpart(appointment: AppointmentCardSource, role:
     student.studyYear >= 1 && student.studyYear <= 6 && student.user.role === "STUDENT" && student.user.emailVerified);
   const ratings = role === "PATIENT" ? student.user.reviewsReceived : patient.user.reviewsReceived;
   return {
-    label: role === "PATIENT" ? "Student" : "Pacient",
-    name: role === "PATIENT" ? appointment.studentNameSnapshot : appointment.patientNameSnapshot,
+    label,
+    name,
     subtitle: role === "PATIENT"
       ? [student.university, student.studyYear ? `Anul ${student.studyYear}` : null].filter(Boolean).join(" · ")
-      : `${appointment.patientAgeAtAppointment} ani la programare`,
+      : appointment.patientAgeAtAppointment === null ? "" : `${appointment.patientAgeAtAppointment} ani la programare`,
     href: role === "PATIENT"
       ? publicStudent ? `/studenti/${encodeURIComponent(student.publicSlug!)}` : null
       : `/pacienti/${encodeURIComponent(patient.profileSlug)}`,

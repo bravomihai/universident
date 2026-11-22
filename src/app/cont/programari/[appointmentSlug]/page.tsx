@@ -21,6 +21,7 @@ import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { appointmentCounterpart } from "@/lib/appointments/appointment-card-data";
 import { getAppointmentForUser } from "@/lib/appointments/appointment-service";
 import {
+  appointmentDisplayStatus,
   appointmentNeedsAttention,
   hasAppointmentReview,
 } from "@/lib/appointments/appointment-presentation";
@@ -43,7 +44,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
   const reviewedByActor = hasAppointmentReview(appointment, role);
   const ownReview = appointment.reviews.find((review) => review.authorRole === role);
   const counterpart = appointmentCounterpart(appointment, role);
-  const studentPatientContext = role === "STUDENT"
+  const studentPatientContext = role === "STUDENT" && !appointment.participantDeleted
     ? await (async () => {
         const [history, recentConfirmedAppointments] = await Promise.all([
           prisma.appointment.findMany({
@@ -96,7 +97,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
             <div className="heading-actions flex flex-wrap items-center justify-between gap-3">
               <CardTitle>Programarea ta</CardTitle>
               <AppointmentStatusBadges
-                status={appointment.status}
+                status={appointmentDisplayStatus(appointment)}
                 role={role}
                 needsAttention={appointmentNeedsAttention(appointment, role)}
               />
@@ -109,7 +110,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
           <CardContent className="space-y-5">
             <AppointmentInformationGrid appointment={appointment} counterpart={counterpart} />
             {appointment.confirmedAt ? <Button asChild variant="outline"><Link href={`/cont/mesaje/${appointment.chatSlug}`} prefetch={false}>{role === "PATIENT" ? "Mesaje cu studentul" : "Mesaje cu pacientul"} &gt;</Link></Button> : null}
-            <div className="border-t pt-5 empty:hidden">
+            {!appointment.participantDeleted ? <div className="border-t pt-5 empty:hidden">
               <AppointmentActions
                 appointmentSlug={appointment.routeSlug}
                 version={appointment.version}
@@ -119,7 +120,7 @@ export default async function AppointmentDetailPage({ params }: Props) {
                 endsAt={appointment.scheduledEndsAt.toISOString()}
                 reviewedByActor={reviewedByActor}
               />
-            </div>
+            </div> : null}
           </CardContent>
         </Card>
 

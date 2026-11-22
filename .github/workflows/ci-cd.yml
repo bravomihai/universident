@@ -79,6 +79,10 @@ jobs:
         env:
           NODE_OPTIONS: --conditions=react-server
         run: npx --no-install tsx scripts/test-chat-integration.ts
+      - name: PostgreSQL account deletion integration tests (isolated test database)
+        env:
+          NODE_OPTIONS: --conditions=react-server
+        run: npx --no-install tsx scripts/test-account-deletion-integration.ts
       - name: Production build
         run: npm run build
       - name: Standalone SEO integration tests
