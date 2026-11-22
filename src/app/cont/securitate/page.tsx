@@ -1,11 +1,13 @@
-import { KeyRound, Mail } from "lucide-react";
+import { KeyRound, Mail, Trash2 } from "lucide-react";
 import Link from "@/components/navigation/app-link";
 
 import { ChangeEmailForm } from "@/components/account/change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { DeleteAccountForm } from "@/components/account/delete-account-form";
 import { BackLink } from "@/components/ui/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
+import { UserRole } from "@/generated/prisma/enums";
 
 type AccountSecurityPageProps = {
   searchParams: Promise<{
@@ -121,6 +123,24 @@ export default async function AccountSecurityPage({
             </CardContent>
           </Card>
         </section>
+        {session.user.role !== UserRole.ADMIN ? (
+          <Card className="gap-4 md:grid md:grid-cols-2 md:items-start">
+            <CardContent>
+              <div className="flex items-start gap-3">
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-muted/30">
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </span>
+                <div className="space-y-1">
+                  <h2 className="font-semibold">Șterge contul</h2>
+                  <p className="text-sm text-muted-foreground">Introdu parola actuală. Îți vom trimite pe email un link pentru a confirma ștergerea definitivă.</p>
+                </div>
+              </div>
+            </CardContent>
+            <CardContent>
+              <DeleteAccountForm />
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </main>
   );

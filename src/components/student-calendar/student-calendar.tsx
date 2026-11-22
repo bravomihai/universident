@@ -40,7 +40,7 @@ export type CalendarSlot = {
   studentLocation: { id: string; name: string; address: string; city: { name: string } };
   offerings: Array<{ id: string; studentTreatment: { id: string; durationMinutes: number; treatment: { name: string; slug: string } } }>;
   appointments: Array<{
-    id: string; routeSlug: string; version: number; status: string; scheduledStartsAt: string; scheduledEndsAt: string; patientNameSnapshot: string; patientAgeAtAppointment: number; patientNote: string | null;
+    id: string; routeSlug: string; version: number; status: string; scheduledStartsAt: string; scheduledEndsAt: string; patientNameSnapshot: string; patientAgeAtAppointment: number | null; patientNote: string | null;
     patientProfile: { profileSlug: string; user: { reviewsReceived: Array<{ rating: number }> } };
   }>;
 };

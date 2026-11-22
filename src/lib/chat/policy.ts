@@ -5,20 +5,21 @@ export const EMAIL_COOLDOWN_MS = 15 * 60_000;
 
 export type ChatAppointmentState = {
   status: string;
+  participantDeleted?: boolean;
   confirmedAt: Date | string | null;
   statusChangedAt: Date | string;
 };
 
 export function chatState(appointment: ChatAppointmentState, now = new Date()) {
   const available = appointment.confirmedAt !== null;
-  const past = available && appointment.status !== "CONFIRMED";
-  const closesAt = past
+  const past = available && (appointment.participantDeleted === true || appointment.status !== "CONFIRMED");
+  const closesAt = past && !appointment.participantDeleted
     ? new Date(new Date(appointment.statusChangedAt).getTime() + CHAT_GRACE_MS)
     : null;
   return {
     available,
     past,
-    canSend: available && (!closesAt || now.getTime() < closesAt.getTime()),
+    canSend: available && !appointment.participantDeleted && (!closesAt || now.getTime() < closesAt.getTime()),
     closesAt: closesAt?.toISOString() ?? null,
   };
 }

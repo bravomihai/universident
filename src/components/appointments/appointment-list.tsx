@@ -45,7 +45,7 @@ export function AppointmentList({
           role={role}
           needsAttention={appointmentNeedsAttention(appointment, role, now)}
           isUnread={unreadSlugs.has(appointment.routeSlug)}
-          cancelAction={
+          cancelAction={appointment.participantDeleted ? null : (
             <AppointmentActions
               appointmentSlug={appointment.routeSlug}
               version={appointment.version}
@@ -56,7 +56,7 @@ export function AppointmentList({
               reviewedByActor={hasAppointmentReview(appointment, role)}
               mode="cancel-only"
             />
-          }
+          )}
         />
       ))}
     </div>

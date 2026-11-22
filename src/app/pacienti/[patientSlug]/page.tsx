@@ -27,6 +27,7 @@ export default async function PatientReviewsProfilePage({ params }: Props) {
     where: {
       profileSlug: patientSlug,
       ...patientProfileAccessWhere(session.user),
+      user: { emailVerified: true },
     },
     select: {
       id: true,

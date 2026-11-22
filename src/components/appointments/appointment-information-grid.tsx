@@ -53,12 +53,16 @@ export function AppointmentInformationGrid({ appointment, counterpart }: {
           <span className={clickableCardIndicatorClassName} aria-hidden="true">&gt;</span>
         ) : null}
       </div>
-      <div className="mt-3">
-        <RatingStars {...counterpart.summary} className="gap-1.5" />
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        {counterpart.href ? "Vezi profilul și recenziile" : "Profilul nu este disponibil public."}
-      </p>
+      {!appointment.participantDeleted ? (
+        <>
+          <div className="mt-3">
+            <RatingStars {...counterpart.summary} className="gap-1.5" />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {counterpart.href ? "Vezi profilul și recenziile" : "Profilul nu este disponibil public."}
+          </p>
+        </>
+      ) : null}
     </div>
   );
 

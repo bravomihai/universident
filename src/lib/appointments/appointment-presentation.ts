@@ -6,8 +6,15 @@ const directlyArchivedStatuses = new Set([
   "CANCELLED_BY_STUDENT",
 ]);
 
+export function appointmentDisplayStatus(appointment: { status: string; participantDeleted?: boolean }) {
+  return appointment.participantDeleted && appointment.status === "CONFIRMED"
+    ? "CLOSED_ACCOUNT_DELETED"
+    : appointment.status;
+}
+
 type PresentationAppointment = {
   status: string;
+  participantDeleted?: boolean;
   scheduledStartsAt: Date | string;
   scheduledEndsAt: Date | string;
   reviews: ReadonlyArray<{ authorRole: string }>;
@@ -32,6 +39,7 @@ export function appointmentNeedsAttention(
   role: "PATIENT" | "STUDENT",
   now = new Date(),
 ) {
+  if (appointment.participantDeleted) return false;
   if (
     role === "STUDENT" &&
     appointment.status === "CONFIRMED" &&
@@ -49,6 +57,7 @@ export function appointmentIsArchived(
   appointment: PresentationAppointment,
   role: "PATIENT" | "STUDENT",
 ) {
+  if (appointment.participantDeleted) return true;
   if (directlyArchivedStatuses.has(appointment.status)) return true;
   if (appointment.status === "NO_SHOW" && role === "PATIENT") return true;
   if (appointment.status === "COMPLETED" || appointment.status === "NO_SHOW") {

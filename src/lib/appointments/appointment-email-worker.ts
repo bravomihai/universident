@@ -58,6 +58,7 @@ Deschide programările: ${url}`,
 const recipient = { select: { user: { select: { email: true, emailVerified: true } } } } as const;
 const appointmentSelect = {
   status: true,
+  participantDeleted: true,
   scheduledEndsAt: true,
   patientProfile: recipient,
   studentProfile: recipient,
@@ -67,7 +68,7 @@ const appointmentSelect = {
 type EmailAppointment = Prisma.AppointmentGetPayload<{ select: typeof appointmentSelect }>;
 
 function eligibleRecipient(appointment: EmailAppointment | null, kind: AppointmentEmailKind, now: Date) {
-  if (!appointment) return null;
+  if (!appointment || appointment.participantDeleted) return null;
 
   const canSend = {
     CONFIRMED: appointment.status === "CONFIRMED",

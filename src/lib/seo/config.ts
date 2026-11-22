@@ -25,7 +25,7 @@ export function canonicalUrl(path: string) {
 }
 
 export function mustNotIndexPath(pathname: string) {
-  return /^\/(?:cont|pacienti|api|autentificare|inregistrare|confirma-reguli|parola-uitata|resetare-parola|verifica-email)(?:\/|$)/.test(pathname) ||
+  return /^\/(?:cont|pacienti|api|autentificare|inregistrare|confirma-reguli|confirma-stergerea-contului|parola-uitata|resetare-parola|verifica-email)(?:\/|$)/.test(pathname) ||
     /^\/studenti\/[^/]+\/programare(?:\/|$)/.test(pathname);
 }
 

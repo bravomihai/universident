@@ -8,6 +8,7 @@ export const appointmentStatusLabels: Record<string, string> = {
   CANCELLED_BY_STUDENT: "Anulată de student",
   COMPLETED: "Finalizată",
   NO_SHOW: "Neprezentare",
+  CLOSED_ACCOUNT_DELETED: "Închisă după ștergerea contului",
 };
 
 export function formatAppointmentInterval(startsAt: string | Date, endsAt: string | Date) {
