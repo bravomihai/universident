@@ -107,13 +107,17 @@ export default async function PublicStudentProfilePage({
         </header>
 
         {profile.bio ? (
-          <section aria-labelledby="public-profile-bio" className="card-adjacent max-w-3xl">
-            <h2 id="public-profile-bio" className="text-2xl font-semibold tracking-tight">
+          <section aria-labelledby="public-profile-bio" className="max-w-3xl space-y-3">
+            <h2 id="public-profile-bio" className="card-adjacent text-2xl font-semibold tracking-tight">
               Despre student
             </h2>
-            <p className="mt-3 whitespace-pre-line text-muted-foreground">
-              {profile.bio}
-            </p>
+            <Card size="sm">
+              <CardContent>
+                <p className="whitespace-pre-line break-words text-base text-muted-foreground">
+                  {profile.bio}
+                </p>
+              </CardContent>
+            </Card>
           </section>
         ) : null}
 
