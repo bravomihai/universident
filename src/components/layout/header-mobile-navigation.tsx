@@ -1,8 +1,9 @@
 "use client";
 
-import { CircleHelp, LogIn, Menu, Search, UserPlus, Users } from "lucide-react";
+import { CircleHelp, LogIn, Menu, UserPlus, Users } from "lucide-react";
 import Link from "@/components/navigation/app-link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { AccountMenuIdentity, AccountMenuItems, type AccountMenuProps } from "@/components/account/account-menu";
 import { compactHeaderIconControlClassName, headerIconControlClassName } from "@/components/layout/header-action-styles";
@@ -34,19 +35,30 @@ export function HeaderMobileNavigation({
 }: HeaderMobileNavigationProps) {
   const pathname = usePathname();
   const { triggerRef, ...focusHandlers } = useHeaderMenuFocus();
-  const studentsCurrent = isCurrentPath(pathname, "/studenti");
+  const [open, setOpen] = useState(false);
   const signInCurrent = isCurrentPath(pathname, "/autentificare");
   const signUpCurrent = isCurrentPath(pathname, "/inregistrare");
 
+  useEffect(() => {
+    if (!open) return;
+
+    const desktopHeader = window.matchMedia("(min-width: 1150px)");
+    const closeOnDesktop = () => {
+      if (desktopHeader.matches) setOpen(false);
+    };
+    desktopHeader.addEventListener("change", closeOnDesktop);
+    return () => desktopHeader.removeEventListener("change", closeOnDesktop);
+  }, [open]);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           ref={triggerRef}
           type="button"
           variant="ghost"
           size="icon"
-          className={cn(headerIconControlClassName, "shrink-0", compactHeaderIconControlClassName)}
+          className={cn(headerIconControlClassName, "shrink-0 min-[1150px]:hidden", compactHeaderIconControlClassName)}
           aria-label="Deschide navigarea principală"
           aria-controls="mobile-primary-navigation"
         >
@@ -61,29 +73,14 @@ export function HeaderMobileNavigation({
         className="w-[min(17rem,calc(100vw-1.5rem))]"
         {...focusHandlers}
       >
-        <DropdownMenuItem
-          asChild
-          className={cn(studentsCurrent && "bg-accent")}
-        >
-          <Link
-            href="/studenti"
-            aria-current={studentsCurrent ? "page" : undefined}
-          >
-            <Search aria-hidden="true" />
-            Găsește un student
-          </Link>
-        </DropdownMenuItem>
-
         {account ? (
           <DropdownMenuGroup className="min-[340px]:hidden">
-            <DropdownMenuSeparator />
             <AccountMenuIdentity name={account.name} roleLabel={account.roleLabel} />
             <AccountMenuItems showStudentNavigation={account.showStudentNavigation} />
             <DropdownMenuSeparator />
           </DropdownMenuGroup>
         ) : (
           <>
-            <DropdownMenuSeparator className="lg:hidden" />
             <DropdownMenuItem
               asChild
               className={cn("lg:hidden", signInCurrent && "bg-accent")}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-export function useTransientMessage() {
+export function useTransientMessage(durationMs = 5_000) {
   const [message, setMessage] = useState<{ text: string } | null>(null);
 
   const showMessage = useCallback((text: string | null) => {
@@ -13,9 +13,9 @@ export function useTransientMessage() {
   useEffect(() => {
     if (!message) return;
 
-    const timer = window.setTimeout(() => setMessage(null), 5_000);
+    const timer = window.setTimeout(() => setMessage(null), durationMs);
     return () => window.clearTimeout(timer);
-  }, [message]);
+  }, [durationMs, message]);
 
   return [message?.text ?? null, showMessage] as const;
 }

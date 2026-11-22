@@ -2,7 +2,7 @@
 
 import Link from "@/components/navigation/app-link";
 import { Search } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTransientMessage } from "@/components/ui/use-transient-message";
 import { cn } from "@/lib/utils";
 import type { PublicCatalogOption } from "@/lib/public-students/public-student-service";
 
@@ -34,7 +35,7 @@ export function PublicStudentSearchForm({
   trailingAction,
 }: PublicStudentSearchFormProps) {
   const hasSelection = selectedTreatmentSlug || selectedCitySlug;
-  const [invalidFilter, setInvalidFilter] = useState("");
+  const [invalidFilter, setInvalidFilter] = useTransientMessage(10_000);
 
   function handleInvalid(event: FormEvent<HTMLFormElement>) {
     const field = event.target;
@@ -61,7 +62,7 @@ export function PublicStudentSearchForm({
           required
           defaultValue={selectedTreatmentSlug}
           onValueChange={() => {
-            if (invalidFilter === "tratament") setInvalidFilter("");
+            if (invalidFilter === "tratament") setInvalidFilter(null);
           }}
         >
           <SelectTrigger
@@ -88,7 +89,7 @@ export function PublicStudentSearchForm({
           required
           defaultValue={selectedCitySlug}
           onValueChange={() => {
-            if (invalidFilter === "oras") setInvalidFilter("");
+            if (invalidFilter === "oras") setInvalidFilter(null);
           }}
         >
           <SelectTrigger
