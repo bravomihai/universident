@@ -1,19 +1,17 @@
 "use client";
 
 import type {
-  DateSelectArg,
-  DatesSetArg,
-  EventClickArg,
-  EventContentArg,
-  EventDropArg,
+  DateSelectInfo,
+  DatesSetInfo,
+  EventClickInfo,
+  EventDisplayInfo,
+  EventDropInfo,
   EventInput,
-} from "@fullcalendar/core";
-import roLocale from "@fullcalendar/core/locales/ro";
-import interactionPlugin, {
-  type DateClickArg,
-} from "@fullcalendar/interaction";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
+} from "@fullcalendar/react";
+import roLocale from "@fullcalendar/react/locales/ro";
+import interactionPlugin from "@fullcalendar/react/interaction";
+import FullCalendar, { type CalendarRef, type DateClickInfo } from "@fullcalendar/react";
+import timeGridPlugin from "@fullcalendar/react/timegrid";
 import {
   Ban,
   CalendarCheck2,
@@ -35,6 +33,7 @@ import {
   StudentAvailabilityDialog,
   type StudentAvailabilitySubmission,
 } from "@/components/student-calendar/student-availability-dialog";
+import { marketplaceCalendarTheme } from "@/components/student-calendar/calendar-theme";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -157,12 +156,12 @@ function calendarEventInput(event: StudentCalendarEvent): EventInput {
     editable: isCalendarEventMovable(event),
     startEditable: isCalendarEventMovable(event),
     durationEditable: false,
-    classNames: [statusClassName(event)],
+    className: statusClassName(event),
     extendedProps: { studentCalendarEvent: event },
   };
 }
 
-function CalendarEventContent({ event, timeText }: EventContentArg) {
+function CalendarEventContent({ event, timeText }: EventDisplayInfo) {
   const model = event.extendedProps.studentCalendarEvent as
     | StudentCalendarEvent
     | undefined;
@@ -221,7 +220,7 @@ function CalendarLegend() {
 }
 
 export function StudentCalendarPrototype() {
-  const calendarRef = useRef<FullCalendar>(null);
+  const calendarRef = useRef<CalendarRef>(null);
   const [events, setEvents] = useState<StudentCalendarEvent[]>(() =>
     createMockStudentCalendarEvents(),
   );
@@ -352,23 +351,23 @@ export function StudentCalendarPrototype() {
     return null;
   }
 
-  function selectFreeInterval(selection: DateSelectArg) {
+  function selectFreeInterval(selection: DateSelectInfo) {
     openCreateDialog(selection.start);
     selection.view.calendar.unselect();
   }
 
-  function clickFreeSlot(click: DateClickArg) {
+  function clickFreeSlot(click: DateClickInfo) {
     openCreateDialog(click.date);
   }
 
-  function clickCalendarEvent(click: EventClickArg) {
+  function clickCalendarEvent(click: EventClickInfo) {
     const model = click.event.extendedProps
       .studentCalendarEvent as StudentCalendarEvent;
     setFeedback(null);
     setDetailEventId(model.id);
   }
 
-  function dropCalendarEvent(drop: EventDropArg) {
+  function dropCalendarEvent(drop: EventDropInfo) {
     const model = events.find((event) => event.id === drop.event.id);
     const newStart = drop.event.start;
     const newEnd = drop.event.end;
@@ -486,7 +485,7 @@ export function StudentCalendarPrototype() {
     setView(nextView);
   }
 
-  function datesChanged(arg: DatesSetArg) {
+  function datesChanged(arg: DatesSetInfo) {
     setCalendarTitle(arg.view.title);
     if (arg.view.type === "timeGridDay" || arg.view.type === "timeGridWeek") {
       setView(arg.view.type);
@@ -564,7 +563,7 @@ export function StudentCalendarPrototype() {
           <div className="student-calendar min-w-0" data-calendar-view={view}>
             <FullCalendar
               ref={calendarRef}
-              plugins={[timeGridPlugin, interactionPlugin]}
+              plugins={[marketplaceCalendarTheme, timeGridPlugin, interactionPlugin]}
               initialView="timeGridWeek"
               locale={roLocale}
               firstDay={1}
@@ -573,8 +572,8 @@ export function StudentCalendarPrototype() {
               slotMinTime="07:00:00"
               slotMaxTime="21:00:00"
               slotDuration="00:15:00"
-              slotLabelInterval="01:00:00"
-              slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+              slotHeaderInterval="01:00:00"
+              slotHeaderFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
               eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
               nowIndicator
               selectable
