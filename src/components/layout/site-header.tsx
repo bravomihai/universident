@@ -1,6 +1,6 @@
 import Link from "@/components/navigation/app-link";
 import { headers } from "next/headers";
-import { CircleHelp, Search, Users } from "lucide-react";
+import { CircleHelp, Users } from "lucide-react";
 
 import {
   HeaderAccount,
@@ -27,7 +27,7 @@ export async function SiteHeader() {
 
   return (
     <header className="site-header border-b border-border/60">
-      <div className="mx-auto flex min-h-18 w-full max-w-6xl items-center gap-2 px-4 sm:min-h-20 sm:gap-4 sm:px-6">
+      <div className="mx-auto flex min-h-18 w-full max-w-6xl items-center gap-2 px-4 min-[340px]:max-[365px]:gap-1 min-[340px]:max-[365px]:px-3 sm:min-h-20 sm:gap-4 sm:px-6">
         <SiteBrand />
 
         <div className="ml-auto flex min-w-0 shrink items-center justify-end gap-1 max-[420px]:shrink-0 sm:gap-2">
@@ -45,23 +45,12 @@ export async function SiteHeader() {
             sectionId="cum-functioneaza"
             className={cn(
               headerNeutralControlClassName,
-              "hidden shrink-0 items-center gap-2 px-3 text-sm font-medium lg:inline-flex",
+              "hidden shrink-0 items-center gap-2 px-3 text-sm font-medium md:inline-flex",
             )}
           >
             <CircleHelp className="size-4" aria-hidden="true" />
             <span>Cum funcționează</span>
           </HomeSectionLink>
-          <Link
-            href="/studenti"
-            aria-label="Găsește un student"
-            className={cn(
-              headerNeutralControlClassName,
-              "hidden shrink-0 items-center justify-center gap-2 px-3 text-sm font-medium md:inline-flex",
-            )}
-          >
-            <Search className="size-4" aria-hidden="true" />
-            <span>Găsește un student</span>
-          </Link>
 
           <HeaderAccount initialUser={initialUser} />
 

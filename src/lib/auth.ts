@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { after } from "next/server";
 
@@ -6,6 +7,7 @@ import { UserRole } from "@/generated/prisma/enums";
 import { sendEmailVerificationMessage } from "@/lib/email/email-verification";
 import { sendPasswordResetMessage } from "@/lib/email/password-reset";
 import { prisma } from "@/lib/prisma";
+import { accountPolicyForRole, policyConfirmations, signUpPolicyHeader } from "@/lib/account/policy-confirmations";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -48,6 +50,8 @@ export const auth = betterAuth({
       updateEmailWithoutVerification: false,
     },
     additionalFields: {
+      signupPolicyVersion: { type: "string", required: false, input: false, returned: false },
+      signupPolicyConfirmedAt: { type: "date", required: false, input: false, returned: false },
       role: {
         type: ["PATIENT", "STUDENT", "ADMIN"],
         required: true,
@@ -68,15 +72,19 @@ export const auth = betterAuth({
               )
               : null;
 
-          return {
-            data: {
-              ...user,
-              role:
-                accountType === "student"
-                  ? UserRole.STUDENT
-                  : UserRole.PATIENT,
-            },
-          };
+          const role = accountType === "student" ? UserRole.STUDENT : UserRole.PATIENT;
+          if (context?.path !== "/sign-up/email") return { data: { ...user, role } };
+
+          const policy = accountPolicyForRole(role)!;
+          const version = policyConfirmations[policy].version;
+          if (context.headers?.get(signUpPolicyHeader) !== version) {
+            throw new APIError("BAD_REQUEST", {
+              code: "POLICY_CONFIRMATION_REQUIRED",
+              message: "Bifează confirmarea pentru versiunea curentă a textului.",
+            });
+          }
+
+          return { data: { ...user, role, signupPolicyVersion: version, signupPolicyConfirmedAt: new Date() } };
         },
       },
     },

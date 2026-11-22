@@ -14,7 +14,7 @@ type PresentationAppointment = {
 };
 
 export function hasAppointmentReview(
-  appointment: PresentationAppointment,
+  appointment: Pick<PresentationAppointment, "reviews">,
   role: "PATIENT" | "STUDENT",
 ) {
   return appointment.reviews.some((review) => review.authorRole === role);

@@ -2,11 +2,13 @@
 
 ## Access and lifecycle
 
-`/cont/mesaje` lists one conversation per appointment with `confirmedAt != null`. Only the appointment's authenticated, email-verified patient and student may read or send messages. Responses exclude account emails, birth dates, and profile IDs.
+`/cont/mesaje` lists one conversation per appointment with `confirmedAt != null`. Only the appointment's authenticated, email-verified patient and student may read or send messages. Before accessing the chat, verified participants must acknowledge the current account notice or declaration and the current chat rules for their role. Responses exclude account emails, birth dates, and profile IDs.
 
 Conversations use `/cont/mesaje/{chatSlug}`. `Appointment.chatSlug` is a stable, database-generated 12-character lowercase hexadecimal identifier with format and uniqueness constraints. Appointment creation retries chat-slug collisions only. The appointment's `routeSlug` remains separate. Legacy chat links resolve after authorization and redirect to the canonical URL; previously frozen email retry URLs remain unchanged.
 
 Terminal appointments move to past conversations immediately. Sending closes exactly seven elapsed days after `statusChangedAt`; new messages do not extend that deadline. History remains readable. Messages are plain text, limited to 2,000 characters.
+
+The sign-up form writes the notice or declaration version and its timestamp with the account. Later confirmations are recorded in `account_policy_confirmation`, keyed by account, policy, and version. Existing accounts start without a confirmation for the new text. Change the relevant version in `src/lib/account/policy-confirmations.ts` when the corresponding public text changes materially. Retain the old wording in version history.
 
 ## Client behavior
 
@@ -17,11 +19,17 @@ Terminal appointments move to past conversations immediately. Sending closes exa
 
 ## Moderation
 
-[`src/lib/chat/moderation.ts`](../src/lib/chat/moderation.ts) runs `omni-moderation-latest`, followed by a structured contextual verdict through the Responses API using `gpt-4.1-mini` by default. The policy permits dental descriptions and respectful complaints while blocking personal attacks, threats, harassment, discrimination, blackmail, and spam. Automated classification can make mistakes.
+[`src/lib/chat/moderation.ts`](../src/lib/chat/moderation.ts) runs `omni-moderation-latest`, followed by a structured contextual verdict through the Responses API using `gpt-4.1-mini` by default. The chat is limited to appointment logistics. Moderation also attempts to block sending or requesting personal medical information, while allowing logistical references to the scheduled treatment and respectful complaints. Automated classification can make mistakes.
 
 Only the current message text is sent to OpenAI. Responses requests use `store: false`; this does not itself disable provider abuse-monitoring logs. The application explains processing on its moderation information page.
 
 Blocked messages are not persisted or included in emails. Timeouts, refusals, malformed responses, quota failures, and provider outages fail closed and preserve the browser draft. PostgreSQL-backed limits of 20 attempts per minute and 200 per hour per user apply before external calls. Investigate provider quota errors without bypassing moderation.
+
+## Reports of accidentally shared medical information
+
+Either participant can report a message from their conversation, including their own message. The report stores the message and reporter IDs and the time of the report. It adds no copy of the message and requests no free-text explanation.
+
+Assign a reviewer before relaunch. Review the unresolved records in `chat_medical_data_report` (`resolvedAt IS NULL`) in a restricted operator session. Verify the report in place, without copying text into tickets or ordinary logs. When the authorized reviewer decides a message should be redacted, redact it in place so replies, read receipts, and batch links keep their identifiers, then mark all related reports resolved in the same transaction. Keep only the incident metadata required under the approved procedure and assess whether any further action is needed under that procedure. The app does not notify a reviewer automatically.
 
 ## Configuration and processes
 
@@ -38,7 +46,7 @@ Keep server configuration in the untracked `.env` or a secret store:
 
 `npm run dev` starts Next.js and the email worker together; stopping it stops both. `npm run dev:web` starts only Next.js. With the application already running, `npm run chat:emails` starts the worker separately. The worker can send real emails: use an isolated test database for QA.
 
-Production runs the separate `chat-email-worker` service from [`compose.production.yaml`](../compose.production.yaml). Its state survives restarts in PostgreSQL. Apply reviewed migrations once, before updating the application and worker, following the [deployment procedure](deployment.md#manual-migrations-failure-recovery-and-rollback). The chat migrations are `20260911100000_add_moderated_appointment_chat` and `20260912100000_add_chat_conversation_slug`; the latter backfills identifiers without changing message history.
+Production runs the separate `chat-email-worker` service from the `prod` profile in [`compose.yaml`](../compose.yaml). Its state survives restarts in PostgreSQL. Apply reviewed migrations once, before updating the application and worker, following the [deployment procedure](deployment.md#manual-migrations-failure-recovery-and-rollback). The chat migrations are `20260911100000_add_moderated_appointment_chat` and `20260912100000_add_chat_conversation_slug`; the latter backfills identifiers without changing message history.
 
 ## Email delivery and recovery
 
@@ -47,6 +55,12 @@ The worker polls every 15 seconds. A batch becomes eligible when its oldest stil
 Delivery uses persistent batches, per-recipient/conversation locks, 60-second leases with ownership tokens, and stable Resend idempotency keys. Recipient, sender, and URL are frozen on the first attempt. Retries stop after eight attempts or 23 hours, within the provider's 24-hour idempotency window. Investigate `FAILED` batches; do not retry an uncertain delivery with a new key.
 
 Monitor queue age, failed batches, worker availability, and provider quota. Do not log message text, credentials, or raw provider responses. History has no automatic deletion; retention, export, and deletion procedures must cover it before processing real patient data.
+
+## Appointment emails
+
+The same worker sends the patient an email when their request is confirmed or rejected. The student receives an email if the patient cancels a confirmed appointment or withdraws a pending request. A confirmed appointment schedules a student reminder for the appointment's scheduled end. The patient receives a review invitation once the student marks the appointment completed. The worker skips review reminders if the recipient has already completed the required action. Emails link to the signed-in appointments page and exclude participant names, treatment information, and rejection reasons.
+
+For new chat and appointment emails, the worker records the Resend email ID when available. The database's `SENT` status and `sentAt` timestamp reflect acceptance by Resend. Open the email in the Resend dashboard to inspect the delivery timeline and receiving server's response.
 
 ## Worker health
 

@@ -9,7 +9,7 @@ type AppointmentApiSource = {
   treatmentNameSnapshot: string;
   locationNameSnapshot: string;
   locationAddressSnapshot: string;
-  supervisorNameSnapshot: string;
+  studentUniversitySnapshot: string;
   status: string;
   version: number;
   statusReason: string | null;
@@ -51,7 +51,7 @@ export function toAppointmentApiDto(appointment: AppointmentApiSource) {
     treatmentNameSnapshot: appointment.treatmentNameSnapshot,
     locationNameSnapshot: appointment.locationNameSnapshot,
     locationAddressSnapshot: appointment.locationAddressSnapshot,
-    supervisorNameSnapshot: appointment.supervisorNameSnapshot,
+    studentUniversitySnapshot: appointment.studentUniversitySnapshot,
     status: appointment.status,
     version: appointment.version,
     statusReason: appointment.statusReason,

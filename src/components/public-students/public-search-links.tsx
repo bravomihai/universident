@@ -6,7 +6,7 @@ export async function PublicSearchLinks() {
   if (!combinations.length) return null;
   return (
     <nav aria-labelledby="available-searches-title" className="space-y-4">
-      <h2 id="available-searches-title" className="text-xl font-semibold">Tratamente disponibile în orașe</h2>
+      <h2 id="available-searches-title" className="card-adjacent text-xl font-semibold">Tratamente disponibile în orașe</h2>
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {combinations.map((entry) => (
           <li key={entry.href}>

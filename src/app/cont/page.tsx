@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   Stethoscope,
   UserRound,
-  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -25,6 +24,8 @@ import {
   clickableCardLinkClassName,
 } from "@/components/ui/clickable-card-styles";
 import { UserRole } from "@/generated/prisma/enums";
+import { redirect } from "next/navigation";
+import { missingAccountPolicy } from "@/lib/account/policy-confirmation-service";
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
 import { formatUnreadAppointmentNotifications } from "@/lib/appointments/appointment-notification-label";
@@ -146,6 +147,7 @@ function compactBio(bio: string | null) {
 
 export default async function AccountPage() {
   const session = await requireAccountPageSession();
+  if (await missingAccountPolicy(session.user)) redirect("/confirma-reguli");
   const isStudent = session.user.role === UserRole.STUDENT;
   const isPatient = session.user.role === UserRole.PATIENT;
   const appointmentData =
@@ -174,10 +176,8 @@ export default async function AccountPage() {
           profile: null,
           activeTreatments: 0,
           activeLocations: 0,
-          activeSupervisors: 0,
           archivedTreatments: 0,
           archivedLocations: 0,
-          archivedSupervisors: 0,
         };
       }
 
@@ -193,19 +193,10 @@ export default async function AccountPage() {
           deletedAt: null,
         },
       });
-      const activeSupervisors = await prisma.studentSupervisor.count({
-        where: {
-          studentProfileId: profile.id,
-          deletedAt: null,
-        },
-      });
       const archivedTreatments = await prisma.studentTreatment.count({
         where: { studentProfileId: profile.id, deletedAt: { not: null } },
       });
       const archivedLocations = await prisma.studentLocation.count({
-        where: { studentProfileId: profile.id, deletedAt: { not: null } },
-      });
-      const archivedSupervisors = await prisma.studentSupervisor.count({
         where: { studentProfileId: profile.id, deletedAt: { not: null } },
       });
 
@@ -213,10 +204,8 @@ export default async function AccountPage() {
         profile,
         activeTreatments,
         activeLocations,
-        activeSupervisors,
         archivedTreatments,
         archivedLocations,
-        archivedSupervisors,
       };
     })()
     : null;
@@ -449,7 +438,7 @@ export default async function AccountPage() {
         {studentData ? (
           <section
             aria-label="Administrare profesională"
-            className="grid gap-4 md:grid-cols-3"
+            className="grid gap-4 md:grid-cols-2"
           >
             <DashboardLinkCard
               href="/cont/tratamente"
@@ -478,21 +467,6 @@ export default async function AccountPage() {
                   studentData.activeLocations,
                   "locație",
                   "locații",
-                )}
-              </p>
-            </DashboardLinkCard>
-            <DashboardLinkCard
-              href="/cont/supervizori"
-              icon={UsersRound}
-              title="Supervizori"
-              description="Profesorii disponibili pentru asocieri."
-              action="Gestionează supervizorii"
-            >
-              <p className="font-medium">
-                {resourceCountLabel(
-                  studentData.activeSupervisors,
-                  "supervizor",
-                  "supervizori",
                 )}
               </p>
             </DashboardLinkCard>
@@ -566,7 +540,7 @@ export default async function AccountPage() {
               href="/cont/resurse-arhivate"
               icon={Archive}
               title="Resurse arhivate"
-              description="Tratamente, locații și supervizori păstrați pentru restaurare."
+              description="Tratamente și locații păstrate pentru restaurare."
               action="Vezi resursele arhivate"
               actionOnDesktop
             >
@@ -583,13 +557,6 @@ export default async function AccountPage() {
                     studentData.archivedLocations,
                     "locație",
                     "locații",
-                  )}
-                </span>
-                <span>
-                  {resourceCountLabel(
-                    studentData.archivedSupervisors,
-                    "supervizor",
-                    "supervizori",
                   )}
                 </span>
               </div>

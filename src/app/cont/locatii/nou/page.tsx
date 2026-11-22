@@ -45,7 +45,7 @@ export default async function NewStudentLocationPage() {
       <div className="w-full max-w-6xl space-y-6">
         <BackLink />
 
-        <div className="space-y-2">
+        <div className="card-adjacent space-y-2">
           <div className="flex items-center gap-3">
             <span className="inline-flex size-10 items-center justify-center rounded-full border bg-card">
               <MapPin className="size-5" aria-hidden="true" />

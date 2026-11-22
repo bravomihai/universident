@@ -1,7 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
-import { UserRole } from "@/generated/prisma/enums";
+import type { RatingSummaryValue } from "@/components/reviews/rating-summary";
+import { publiclyEligibleStudentProfileWhere } from "@/lib/student-publication/student-publication-readiness";
 import { publicBookingWindowEnd } from "@/lib/availability/public-booking-window";
 import { ensureActiveSeriesMaterializedThrough, ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generateSmartBookingSlots } from "@/lib/availability/smart-booking-slots";
@@ -9,6 +10,7 @@ import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment
 import { prisma } from "@/lib/prisma";
 import { createPublicStudentProfile } from "@/lib/public-students/public-student-profile-dto";
 import { getBookablePublicTreatments } from "@/lib/public-students/public-bookable-treatments";
+import { emptyPublicStudentRating, getPublicStudentRatings } from "@/lib/public-students/public-student-ratings";
 import { rankUniquePublicStudents } from "@/lib/public-students/public-student-search-ranking";
 import { getPublishedProfileReviews, type ProfileReviewData } from "@/lib/reviews/profile-review-service";
 import { studentProfileImageUrl } from "@/lib/student-profile/student-profile-image";
@@ -22,7 +24,6 @@ export type PublicStudentLocationDto = {
   name: string;
   address: string;
   city: PublicCatalogOption;
-  supervisor: { fullName: string; academicTitle: string | null };
 };
 export type PublicStudentTreatmentDto = {
   name: string;
@@ -43,6 +44,8 @@ export type PublicStudentSummaryDto = {
   city: PublicCatalogOption;
   firstAvailableAt: Date;
   locationCount: number;
+  rating: RatingSummaryValue;
+  completedAppointmentsCount: number | null;
 };
 export type PublicStudentProfileDto = {
   name: string;
@@ -54,6 +57,7 @@ export type PublicStudentProfileDto = {
   treatments: PublicStudentTreatmentDto[];
   reviewData: ProfileReviewData;
   cancellationsLast10: number;
+  completedAppointmentsCount: number | null;
 };
 
 export const getPublicStudentCatalog = cache(async () => {
@@ -64,13 +68,7 @@ export const getPublicStudentCatalog = cache(async () => {
   return { treatments, cities };
 });
 
-const publicProfileWhere = {
-  isPublished: true,
-  publicSlug: { not: null },
-  university: { not: "" },
-  studyYear: { gte: 1, lte: 6 },
-  user: { role: UserRole.STUDENT, emailVerified: true },
-} as const;
+const publicProfileWhere = publiclyEligibleStudentProfileWhere();
 
 export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page, excludedUserId }: { treatmentSlug: string; citySlug: string; page: number; excludedUserId?: string }) => {
   const now = new Date();
@@ -87,7 +85,7 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       endsAt: { gt: now },
       studentProfile: { ...publicProfileWhere, ...(isPublicDeployment() ? realStudentProfileWhere() : {}), ...(excludedUserId ? { userId: { not: excludedUserId } } : {}) },
       studentLocation: { deletedAt: null, city: { slug: citySlug, isActive: true } },
-      offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { slug: treatmentSlug, isActive: true } }, supervisor: { deletedAt: null } } },
+      offerings: { some: { removedAt: null, studentTreatment: { deletedAt: null, treatment: { slug: treatmentSlug, isActive: true } } } },
     },
     include: {
       studentProfile: {
@@ -99,11 +97,11 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
           bio: true,
           lastRefreshedAt: true,
           profileImage: { select: { id: true, updatedAt: true } },
-          user: { select: { name: true } },
+          user: { select: { id: true, name: true } },
         },
       },
       studentLocation: { include: { city: true } },
-      offerings: { where: { removedAt: null }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
+      offerings: { where: { removedAt: null }, include: { studentTreatment: { include: { treatment: true } } } },
       appointments: { where: appointmentConsumesCapacityWhere(now), select: { scheduledStartsAt: true, scheduledEndsAt: true } },
     },
     orderBy: [{ startsAt: "asc" }, { id: "asc" }],
@@ -111,7 +109,7 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
 
   const candidates = [];
   for (const block of blocks) {
-    const offering = block.offerings.find((item) => item.studentTreatment.treatment.slug === treatmentSlug && !item.studentTreatment.deletedAt && !item.supervisor.deletedAt);
+    const offering = block.offerings.find((item) => item.studentTreatment.treatment.slug === treatmentSlug && !item.studentTreatment.deletedAt);
     if (!offering || !block.studentProfile.publicSlug) continue;
     const choices = generateSmartBookingSlots([{
       id: block.id,
@@ -119,7 +117,7 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       startsAt: block.startsAt,
       endsAt: block.endsAt,
       treatmentDurationMinutes: offering.studentTreatment.durationMinutes,
-      offeredDurationsMinutes: block.offerings.filter((item) => !item.studentTreatment.deletedAt && !item.supervisor.deletedAt).map((item) => item.studentTreatment.durationMinutes),
+      offeredDurationsMinutes: block.offerings.filter((item) => !item.studentTreatment.deletedAt).map((item) => item.studentTreatment.durationMinutes),
       occupied: block.appointments.map((item) => ({ startsAt: item.scheduledStartsAt, endsAt: item.scheduledEndsAt })),
     }], now);
     if (choices.length === 0) continue;
@@ -131,6 +129,8 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       firstAvailableAt: choices[0].startsAt,
       tieBreaker: `${block.studentLocation.routeKey}:${offering.id}`,
       value: {
+        userId: block.studentProfile.user.id,
+        profileId: block.studentProfile.id,
         name: block.studentProfile.user.name,
         imageUrl: studentProfileImageUrl(block.studentProfile.profileImage),
         publicSlug: block.studentProfile.publicSlug,
@@ -151,15 +151,37 @@ export const searchPublicStudents = cache(async ({ treatmentSlug, citySlug, page
       },
     });
   }
-  const all: PublicStudentSummaryDto[] = rankUniquePublicStudents(candidates).map(
-    (student) => ({
-      ...student.value,
-      firstAvailableAt: student.firstAvailableAt,
-      locationCount: student.locationCount,
+  const ranked = rankUniquePublicStudents(candidates);
+  const totalResults = ranked.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / PUBLIC_STUDENTS_PAGE_SIZE));
+  const pageStudents = ranked.slice((page - 1) * PUBLIC_STUDENTS_PAGE_SIZE, page * PUBLIC_STUDENTS_PAGE_SIZE);
+  if (!pageStudents.length) return { results: [], totalResults, totalPages, page };
+
+  const [ratings, profilesWithVisibleCounts] = await Promise.all([
+    getPublicStudentRatings(prisma, { targetUserId: { in: pageStudents.map(({ value }) => value.userId) } }),
+    prisma.studentProfile.findMany({
+      where: {
+        id: { in: pageStudents.map(({ value }) => value.profileId) },
+        showCompletedAppointmentsCount: true,
+      },
+      select: {
+        id: true,
+        _count: { select: { appointments: { where: { status: "COMPLETED" } } } },
+      },
     }),
-  );
-  const totalResults = all.length;
-  return { results: all.slice((page - 1) * PUBLIC_STUDENTS_PAGE_SIZE, page * PUBLIC_STUDENTS_PAGE_SIZE), totalResults, totalPages: Math.max(1, Math.ceil(totalResults / PUBLIC_STUDENTS_PAGE_SIZE)), page };
+  ]);
+  const completedByProfile = new Map(profilesWithVisibleCounts.map((profile) => [profile.id, profile._count.appointments]));
+  const results = pageStudents.map<PublicStudentSummaryDto>(({ value, firstAvailableAt, locationCount }) => {
+    const { userId, profileId, ...student } = value;
+    return {
+      ...student,
+      firstAvailableAt,
+      locationCount,
+      rating: ratings.get(userId) ?? emptyPublicStudentRating,
+      completedAppointmentsCount: completedByProfile.get(profileId) ?? null,
+    };
+  });
+  return { results, totalResults, totalPages, page };
 });
 
 export const getPublicStudentProfile = cache(async (publicSlug: string) => {
@@ -180,7 +202,7 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
   });
   if (!profile?.publicSlug) return null;
   await ensureStudentSeriesMaterializedThrough(profile.id, through, now);
-  const [blocks, reviewData] = await Promise.all([
+  const [blocks, reviewData, completedAppointmentsCount] = await Promise.all([
     prisma.studentAvailabilitySlot.findMany({
       where: {
         studentProfileId: profile.id,
@@ -193,7 +215,7 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
       orderBy: [{ startsAt: "asc" }, { id: "asc" }],
       include: {
         studentLocation: { include: { city: true } },
-        offerings: { where: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } }, include: { studentTreatment: { include: { treatment: true } }, supervisor: true } },
+        offerings: { where: { removedAt: null, studentTreatment: { deletedAt: null } }, include: { studentTreatment: { include: { treatment: true } } } },
         appointments: {
           where: appointmentConsumesCapacityWhere(now),
           select: { scheduledStartsAt: true, scheduledEndsAt: true },
@@ -201,10 +223,14 @@ export const getPublicStudentProfile = cache(async (publicSlug: string) => {
       },
     }),
     getPublishedProfileReviews(profile.user.id, "STUDENT"),
+    profile.showCompletedAppointmentsCount
+      ? prisma.appointment.count({ where: { studentProfileId: profile.id, status: "COMPLETED" } })
+      : null,
   ]);
   return createPublicStudentProfile(
     profile,
     getBookablePublicTreatments(blocks, now, through),
     reviewData,
+    completedAppointmentsCount,
   );
 });

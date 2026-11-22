@@ -2,6 +2,7 @@ import { appointmentConsumesCapacityWhere } from "@/lib/appointments/appointment
 import { ensureStudentSeriesMaterializedThrough } from "@/lib/availability/materializer";
 import { generatePublicBookingSlots } from "@/lib/availability/public-booking-slots";
 import { publicBookingLocationWhere } from "@/lib/public-students/public-booking-location";
+import { publiclyEligibleStudentProfileWhere } from "@/lib/student-publication/student-publication-readiness";
 import { prisma } from "@/lib/prisma";
 
 export async function listPublicStudentAvailability(
@@ -15,7 +16,7 @@ export async function listPublicStudentAvailability(
   if (to <= from || to.getTime() - from.getTime() > 120 * 86_400_000) return null;
   const now = new Date();
   const student = await prisma.studentProfile.findFirst({
-      where: { publicSlug, isPublished: true },
+      where: { ...publiclyEligibleStudentProfileWhere(), publicSlug },
       select: { id: true },
   });
   if (!student) return null;
@@ -37,7 +38,6 @@ export async function listPublicStudentAvailability(
               deletedAt: null,
               treatment: { slug: treatmentSlug, isActive: true },
             },
-            supervisor: { deletedAt: null },
           },
         },
       },
@@ -45,8 +45,8 @@ export async function listPublicStudentAvailability(
       include: {
         studentLocation: { include: { city: true } },
         offerings: {
-          where: { removedAt: null, studentTreatment: { deletedAt: null }, supervisor: { deletedAt: null } },
-          include: { studentTreatment: { include: { treatment: true } }, supervisor: true },
+          where: { removedAt: null, studentTreatment: { deletedAt: null } },
+          include: { studentTreatment: { include: { treatment: true } } },
         },
         appointments: {
           where: appointmentConsumesCapacityWhere(now),
@@ -116,10 +116,6 @@ export async function listPublicStudentAvailability(
               name: block.studentLocation.city.name,
               slug: block.studentLocation.city.slug,
             },
-          },
-          supervisor: {
-            fullName: offering.supervisor.fullName,
-            academicTitle: offering.supervisor.academicTitle,
           },
         };
       });

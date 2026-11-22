@@ -4,7 +4,7 @@ Public answers and JSON-LD describe the same visible product information. They s
 
 ## Content and schemas
 
-The homepage answers five questions about the platform, supervised care, booking requests, adult eligibility, and student confirmation. Search pages explain the selected treatment/city and distinguish requests from confirmed appointments. Public profiles identify the provider as a dentistry student and show university and study year. Copy does not make unsupported clinical, pricing, or outcome claims.
+The homepage answers five questions about the platform, supervised care, booking requests, adult eligibility, and student confirmation. Search pages show the selected treatment and city along with the available student profiles. Public profiles identify the provider as a dentistry student and show university and study year. Copy does not make unsupported clinical, pricing, or outcome claims.
 
 | Page | JSON-LD |
 | --- | --- |

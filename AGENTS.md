@@ -4,10 +4,12 @@
 
 - Universident is a Romanian-language marketplace that connects adult patients with dentistry students working under a supervisor.
 - Preserve the existing Next.js App Router, React, TypeScript, Prisma/PostgreSQL, Better Auth, shadcn/Radix, Tailwind, and FullCalendar architecture.
-- Keep user-facing copy in Romanian and keep the existing visual language unless the user explicitly requests a redesign.
+- Keep application copy in Romanian and preserve the existing visual language unless the user explicitly requests a redesign.
 - Prefer readable Romanian routes and dynamic slugs. Follow the API shapes and naming conventions already present in `src/app/api`.
 
 ## Commands
+
+Write script prompts, help text, status messages, warnings, and errors in English, including output from Make targets and deployment scripts.
 
 Run commands from the repository root:
 
@@ -55,6 +57,7 @@ npm run db:seed
 
 - Better Auth is authoritative for sessions. Enforce role and ownership checks on the server for every private read and write.
 - Mutating account APIs must verify the request origin and require a verified email.
+- Keep role-specific account and chat confirmations explicit, versioned, and enforced on the server. Existing accounts must confirm the applicable text. Publication and public availability require the current student declaration.
 - Roles are `PATIENT`, `STUDENT`, and `ADMIN`. Do not trust a role, user ID, profile ID, or ownership field supplied by the client.
 - A signed-in student must not see their own listing among `/studenti` search results, although their direct public profile remains accessible.
 - A student profile university must use the `shortName` of an active entry from the seeded university catalog; never accept free-form university names from the profile API.
@@ -66,7 +69,7 @@ npm run db:seed
 - Patients can submit overlapping `PENDING` requests for different slots, but cannot have overlapping `CONFIRMED` appointments.
 - A patient can request a slot until its start time. At the start time an unconfirmed request becomes `EXPIRED`.
 - Confirming one request atomically marks the patient's other overlapping pending requests as `SUPERSEDED`.
-- A student availability occurrence is a multi-hour block at exactly one location. It exposes one or more offerings, each pairing one student treatment with one supervisor.
+- A student availability occurrence is a multi-hour block at exactly one location. It exposes one or more offerings, each referencing one student treatment.
 - A one-off availability and every recurring occurrence must start and end on the same Europe/Bucharest calendar day. When a calendar drag crosses into another day, preserve the start day and clamp the end to the dragged local time; reject cross-day API creation and edits server-side.
 - A treatment can be attached to an occurrence only when its configured duration fits completely inside the occurrence. Disable and explain treatments that are too long in the editor, and enforce the same rule server-side.
 - `PENDING` and `CONFIRMED` appointments consume only their selected subinterval inside the block. Active appointment subintervals for the same student must never overlap.
@@ -81,8 +84,8 @@ npm run db:seed
 - Moving or cancelling an occupied availability occurrence must atomically reject its pending request or cancel its confirmed appointment with a required reason. Never move the patient's appointment to the new time.
 - Recurring availability created from the calendar must have an explicit end: either a finite occurrence count or an inclusive end date. The UI must not create never-ending series.
 - A recurring occurrence can be edited by itself or together with the series from that occurrence onward. A single-occurrence edit becomes an exception; a series edit replaces the selected and following occurrences while preserving past appointment history. Cancelling a series removes all of its future occurrences.
-- Appointments retain their scheduled time, names, treatment, location, address, supervisor, age, and note snapshots even when the underlying availability or professional resources later change.
-- Treatments, locations, and supervisors owned by a student have only archived/unarchived lifecycle state. Their associations are defined exclusively on calendar occurrences; do not recreate active flags or treatment-location join records.
+- Appointments retain their scheduled time, names, treatment, location, address, student university, age, and note snapshots even when the underlying availability or professional resources later change.
+- Treatments and locations owned by a student have only archived/unarchived lifecycle state. Their associations are defined exclusively on calendar occurrences; do not recreate active flags or treatment-location join records.
 - Use serializable transactions and optimistic `version`/`revision` checks for scheduling writes. Database constraints are the final defense against slot and time overlaps.
 - After the scheduled end, a confirmed appointment remains active and highlighted until the student records `COMPLETED` or `NO_SHOW` together with a required 1–5 rating; the review comment is optional, but must contain 10–1,000 trimmed characters when present.
 - A completed appointment remains active and highlighted separately for each participant until that participant submits a 1–5 rating. A no-show is archived immediately for the patient, who cannot review it and receives no no-show notification; the student's required review is created atomically when the student records the no-show.
@@ -108,9 +111,9 @@ npm run db:seed
 
 - FullCalendar is the primary scheduling surface: `timeGridWeek` on larger screens and `timeGridDay` on phones.
 - Student events use consistent states: available (green), pending (amber), confirmed (blue), moved exception (violet), and selected (primary highlight). Cancelled occurrences are never rendered. Use a repeat icon for ordinary recurring occurrences and a pencil for an occurrence edited separately; do not use an undo-style arrow for either state.
-- Students create and edit availability in a modal dialog opened from a calendar selection or event click. The dialog configures location, treatment offerings, and a supervisor per treatment. Outside click and the explicit cancel action close without saving.
+- Students create and edit availability in a modal dialog opened from a calendar selection or event click. The dialog configures location and treatment offerings. Outside click and the explicit cancel action close without saving.
 - Patients enter booking through `/studenti/[studentSlug]/programare/[treatmentSlug]/[citySlug]`. Search combines matching locations in the city; profile location cards add `?locatie=<routeKey>` to restrict the same calendar to that treatment and location. Validate this optional filter server-side and keep it in availability requests. The calendar opens at the earliest valid occurrence and links the aggregate rating to the professional profile; review cards remain on the profile, not on the booking page.
-- Public professional profiles list only treatment–location–supervisor pairs with real bookable capacity in the same 60-day window and slicing pipeline as the patient calendar. Materialize recurring slots before checking capacity and subtract pending/confirmed occupied intervals; hide empty treatments instead of linking to unavailable combinations.
+- Public professional profiles list only treatment–location pairs with real bookable capacity in the same 60-day window and slicing pipeline as the patient calendar. Materialize recurring slots before checking capacity and subtract pending/confirmed occupied intervals; hide empty treatments instead of linking to unavailable combinations.
 - The patient calendar renders availability windows, not a stack of overlapping events for every possible start. Optimized windows normally expose one start; a grouped fallback window opens a dialog where the patient selects one of its valid starts and may add an optional note.
 - Calendar navigation uses `Azi`, `Mâine`, `Poimâine`, or a localized date/range between the arrows, never permits past navigation, and keeps the day/week selector on the right on phones.
 - If the patient's birth date is missing, complete that profile step before enabling a booking request.

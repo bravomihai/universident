@@ -18,7 +18,7 @@ import { prisma } from "../src/lib/prisma";
 import { PROFILE_REFRESH_COOLDOWN_MS } from "../src/lib/student-profile/profile-refresh";
 import { assertLocalDemoDatabase, parseLocalDemoOptions } from "./lib/local-demo-options";
 import { placeLocalDemoSlots } from "./lib/local-demo-schedule";
-import { buildDemoDirectory, isDemoDirectoryStudent, type DemoDirectoryPlan } from "./lib/local-demo-directory";
+import { buildDemoDirectory, isDemoDirectoryPatient, isDemoDirectoryStudent, type DemoDirectoryPlan } from "./lib/local-demo-directory";
 import { validateDemoDirectory, writeDemoDirectory } from "./lib/local-demo-directory-store";
 
 const DEMO_PREFIX = "demo-ui-";
@@ -53,7 +53,6 @@ const demoSlotKeys = [
 type DemoSlotKey = (typeof demoSlotKeys)[number];
 type TreatmentKey = (typeof requiredTreatmentSlugs)[number];
 type LocationKey = "clinic" | "faculty";
-type SupervisorKey = "primary" | "secondary";
 
 type SlotDefinition = {
   key: DemoSlotKey;
@@ -63,7 +62,6 @@ type SlotDefinition = {
   location: LocationKey;
   treatments: Array<{
     treatment: TreatmentKey;
-    supervisor: SupervisorKey;
   }>;
   isException?: boolean;
   isCancelled?: boolean;
@@ -87,7 +85,7 @@ type AppointmentDefinition = {
 
 function requiredPrismaDate(value: string) {
   const result = localDateToPrismaDate(value);
-  if (!result) throw new Error(`Data locală „${value}” este invalidă.`);
+  if (!result) throw new Error(`Invalid local date: "${value}".`);
   return result;
 }
 
@@ -95,7 +93,7 @@ function requiredInstant(localDate: string, minuteOfDay: number) {
   const result = utcInstantForBucharestLocal(localDate, minuteOfDay);
   if (!result) {
     throw new Error(
-      `Ora demo ${localDate}, minutul ${minuteOfDay}, nu există în Europe/Bucharest.`,
+      `Demo time ${localDate}, minute ${minuteOfDay}, does not exist in Europe/Bucharest.`,
     );
   }
   return result;
@@ -115,9 +113,11 @@ function demoId(kind: string, key: string) {
 
 function printDirectorySummary(directory: DemoDirectoryPlan) {
   const cityCount = new Set(directory.locations.map((location) => location.cityId)).size;
-  console.log(`${directory.profiles.length} profiluri fictive publicate, ${directory.locations.length} locații și ${directory.slots.length} intervale viitoare, în ${cityCount} orașe.`);
-  console.log(`Distribuția pentru căutare (doar cele ${directory.profiles.length} de profiluri demo):`);
-  console.table(directory.coverage.map((row) => ({ oraș: row.city, tratament: row.treatment, profiluri: row.profiles })));
+  console.log(`${directory.profiles.length} fictional profiles planned for publication, ${directory.locations.length} locations, and ${directory.slots.length} future slots across ${cityCount} cities.`);
+  const visibleCountProfiles = directory.profiles.filter((profile) => profile.showCompletedAppointmentsCount).length;
+  console.log(`${directory.history.appointments.length} completed demo appointments, with counts shown for ${visibleCountProfiles} fictional students.`);
+  console.log(`Search coverage for ${directory.profiles.length} demo profiles:`);
+  console.table(directory.coverage.map((row) => ({ city: row.city, treatment: row.treatment, profiles: row.profiles })));
 }
 
 async function main() {
@@ -141,14 +141,14 @@ async function main() {
     await validateDemoDirectory(prisma, directory);
     printDirectorySummary(directory);
     if (options.dryRun) {
-      console.log("Verificare încheiată fără scrieri. Modul directory-only nu modifică scenariile sau conturile existente din afara setului de profiluri fictive.");
+      console.log("Dry run complete. No changes were written. Directory-only mode preserves existing scenarios and accounts outside the fictional profile set.");
       return;
     }
     await prisma.$transaction(async (transaction) => {
       const existing = await validateDemoDirectory(transaction, directory);
       await writeDemoDirectory(transaction, directory, existing, now);
     }, { isolationLevel: "Serializable", maxWait: 10_000, timeout: 120_000 });
-    console.log(`Cele ${directory.profiles.length} de profiluri Demo sunt pregătite. Nu au parole și nu au fost trimise emailuri. Detalii: scripts/DEMO-TESTING.md.`);
+    console.log(`${directory.profiles.length} demo profiles are ready. The accounts have no passwords and no emails were sent. See scripts/DEMO-TESTING.md.`);
     return;
   }
 
@@ -180,20 +180,20 @@ async function main() {
     },
   });
 
-  const patientUsers = users.filter((user) => user.role === UserRole.PATIENT &&
+  const patientUsers = users.filter((user) => user.role === UserRole.PATIENT && !isDemoDirectoryPatient(user) &&
     (!options.patientEmail || user.email.toLowerCase() === options.patientEmail));
   const studentUsers = users.filter((user) => user.role === UserRole.STUDENT && !isDemoDirectoryStudent(user) &&
     (!options.studentEmail || user.email.toLowerCase() === options.studentEmail));
   if (patientUsers.length !== 1 || studentUsers.length !== 1) {
     throw new Error(
-      `Selectează exact un pacient și un student existenți cu --patient-email=... și, dacă este nevoie, --student-email=... . Selecția curentă găsește ${patientUsers.length} pacienți și ${studentUsers.length} studenți.`,
+      `Select exactly one existing patient and one existing student. Use --patient-email=<email> and --student-email=<email> to narrow the selection. Matched patient accounts: ${patientUsers.length}. Matched student accounts: ${studentUsers.length}.`,
     );
   }
 
   const patientUser = patientUsers[0];
   const studentUser = studentUsers[0];
   if (!patientUser.emailVerified || !studentUser.emailVerified) {
-    throw new Error("Verifică emailul celor două conturi prin aplicație înainte de a popula datele demo.");
+    throw new Error("Verify the email addresses for both accounts through the app before seeding demo data.");
   }
   const city = catalogCities.find((candidate) => candidate.slug === "cluj-napoca");
   const defaultUniversity = catalogUniversities[0];
@@ -202,7 +202,7 @@ async function main() {
   );
   if (missingTreatments.length > 0 || !city || !defaultUniversity) {
     throw new Error(
-      "Lipsesc date din cataloage. Rulează întâi `npx prisma db seed`, apoi `npm run demo:seed`.",
+      "Required catalog data is missing. Run `npx prisma db seed` first, then `npm run demo:seed`.",
     );
   }
 
@@ -225,8 +225,8 @@ async function main() {
       endMinute: 12 * 60,
       location: "clinic",
       treatments: [
-        { treatment: "consultatie", supervisor: "primary" },
-        { treatment: "igienizare", supervisor: "secondary" },
+        { treatment: "consultatie" },
+        { treatment: "igienizare" },
       ],
     },
     {
@@ -236,8 +236,8 @@ async function main() {
       endMinute: 13 * 60,
       location: "faculty",
       treatments: [
-        { treatment: "consultatie", supervisor: "primary" },
-        { treatment: "igienizare", supervisor: "secondary" },
+        { treatment: "consultatie" },
+        { treatment: "igienizare" },
       ],
     },
     {
@@ -247,8 +247,8 @@ async function main() {
       endMinute: 17 * 60,
       location: "clinic",
       treatments: [
-        { treatment: "carii-si-obturatii", supervisor: "primary" },
-        { treatment: "consultatie", supervisor: "secondary" },
+        { treatment: "carii-si-obturatii" },
+        { treatment: "consultatie" },
       ],
     },
     {
@@ -257,7 +257,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 11 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
       isException: true,
     },
     {
@@ -267,8 +267,8 @@ async function main() {
       endMinute: 14 * 60,
       location: "clinic",
       treatments: [
-        { treatment: "consultatie", supervisor: "primary" },
-        { treatment: "carii-si-obturatii", supervisor: "secondary" },
+        { treatment: "consultatie" },
+        { treatment: "carii-si-obturatii" },
       ],
     },
     {
@@ -277,7 +277,7 @@ async function main() {
       startMinute: 10 * 60,
       endMinute: 13 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
       isCancelled: true,
     },
     {
@@ -286,7 +286,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 11 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "completed-awaiting-patient",
@@ -294,7 +294,7 @@ async function main() {
       startMinute: 9 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
     },
     {
       key: "completed-reviewed",
@@ -302,7 +302,7 @@ async function main() {
       startMinute: 14 * 60,
       endMinute: 18 * 60,
       location: "clinic",
-      treatments: [{ treatment: "carii-si-obturatii", supervisor: "primary" }],
+      treatments: [{ treatment: "carii-si-obturatii" }],
     },
     {
       key: "completed-reviewed-second",
@@ -310,7 +310,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "consultatie", supervisor: "secondary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "no-show-reviewed",
@@ -318,7 +318,7 @@ async function main() {
       startMinute: 13 * 60,
       endMinute: 17 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "cancelled-patient-late",
@@ -326,7 +326,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 11 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
     },
     {
       key: "cancelled-patient-normal",
@@ -334,7 +334,7 @@ async function main() {
       startMinute: 13 * 60,
       endMinute: 17 * 60,
       location: "clinic",
-      treatments: [{ treatment: "carii-si-obturatii", supervisor: "primary" }],
+      treatments: [{ treatment: "carii-si-obturatii" }],
     },
     {
       key: "cancelled-student",
@@ -342,7 +342,7 @@ async function main() {
       startMinute: 8 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "consultatie", supervisor: "secondary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
     {
       key: "rejected",
@@ -350,7 +350,7 @@ async function main() {
       startMinute: 14 * 60,
       endMinute: 18 * 60,
       location: "clinic",
-      treatments: [{ treatment: "carii-si-obturatii", supervisor: "primary" }],
+      treatments: [{ treatment: "carii-si-obturatii" }],
     },
     {
       key: "superseded",
@@ -358,7 +358,7 @@ async function main() {
       startMinute: 9 * 60,
       endMinute: 12 * 60,
       location: "faculty",
-      treatments: [{ treatment: "igienizare", supervisor: "secondary" }],
+      treatments: [{ treatment: "igienizare" }],
     },
     {
       key: "expired",
@@ -366,7 +366,7 @@ async function main() {
       startMinute: 13 * 60,
       endMinute: 17 * 60,
       location: "clinic",
-      treatments: [{ treatment: "consultatie", supervisor: "primary" }],
+      treatments: [{ treatment: "consultatie" }],
     },
   ];
   if (
@@ -375,7 +375,7 @@ async function main() {
       (key) => !slotDefinitions.some((definition) => definition.key === key),
     )
   ) {
-    throw new Error("Lista sloturilor demo nu este completă.");
+    throw new Error("The demo slot list is incomplete.");
   }
 
   const appointmentDefinitions: AppointmentDefinition[] = [
@@ -534,7 +534,7 @@ async function main() {
       },
     });
     if (otherPairAppointments > 0) {
-      throw new Error("Setul demo existent aparține altei perechi de conturi. Selectează aceeași pereche sau folosește o copie locală separată.");
+      throw new Error("The existing demo data belongs to a different pair of accounts. Select the original pair or use a separate local database.");
     }
 
     // Do not move a fixture interval if an appointment created through the UI uses it.
@@ -546,7 +546,7 @@ async function main() {
     });
     if (dependentAppointments > 0) {
       throw new Error(
-        "Există programări create manual pe intervalele demo. Seed-ul nu le resetează; folosește o copie locală separată pentru un nou set de scenarii.",
+        "Demo slots contain manually created appointments. The demo seed preserves those appointments. Use a separate local database for a new set of scenarios.",
       );
     }
 
@@ -563,7 +563,7 @@ async function main() {
         },
       });
       if (conflicts > 0) {
-        throw new Error("Calendarul existent se suprapune cu intervalele demo. Seed-ul a fost oprit fără modificări.");
+        throw new Error("Existing availability overlaps the demo slots. The demo seed stopped without making changes.");
       }
     }
   }
@@ -571,12 +571,12 @@ async function main() {
   await validateExistingCalendar(prisma);
   await validateDemoDirectory(prisma, directory);
 
-  console.log(`Scenariu: ${options.scenario}; actualizare profil: ${options.refresh}.`);
-  console.log(`${selectedAppointments.length} programări și ${selectedSlots.length} intervale demo, raportate la data ${today}.`);
+  console.log(`Scenario: ${options.scenario}. Profile refresh status: ${options.refresh}.`);
+  console.log(`${selectedAppointments.length} demo appointments and ${selectedSlots.length} demo slots relative to ${today}.`);
   printDirectorySummary(directory);
   if (options.dryRun) {
-    console.log("Verificare încheiată fără scrieri. Conturile, parolele și fotografiile existente sunt păstrate.");
-    console.log("La populare se configurează profilurile și resursele demo și se resetează programările/recenziile/notificările acestui set demo.");
+    console.log("Dry run complete. No changes were written. Seeding preserves existing accounts, passwords, and photos.");
+    console.log("Seeding configures the demo profiles and resources and resets this demo set's appointments, reviews, and notifications.");
     return;
   }
 
@@ -659,7 +659,7 @@ async function main() {
       >();
       for (const spec of treatmentSpecs) {
         const catalogTreatment = treatmentCatalogBySlug.get(spec.key);
-        if (!catalogTreatment) throw new Error(`Lipsește tratamentul ${spec.key}.`);
+        if (!catalogTreatment) throw new Error(`Missing treatment ${spec.key}.`);
         const treatment = await transaction.studentTreatment.upsert({
           where: {
             studentProfileId_treatmentId: {
@@ -758,62 +758,6 @@ async function main() {
         },
       });
 
-      const supervisors = new Map<
-        SupervisorKey,
-        { id: string; fullName: string; academicTitle: string | null }
-      >();
-      const supervisorSpecs = [
-        {
-          key: "primary" as const,
-          id: demoId("supervisor", "primary"),
-          fullName: "Andrei Popescu",
-          academicTitle: "Conf. dr.",
-          deletedAt: null,
-        },
-        {
-          key: "secondary" as const,
-          id: demoId("supervisor", "secondary"),
-          fullName: "Ioana Marinescu",
-          academicTitle: "Șef lucr. dr.",
-          deletedAt: null,
-        },
-      ];
-      for (const spec of supervisorSpecs) {
-        const supervisor = await transaction.studentSupervisor.upsert({
-          where: { id: spec.id },
-          update: {
-            studentProfileId: studentProfile.id,
-            fullName: spec.fullName,
-            academicTitle: spec.academicTitle,
-            deletedAt: spec.deletedAt,
-          },
-          create: {
-            id: spec.id,
-            studentProfileId: studentProfile.id,
-            fullName: spec.fullName,
-            academicTitle: spec.academicTitle,
-            deletedAt: spec.deletedAt,
-          },
-        });
-        supervisors.set(spec.key, supervisor);
-      }
-      await transaction.studentSupervisor.upsert({
-        where: { id: demoId("supervisor", "archived") },
-        update: {
-          studentProfileId: studentProfile.id,
-          fullName: "Radu Ionescu",
-          academicTitle: "Prof. dr.",
-          deletedAt: now,
-        },
-        create: {
-          id: demoId("supervisor", "archived"),
-          studentProfileId: studentProfile.id,
-          fullName: "Radu Ionescu",
-          academicTitle: "Prof. dr.",
-          deletedAt: now,
-        },
-      });
-
       const demoRouteSlugs = allDemoRouteSlugs;
       await transaction.appointmentNotification.deleteMany({
         where: { appointment: { routeSlug: { in: demoRouteSlugs } } },
@@ -856,14 +800,14 @@ async function main() {
       >();
       const offerings = new Map<
         string,
-        { id: string; supervisorName: string }
+        { id: string }
       >();
       for (const definition of selectedSlots) {
         const localDate = addLocalDays(today, definition.dayOffset);
         const startsAt = requiredInstant(localDate, definition.startMinute);
         const endsAt = requiredInstant(localDate, definition.endMinute);
         const location = locations.get(definition.location);
-        if (!location) throw new Error(`Lipsește locația ${definition.location}.`);
+        if (!location) throw new Error(`Missing location ${definition.location}.`);
         const slot = await transaction.studentAvailabilitySlot.upsert({
           where: { id: demoId("slot", definition.key) },
           update: {
@@ -910,9 +854,8 @@ async function main() {
           const studentTreatment = studentTreatments.get(
             offeringDefinition.treatment,
           );
-          const supervisor = supervisors.get(offeringDefinition.supervisor);
-          if (!studentTreatment || !supervisor) {
-            throw new Error(`Lipsește o asociere pentru slotul ${definition.key}.`);
+          if (!studentTreatment) {
+            throw new Error(`Missing association for slot ${definition.key}.`);
           }
           const offering = await transaction.studentAvailabilitySlotOffering.upsert({
             where: {
@@ -925,7 +868,6 @@ async function main() {
               slotId: slot.id,
               studentProfileId: studentProfile.id,
               studentTreatmentId: studentTreatment.id,
-              supervisorId: supervisor.id,
               removedAt: null,
             },
             create: {
@@ -936,15 +878,11 @@ async function main() {
               slotId: slot.id,
               studentProfileId: studentProfile.id,
               studentTreatmentId: studentTreatment.id,
-              supervisorId: supervisor.id,
               removedAt: null,
             },
           });
           offerings.set(`${definition.key}:${offeringDefinition.treatment}`, {
             id: offering.id,
-            supervisorName: [supervisor.academicTitle, supervisor.fullName]
-              .filter(Boolean)
-              .join(" "),
           });
         }
       }
@@ -960,13 +898,13 @@ async function main() {
           `${definition.key}:${definition.treatment}`,
         );
         if (!slot || !studentTreatment || !offering) {
-          throw new Error(`Lipsește slotul sau oferta pentru ${definition.key}.`);
+          throw new Error(`Missing slot or offering for ${definition.key}.`);
         }
         const slotDefinition = selectedSlots.find(
           (item) => item.key === definition.key,
         );
         if (!slotDefinition) {
-          throw new Error(`Lipsește definiția slotului ${definition.key}.`);
+          throw new Error(`Missing definition for slot ${definition.key}.`);
         }
         const localDate = addLocalDays(today, slotDefinition.dayOffset);
         const scheduledStartsAt = requiredInstant(
@@ -1031,7 +969,7 @@ async function main() {
           treatmentNameSnapshot: studentTreatment.treatment.name,
           locationNameSnapshot: slot.location.name,
           locationAddressSnapshot: slot.location.address,
-          supervisorNameSnapshot: offering.supervisorName,
+          studentUniversitySnapshot: studentProfile.university,
           status: definition.status,
           version: 1,
           statusReason: definition.statusReason ?? null,
@@ -1119,7 +1057,7 @@ async function main() {
         if (options.scenario === "booking" && reviewSpec.appointment === "completed-awaiting-patient") continue;
         const appointment = appointments.get(reviewSpec.appointment);
         if (!appointment) {
-          throw new Error(`Lipsește programarea ${reviewSpec.appointment}.`);
+          throw new Error(`Missing appointment ${reviewSpec.appointment}.`);
         }
         const isPatient =
           reviewSpec.authorRole === AppointmentReviewAuthorRole.PATIENT;
@@ -1178,7 +1116,7 @@ async function main() {
       for (const [index, notificationSpec] of notificationSpecs.entries()) {
         const appointment = appointments.get(notificationSpec.appointment);
         if (!appointment) {
-          throw new Error(`Lipsește programarea ${notificationSpec.appointment}.`);
+          throw new Error(`Missing appointment ${notificationSpec.appointment}.`);
         }
         await transaction.appointmentNotification.create({
           data: {
@@ -1200,7 +1138,6 @@ async function main() {
         activeLocationCount: locations.size,
         activeTreatmentCount: treatmentSpecs.filter((item) => !item.deletedAt)
           .length,
-        activeSupervisorCount: supervisors.size,
         activeCalendarCount: selectedSlots.filter((item) => !item.isCancelled)
           .length,
         hiddenCancelledCalendarCount: selectedSlots.filter(
@@ -1218,27 +1155,27 @@ async function main() {
   );
 
   console.log(
-    `Datele demo au fost legate de pacientul „${result.patientName}” și studentul „${result.studentName}”.`,
+    `Demo data was seeded for patient "${result.patientName}" and student "${result.studentName}".`,
   );
   console.log(
-    `${result.appointmentCount} programări, ${result.activeCalendarCount} apariții vizibile și ${result.hiddenCancelledCalendarCount} apariție anulată ascunsă.`,
+    `Appointments: ${result.appointmentCount}. Visible calendar occurrences: ${result.activeCalendarCount}. Hidden cancelled occurrences: ${result.hiddenCancelledCalendarCount}.`,
   );
   console.log(
-    `${result.activeTreatmentCount} tratamente, ${result.activeLocationCount} locații și ${result.activeSupervisorCount} supervizori activi, plus câte o resursă arhivată din fiecare tip.`,
+    `${result.activeTreatmentCount} active treatments and ${result.activeLocationCount} active locations, plus one archived resource of each type.`,
   );
   console.log(
-    `${result.unreadPatientNotifications} notificări necitite pentru pacient și ${result.unreadStudentNotifications} pentru student.`,
+    `Unread notifications: ${result.unreadPatientNotifications} for the patient and ${result.unreadStudentNotifications} for the student.`,
   );
-  console.log(`${directory.profiles.length} profiluri Demo și ${directory.slots.length} intervale pregătite pentru homepage și căutare. Conturile fictive nu au parole și nu primesc emailuri.`);
+  console.log(`${directory.profiles.length} demo profiles and ${directory.slots.length} slots are ready for the home page and search. Fictional accounts have no passwords and receive no email.`);
   console.log(options.scenario === "full"
-    ? "Scenariul complet include o programare restantă și o recenzie de completat. Rezolvă-le din cont înainte de a testa cereri și confirmări noi."
-    : "Scenariul booking nu adaugă programări restante sau recenzii de completat; poți începe cu o cerere nouă.");
-  console.log("Catalog: /studenti?tratament=consultatie&oras=cluj-napoca. Detalii de testare: scripts/DEMO-TESTING.md.");
+    ? "The full scenario includes an overdue appointment and an outstanding review. Resolve both in the app before testing new requests and confirmations."
+    : "The booking scenario lets you test a new request immediately, with no overdue appointments or outstanding reviews added.");
+  console.log("Directory: /studenti?tratament=consultatie&oras=cluj-napoca. See scripts/DEMO-TESTING.md for testing instructions.");
 }
 
 main()
   .catch((error: unknown) => {
-    console.error("Seed-ul demo a eșuat:", error);
+    console.error("Demo seed failed:", error);
     process.exitCode = 1;
   })
   .finally(async () => {

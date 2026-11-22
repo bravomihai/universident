@@ -29,6 +29,6 @@ export function placeLocalDemoSlots<T extends DemoTimeSlot>(
       if (!definition.isCancelled) reserved.push({ startsAt, endsAt });
       return { ...definition, dayOffset };
     }
-    throw new Error("Nu există o zi liberă pentru un interval demo în limita de 90 de încercări.");
+    throw new Error("Could not find an available day for a demo slot after 90 attempts.");
   });
 }

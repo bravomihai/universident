@@ -9,8 +9,8 @@ export function realStudentProfileWhere(): Prisma.StudentProfileWhereInput {
       { publicSlug: { startsWith: "student-demo-" } },
       { userId: { startsWith: "demo-ui-" } },
       { user: { email: { endsWith: "@demo.universident.test", mode: "insensitive" } } },
+      { locations: { some: { id: { startsWith: "demo-ui-" } } } },
       { availabilitySlots: { some: { id: { startsWith: "demo-ui-" } } } },
-      { supervisors: { some: { id: { startsWith: "demo-ui-" } } } },
     ],
   };
 }
