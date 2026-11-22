@@ -13,7 +13,7 @@ test("demo seed refuses production, remote hosts, deceptive hosts and non-Postgr
   }
   assert.throws(() => assertLocalDemoDatabase("postgresql://localhost/app", "production"));
   assert.throws(() => assertLocalDemoDatabase(undefined, "development"));
-  assert.throws(() => assertLocalDemoDatabase("not-a-url", "development"), /nu este un URL/);
+  assert.throws(() => assertLocalDemoDatabase("not-a-url", "development"), /not a valid PostgreSQL URL/);
 });
 
 test("demo seed accepts only explicit local PostgreSQL targets", () => {
@@ -28,9 +28,9 @@ test("dry-run can select booking and cooldown without enabling writes", () => {
   assert.deepEqual(parseLocalDemoOptions(["--dry-run", "--scenario=booking", "--refresh=cooldown"]), {
     dryRun: true, directoryOnly: false, scenario: "booking", refresh: "cooldown",
   });
-  assert.throws(() => parseLocalDemoOptions(["--dryrun"]), /necunoscută/);
-  assert.throws(() => parseLocalDemoOptions(["--scenario=unknown"]), /necunoscută/);
-  assert.throws(() => parseLocalDemoOptions(["--patient-email="]), /adresă de email/);
+  assert.throws(() => parseLocalDemoOptions(["--dryrun"]), /Unknown demo seed option/);
+  assert.throws(() => parseLocalDemoOptions(["--scenario=unknown"]), /Unknown demo seed option/);
+  assert.throws(() => parseLocalDemoOptions(["--patient-email="]), /requires an email address/);
   assert.equal(parseLocalDemoOptions(["--patient-email=Patient@Example.test"]).patientEmail, "patient@example.test");
 });
 

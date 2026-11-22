@@ -54,7 +54,7 @@ type SavePayload = {
   kind: "SINGLE" | "RECURRING";
   scope: EditScope;
   studentLocationId: string;
-  offerings: Array<{ studentTreatmentId: string; supervisorId: string }>;
+  offerings: Array<{ studentTreatmentId: string }>;
   startsAt: Date;
   endsAt: Date;
   repeat: Repeat;
@@ -142,19 +142,11 @@ export function StudentAvailabilityEditorDialog({
   const [locationId, setLocationId] = useState(
     slot?.studentLocation.id ?? catalog.locations[0]?.id ?? "",
   );
-  const [selected, setSelected] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      slot?.offerings
-        .filter(
-          (offering) =>
-            offering.studentTreatment.durationMinutes <= initialDurationMinutes,
-        )
-        .map((offering) => [
-          offering.studentTreatment.id,
-          offering.supervisor.id,
-        ]) ?? [],
-    ),
-  );
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(
+    slot?.offerings
+      .filter((offering) => offering.studentTreatment.durationMinutes <= initialDurationMinutes)
+      .map((offering) => offering.studentTreatment.id),
+  ));
   const [editScope, setEditScope] = useState<EditScope>("OCCURRENCE");
   const [repeat, setRepeat] = useState<Repeat>(initialRepeat);
   const [recurrenceEndMode, setRecurrenceEndMode] = useState<RecurrenceEndMode>(
@@ -185,8 +177,8 @@ export function StudentAvailabilityEditorDialog({
     const nextDuration = intervalMinutes(nextStartTime, nextEndTime);
     if (nextDuration <= 0) return;
     setSelected((current) =>
-      Object.fromEntries(
-        Object.entries(current).filter(([treatmentId]) => {
+      new Set(
+        [...current].filter((treatmentId) => {
           const treatment = catalog.treatments.find(
             (item) => item.id === treatmentId,
           );
@@ -215,9 +207,9 @@ export function StudentAvailabilityEditorDialog({
       return;
     }
     setSelected((current) => {
-      const next = { ...current };
-      if (checked) next[id] = next[id] || catalog.supervisors[0]?.id || "";
-      else delete next[id];
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
       return next;
     });
   }
@@ -233,24 +225,13 @@ export function StudentAvailabilityEditorDialog({
       date,
       Number(endTime.slice(0, 2)) * 60 + Number(endTime.slice(3, 5)),
     );
-    const offerings = Object.entries(selected).map(
-      ([studentTreatmentId, supervisorId]) => ({
-        studentTreatmentId,
-        supervisorId,
-      }),
-    );
+    const offerings = [...selected].map((studentTreatmentId) => ({ studentTreatmentId }));
     if (!startsAt || !endsAt || endsAt <= startsAt) {
       setError("Ora de final trebuie să fie după ora de început.");
       return;
     }
-    if (
-      !locationId ||
-      offerings.length === 0 ||
-      offerings.some((item) => !item.supervisorId)
-    ) {
-      setError(
-        "Alege locația, cel puțin un tratament și supervizorul fiecăruia.",
-      );
+    if (!locationId || offerings.length === 0) {
+      setError("Alege locația și cel puțin un tratament.");
       return;
     }
     if (showsRecurrence && repeat !== "none") {
@@ -330,7 +311,7 @@ export function StudentAvailabilityEditorDialog({
             <DialogDescription>
               {slot
                 ? "Alege dacă modifici doar apariția selectată sau seria de la această apariție înainte."
-                : "Alege unde vei fi, tratamentele oferite și supervizorul fiecăruia."}
+                : "Alege unde vei fi și tratamentele oferite."}
             </DialogDescription>
           </DialogHeader>
 
@@ -398,7 +379,7 @@ export function StudentAvailabilityEditorDialog({
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
+              <Label htmlFor="availability-location" className="flex items-center gap-2">
                 <MapPin className="size-4" />
                 Locație
               </Label>
@@ -407,7 +388,7 @@ export function StudentAvailabilityEditorDialog({
                 disabled={!editable || pending}
                 onValueChange={setLocationId}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="availability-location" className="w-full">
                   <SelectValue placeholder="Alege locația" />
                 </SelectTrigger>
                 <SelectContent>
@@ -423,17 +404,17 @@ export function StudentAvailabilityEditorDialog({
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Stethoscope className="size-4" />
-                Tratamente și supervizori
+                Tratamente
               </Label>
               {catalog.treatments.map((treatment) => {
                 const fits =
                   selectedIntervalMinutes > 0 &&
                   treatment.durationMinutes <= selectedIntervalMinutes;
-                const checked = fits && Object.hasOwn(selected, treatment.id);
+                const checked = fits && selected.has(treatment.id);
                 return (
                   <div
                     key={treatment.id}
-                    className={`grid gap-3 rounded-xl border p-3 sm:grid-cols-[1fr_240px] sm:items-center ${
+                    className={`rounded-xl border p-3 ${
                       fits
                         ? ""
                         : "border-amber-500/35 bg-amber-500/5 opacity-70"
@@ -464,29 +445,6 @@ export function StudentAvailabilityEditorDialog({
                         ) : null}
                       </span>
                     </label>
-                    <Select
-                      value={checked ? selected[treatment.id] ?? "" : ""}
-                      disabled={!checked || !editable || pending}
-                      onValueChange={(supervisorId) =>
-                        setSelected((current) => ({
-                          ...current,
-                          [treatment.id]: supervisorId,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Alege supervizorul" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {catalog.supervisors.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {[item.academicTitle, item.fullName]
-                              .filter(Boolean)
-                              .join(" ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 );
               })}
@@ -495,7 +453,7 @@ export function StudentAvailabilityEditorDialog({
             {showsRecurrence ? (
               <div className="space-y-4 rounded-xl border p-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <Label htmlFor="availability-recurrence" className="flex items-center gap-2">
                     <Repeat2 className="size-4" />
                     Repetare
                   </Label>
@@ -512,7 +470,7 @@ export function StudentAvailabilityEditorDialog({
                       }
                     }}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger id="availability-recurrence" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

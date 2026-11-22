@@ -24,7 +24,7 @@ export function parseLocalDemoOptions(args: string[]): LocalDemoOptions {
     else if (argument === "--refresh=cooldown") options.refresh = "cooldown";
     else if (argument.startsWith("--patient-email=")) options.patientEmail = selectedEmail(argument);
     else if (argument.startsWith("--student-email=")) options.studentEmail = selectedEmail(argument);
-    else throw new Error(`Opțiune demo necunoscută: ${argument}`);
+    else throw new Error(`Unknown demo seed option: ${argument}`);
   }
 
   return options;
@@ -33,7 +33,7 @@ export function parseLocalDemoOptions(args: string[]): LocalDemoOptions {
 function selectedEmail(argument: string) {
   const email = argument.slice(argument.indexOf("=") + 1).trim().toLowerCase();
   if (!email || !email.includes("@")) {
-    throw new Error("Selectorul contului demo trebuie să conțină o adresă de email.");
+    throw new Error("The demo account option requires an email address.");
   }
   return email;
 }
@@ -41,23 +41,23 @@ function selectedEmail(argument: string) {
 export function assertLocalDemoDatabase(
   databaseUrl: string | undefined,
   nodeEnvironment: string | undefined,
-) {
-  if (!databaseUrl) throw new Error("DATABASE_URL nu este definit.");
+): asserts databaseUrl is string {
+  if (!databaseUrl) throw new Error("DATABASE_URL is not set.");
   if (nodeEnvironment === "production") {
-    throw new Error("Seed-ul demo nu poate rula cu NODE_ENV=production.");
+    throw new Error("This command cannot run in production.");
   }
 
   let parsed: URL;
   try {
     parsed = new URL(databaseUrl);
   } catch {
-    throw new Error("DATABASE_URL nu este un URL PostgreSQL valid.");
+    throw new Error("DATABASE_URL is not a valid PostgreSQL URL.");
   }
   const localHosts = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
   if (
     !["postgres:", "postgresql:"].includes(parsed.protocol) ||
     !localHosts.has(parsed.hostname)
   ) {
-    throw new Error("Seed-ul demo acceptă doar o bază PostgreSQL locală.");
+    throw new Error("This command requires a local PostgreSQL database.");
   }
 }

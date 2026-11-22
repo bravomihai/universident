@@ -1,6 +1,7 @@
 .git
 .gitignore
 .next
+.local-dev
 node_modules
 coverage
 npm-debug.log*

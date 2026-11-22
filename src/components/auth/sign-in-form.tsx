@@ -52,7 +52,7 @@ export function SignInForm({ returnTo }: { returnTo?: string | null }) {
         return;
       }
 
-      router.replace(returnTo || "/");
+      router.replace("/confirma-reguli?next=" + encodeURIComponent(returnTo ?? "acasa"));
       router.refresh();
     } catch {
       setErrorMessage(

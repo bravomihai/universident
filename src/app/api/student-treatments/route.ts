@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { prisma } from "@/lib/prisma";
 import { studentTreatmentSelect } from "@/lib/student-treatments/student-treatment-data";
 import { parseCreateStudentTreatmentInput } from "@/lib/student-treatments/student-treatment-input";
@@ -89,16 +90,9 @@ export async function POST(request: Request) {
       return authorization.response;
     }
 
-    let body: unknown;
-
-    try {
-      body = await request.json();
-    } catch {
-      return Response.json(
-        { error: "Datele trimise nu sunt valide." },
-        { status: 400 },
-      );
-    }
+    const bodyResult = await readJsonRequest(request);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data;
 
     const parsedInput = parseCreateStudentTreatmentInput(body);
 

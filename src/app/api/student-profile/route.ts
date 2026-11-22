@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
 import { parseAccountName } from "@/lib/account/account-name";
@@ -13,6 +14,7 @@ type StudentProfileBody = {
     universitySlug?: unknown;
     studyYear?: unknown;
     bio?: unknown;
+    showCompletedAppointmentsCount?: unknown;
 };
 
 const allowedBodyFields = new Set([
@@ -20,6 +22,7 @@ const allowedBodyFields = new Set([
     "universitySlug",
     "studyYear",
     "bio",
+    "showCompletedAppointmentsCount",
 ]);
 
 export async function PUT(request: Request) {
@@ -72,21 +75,15 @@ export async function PUT(request: Request) {
     }
 
     const userId = session.user.id;
-    let body: StudentProfileBody;
-
-    try {
-        body = (await request.json()) as StudentProfileBody;
-    } catch {
-        return Response.json(
-            { error: "Datele trimise nu sunt valide." },
-            { status: 400 },
-        );
-    }
+    const bodyResult = await readJsonRequest(request);
+    if (!bodyResult.ok) return bodyResult.response;
+    const body = bodyResult.data as StudentProfileBody;
 
     if (
         typeof body !== "object" ||
         body === null ||
         Array.isArray(body) ||
+        ("showCompletedAppointmentsCount" in body && typeof body.showCompletedAppointmentsCount !== "boolean") ||
         Object.keys(body).some(
             (field) => !allowedBodyFields.has(field),
         )
@@ -166,6 +163,10 @@ export async function PUT(request: Request) {
         },
     });
 
+    const visibility = typeof body.showCompletedAppointmentsCount === "boolean"
+        ? { showCompletedAppointmentsCount: body.showCompletedAppointmentsCount }
+        : {};
+
     async function saveProfile(publicSlug: string | null) {
         return prisma.$transaction(async (transaction) => {
             const savedProfile = await transaction.studentProfile.upsert({
@@ -177,6 +178,7 @@ export async function PUT(request: Request) {
                     university: universityShortName,
                     studyYear,
                     bio: bio || null,
+                    ...visibility,
                 },
                 create: {
                     userId: userId,
@@ -184,6 +186,7 @@ export async function PUT(request: Request) {
                     university: universityShortName,
                     studyYear,
                     bio: bio || null,
+                    ...visibility,
                 },
             });
 

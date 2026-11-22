@@ -59,15 +59,17 @@ export function HeaderAccount({ initialUser }: HeaderAccountProps) {
         : liveUser;
 
   if (user) {
+    const account = {
+      name: user.name,
+      roleLabel: roleLabels[user.role],
+      showStudentNavigation: user.role === UserRole.STUDENT,
+    };
+
     return (
-      <div className="flex min-w-0 items-center gap-1 sm:gap-2">
+      <div className="flex min-w-0 items-center gap-1 min-[340px]:max-[365px]:gap-0.5 sm:gap-2">
         {user.role !== UserRole.ADMIN ? <HeaderMessages /> : null}
-        <AccountMenu
-          name={user.name}
-          roleLabel={roleLabels[user.role]}
-          showStudentNavigation={user.role === UserRole.STUDENT}
-        />
-        <HeaderMobileNavigation isAuthenticated />
+        <AccountMenu {...account} />
+        <HeaderMobileNavigation account={account} />
       </div>
     );
   }
@@ -99,7 +101,7 @@ export function HeaderAccount({ initialUser }: HeaderAccountProps) {
         </Link>
       </nav>
 
-      <HeaderMobileNavigation isAuthenticated={false} />
+      <HeaderMobileNavigation />
     </>
   );
 }

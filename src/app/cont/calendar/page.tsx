@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { StudentCalendar } from "@/components/student-calendar/student-calendar";
 import { BackLink } from "@/components/ui/back-link";
+import { missingAccountPolicy } from "@/lib/account/policy-confirmation-service";
 import { prisma } from "@/lib/prisma";
 import { requireStudentPageSession } from "@/lib/student/student-page-session";
 
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 
 export default async function StudentCalendarPage() {
   const session = await requireStudentPageSession();
+  if (await missingAccountPolicy(session.user)) redirect("/confirma-reguli");
   const studentProfile = await prisma.studentProfile.findUnique({
     where: { userId: session.user.id },
     select: { id: true },

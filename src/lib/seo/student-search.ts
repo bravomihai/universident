@@ -36,10 +36,10 @@ export function studentSearchMetadata(
       indexable: totalResults > 0 && query.page <= Math.ceil(totalResults / pageSize),
     });
   }
-  const isDirectory = query.valid && !query.hasFilters && query.page === 1;
+  const isDirectory = query.valid && !query.hasFilters && query.page === 1 && params.sortare === undefined;
   return publicPageMetadata({
-    title: "Găsește studenți la medicină dentară în orașul tău",
-    description: "Alege un tratament și un oraș pentru a găsi studenți la medicină dentară. Vezi profilurile și disponibilitatea pentru tratamente sub supervizare.",
+    title: "Studenți înscriși",
+    description: "Consultă profilurile publice ale studenților la medicină dentară sau caută ore disponibile după tratament și oraș.",
     path: isDirectory ? "/studenti" : undefined,
     indexable: isDirectory,
   });

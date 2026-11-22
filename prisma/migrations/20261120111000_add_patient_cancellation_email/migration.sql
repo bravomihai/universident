@@ -1,0 +1,1 @@
+ALTER TYPE "AppointmentEmailKind" ADD VALUE 'CANCELLED_BY_PATIENT';

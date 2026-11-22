@@ -1,68 +1,37 @@
-# Universident — imagini de brand
+# Brand assets
 
-Cele șase PNG-uri au fundal cu transparență reală și aceeași geometrie în ambele teme.
+Assets are stored in [`public/branding`](../public/branding). The six primary PNGs have transparent backgrounds and matching geometry across themes.
 
-| Fișier | Dimensiuni | Utilizare |
+| Asset | Dimensions | Use |
 | --- | --- | --- |
-| `universident-header-light.png` | 1600 × 320 | Simbol + nume, pe fundal deschis |
-| `universident-header-dark.png` | 1600 × 320 | Simbol + nume, pe fundal închis |
-| `universident-logo-light.png` | 1600 × 1100 | Logo complet cu slogan, pe fundal deschis |
-| `universident-logo-dark.png` | 1600 × 1100 | Logo complet cu slogan, pe fundal închis |
-| `favicon-light.png` | 512 × 512 | Simbol fără text, pentru tema light |
-| `favicon-dark.png` | 512 × 512 | Simbol fără text, pentru tema dark |
+| `universident-header-light.png` / `universident-header-dark.png` | 1600 × 320 | Symbol and wordmark on light/dark backgrounds |
+| `universident-logo-light.png` / `universident-logo-dark.png` | 1600 × 1100 | Full logo with tagline |
+| `favicon-light.png` / `favicon-dark.png` | 512 × 512 | Text-free browser tab symbol |
 
-`preview-light.png` și `preview-dark.png` sunt planșe de prezentare cu fundal opac, nu fișierele folosite de aplicație.
+`preview-light.png` and `preview-dark.png` are presentation sheets with opaque backgrounds, not application assets.
 
-## Culori și font
+## Colors and typography
 
-- Light: dintele și paginile cărții albastru deschis `#60A5FA`, cotorul și textul navy `#10233F`, fundal de prezentare `#E3EFFF`.
-- Dark: albastru `#60A5FA`, alb rece `#E8EEF7`, fundal de prezentare `#08111F`.
-- Wordmark: Figtree Semibold (600), fontul folosit în site.
-- Slogan: Figtree Regular (400), „Unde învățarea devine grijă.”
-
-Pentru menținerea transparenței, nu salva imaginile ca JPEG. Fișierele au spațiere interioară inclusă; păstrează proporțiile la afișare.
-
-## Proveniență și finisaj
-
-Simbolul trimis de utilizator (dinte deasupra unei cărți deschise) a fost folosit ca referință într-o generare/editare cu instrumentul **ImageGen integrat**, nu prin CLI. Masterul selectat a fost apoi finisat tehnic, cu acordul explicit al utilizatorului: eliminarea fundalului, curățarea contururilor, separarea formelor, recolorare în valorile HEX exacte, compoziție cu text Figtree și redimensionare cu antialiasing. Perechile light/dark folosesc aceleași măști alfa, nu generări independente.
-
-Verificările tehnice acoperă dimensiunile, formatul RGBA, transparența reală, culorile pixelilor opaci și egalitatea măștilor alfa între teme.
-
-### Revizia 2 — aceeași culoare a dintelui în ambele teme
-
-La cererea utilizatorului, numai dintele din cele trei fișiere light a fost recolorat din `#2563EB` în `#60A5FA`, identic cu dintele dark. Aceasta este o operație tehnică deterministă, autorizată, fără o nouă generare ImageGen sau un nou prompt. Paginile cărții, baza navy, textul, dimensiunile și canalul alfa sunt neschimbate. Toți pixelii din afara măștii dintelui sunt identici cu originalul; cele trei fișiere dark au fost copiate fără modificări.
-
-### Revizia 3 — dintele și paginile light blue în ambele teme
-
-Paginile cărții din cele trei fișiere light au fost recolorate tehnic din `#2563EB` în `#60A5FA`. Dintele și paginile au acum exact aceeași culoare și geometrie în ambele teme. Cotorul, textul, dimensiunile și transparența rămân neschimbate. Variantele dark sunt identice cu cele originale. Nu s-a folosit o nouă generare sau un nou prompt.
-
-### Promptul masterului original (înainte de reviziile tehnice)
-
-```text
-Use case: logo-brand.
-Input image 1 is a SHAPE REFERENCE ONLY, not a texture or pixel template.
-Rebuild the Universident tooth-and-open-book symbol from scratch as an immaculate flat vector-style raster logo. Preserve the recognizable outline and proportions of the supplied tooth (two rounded roots and overlapping curved crown) above the open book (two clean page shapes per side and a curved bottom binding). Smooth mathematical-looking curves, large clean negative spaces, perfectly solid flat fills.
-CRITICAL: remove EVERY speckle, tiny line, distressed patch, photographic shading, grain, gradient, blue fringe and stray pixel visible in the reference. Do not preserve the reference's raster defects. There must be no marks at all in the transparent spaces between the pages or inside the tooth.
-LIGHT THEME palette: tooth + four upper page shapes pure #2563EB; lower binding pure #10233F. No black strokes. No outlines around the colored shapes. No extra symbols, words, labels, watermark or shadow.
-One centered isolated symbol on genuine transparent RGBA background. Square PNG 1024x1024, symbol 84% canvas width. This is a final logo/favicon asset, not a mockup. Clean flat logo geometry takes priority over copying damaged pixels.
-```
-
-## Iconițe pentru scurtături și ecranul principal
-
-Toate variantele sunt exportate din `favicon-light.png`, simbolul actual cu dintele și cartea. Nu există un logo separat cu inițiala „U”.
-
-| Fișier | Dimensiuni | Utilizare |
+| Element | Light theme | Dark theme |
 | --- | --- | --- |
-| `public/branding/universident-apple-touch-icon.png` | 180 × 180 | iPhone/iPad, legătură `apple-touch-icon` în fiecare pagină |
-| `public/branding/universident-icon-192.png` | 192 × 192 | Scurtături prin manifest |
-| `public/branding/universident-icon-512.png` | 512 × 512 | Scurtături prin manifest, rezoluție mare |
-| `public/apple-touch-icon.png` | 180 × 180 | Calea implicită căutată de Safari |
-| `public/favicon.ico` | 16, 32, 48 | Calea implicită pentru browsere mai vechi |
+| Tooth and book pages | `#60A5FA` | `#60A5FA` |
+| Binding and text | `#10233F` | `#E8EEF7` |
+| Presentation background | `#E3EFFF` | `#08111F` |
 
-Iconițele de ecran principal au fundal opac `#E3EFFF`; nu depind de tema paginii și nu necesită JavaScript. Cele două faviconuri tematice din tab rămân transparente. Manifestul păstrează afișarea în browser.
+The wordmark uses Figtree Semibold (600); the tagline, “Unde învățarea devine grijă.”, uses Figtree Regular (400). Preserve the built-in padding, aspect ratio, and alpha channel. Do not convert transparent assets to JPEG. Theme variants share the same alpha masks.
 
-După o actualizare a simbolului, rulează `npm run brand:icons` și verifică exporturile. Scriptul reutilizează `sharp` din Next.js și păstrează geometria logo-ului existent; nu generează un desen nou.
+## Home-screen and fallback icons
 
-La verificarea pe iOS după publicare, adaugă o scurtătură nouă. O scurtătură salvată anterior poate păstra iconița veche; în acest caz, elimin-o și adaugă site-ul din nou din Safari.
+These exports use the current tooth-and-book symbol from `favicon-light.png`.
 
-Referință: [Apple — Specifying a Webpage Icon for Web Clip](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html).
+| Asset | Dimensions | Use |
+| --- | --- | --- |
+| `public/branding/universident-apple-touch-icon.png` | 180 × 180 | Explicit Apple touch icon |
+| `public/branding/universident-icon-192.png` | 192 × 192 | Manifest icon |
+| `public/branding/universident-icon-512.png` | 512 × 512 | High-resolution manifest icon |
+| `public/apple-touch-icon.png` | 180 × 180 | Safari fallback path |
+| `public/favicon.ico` | 16, 32, 48 | Legacy browser fallback |
+
+Home-screen icons use an opaque `#E3EFFF` background independent of the page theme. Tab favicons remain transparent; the manifest uses browser display mode.
+
+After changing the source symbol, run `npm run brand:icons`. The script uses sharp to resize the existing artwork. Check dimensions, transparency, theme geometry, and exported icons. For iOS verification, add a new Safari shortcut: an existing shortcut may retain a cached icon. See [Apple's Web Clip icon reference](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html).

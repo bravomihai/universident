@@ -15,4 +15,4 @@ Available `navigation` modes:
 
 Cancelled clicks, prefetches, downloads and modified/new-tab clicks do not stage navigation. Browser history traversal clears pending navigation. Auth pages and API endpoints cannot become return destinations. Only internal paths and allowed UI filters enter the bounded eight-step trail; tokens, message text and unknown query values are excluded. Return context never grants authorization.
 
-Old `inapoi` and `sursa` parameters are removed from local URLs without interpreting them. Source-specific public profile return logic has been removed. New routes participate automatically; optional Romanian labels are defined centrally in `return-navigation.ts`.
+Old `inapoi` and `sursa` parameters are removed from local URLs without interpreting them. New routes participate automatically; optional Romanian labels are defined centrally in `return-navigation.ts`.

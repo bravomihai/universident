@@ -12,7 +12,7 @@ export function SchedulingReputationCard({
 }) {
   return (
     <Card size="sm" className="py-3">
-      <CardContent className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4">
+      <CardContent className="heading-actions flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4">
         <div className="min-w-0">
           <p className="font-medium">Reputație de programare</p>
           <p className="text-xs text-muted-foreground">{description}</p>

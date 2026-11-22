@@ -15,9 +15,11 @@ export function ToothHero() {
     const viewport = host.current;
     const anchor = viewport?.parentElement;
     const content = anchor?.parentElement;
-    const title = anchor?.closest("section")?.querySelector("h1");
+    const title = content?.querySelector("h1");
     if (!viewport || !anchor || !content || !title) return;
 
+    const desktopLayout = window.matchMedia("(width > 1023px)");
+    const mobileLayout = window.matchMedia("(max-width: 767px)");
     let disposed = false;
     function alignToVisibleText() {
       if (disposed || !viewport || !anchor || !content || !title) return;
@@ -26,24 +28,46 @@ export function ToothHero() {
       // Measure text fragments, not block elements, to find the visual edge.
       const walker = document.createTreeWalker(title, NodeFilter.SHOW_TEXT);
       const range = document.createRange();
-      let textRight = title.getBoundingClientRect().left;
+      const titleBounds = title.getBoundingClientRect();
+      let textWidth = 0;
       while (walker.nextNode()) {
         if (!walker.currentNode.textContent?.trim()) continue;
         range.selectNodeContents(walker.currentNode);
         for (const fragment of range.getClientRects()) {
-          textRight = Math.max(textRight, fragment.right);
+          textWidth = Math.max(textWidth, fragment.right - titleBounds.left);
         }
       }
 
       const bounds = anchor.getBoundingClientRect();
-      // Follow the content's right edge: it matches the viewport on small
-      // screens, but stops expanding with the 1200px hero container.
-      const contentRight = content.getBoundingClientRect().right;
-      const targetCenter = (textRight + contentRight) / 2;
-      const offset = targetCenter - (bounds.left + bounds.width / 2);
-      // Transform only the canvas host; measuring the unchanged grid cell
-      // prevents accumulated offsets when fonts or viewport dimensions change.
-      viewport.style.setProperty("--tooth-offset-x", `${offset.toFixed(2)}px`);
+      const contentBounds = content.getBoundingClientRect();
+      // Use the grid's start on mobile so a previous translation cannot affect the next measurement.
+      const titleLeft = mobileLayout.matches
+        ? contentBounds.left + parseFloat(getComputedStyle(content).paddingLeft)
+        : titleBounds.left;
+      const textRight = titleLeft + textWidth;
+      let titleOffset = 0;
+
+      if (mobileLayout.matches) {
+        // Preserve the title inset without changing line breaks.
+        const roomForInset = Math.min(
+          bounds.left - textRight,
+          (contentBounds.right - textRight) * 0.4 - bounds.width / 2,
+        );
+        titleOffset = Math.max(0, roomForInset) * 0.6;
+        title.style.setProperty("--home-title-offset-x", `${titleOffset.toFixed(2)}px`);
+      }
+
+      let leftContentRight = textRight + titleOffset;
+      if (desktopLayout.matches) {
+        // Keep the desktop canvas aligned to the left column as the heading wraps.
+        const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const canvasClearance = viewport.offsetWidth + 2 * rootFontSize;
+        const columnRight = Math.min(titleBounds.right, contentBounds.right - canvasClearance);
+        leftContentRight = Math.max(leftContentRight, columnRight);
+      }
+      const toothCenter = (leftContentRight + contentBounds.right) / 2;
+      const anchorCenter = bounds.left + bounds.width / 2;
+      viewport.style.setProperty("--tooth-offset-x", `${(toothCenter - anchorCenter).toFixed(2)}px`);
     }
 
     alignToVisibleText();

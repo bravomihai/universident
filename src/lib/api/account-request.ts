@@ -1,5 +1,6 @@
 import { UserRole } from "@/generated/prisma/enums";
 import { auth } from "@/lib/auth";
+import { missingAccountPolicy } from "@/lib/account/policy-confirmation-service";
 
 type AuthorizedAccountRequest =
   | {
@@ -16,7 +17,7 @@ type AuthorizedAccountRequest =
 
 export async function authorizeAccountRequest(
   request: Request,
-  options: { verifyOrigin?: boolean; roles?: UserRole[] } = {},
+  options: { verifyOrigin?: boolean; roles?: UserRole[]; requireCurrentPolicy?: boolean } = {},
 ): Promise<AuthorizedAccountRequest> {
   if (options.verifyOrigin) {
     const configuredUrl = process.env.BETTER_AUTH_URL;
@@ -73,6 +74,17 @@ export async function authorizeAccountRequest(
         { error: "Nu ai permisiunea necesară.", code: "ROLE_NOT_ALLOWED" },
         { status: 403 },
       ),
+    };
+  }
+
+  if (options.requireCurrentPolicy && await missingAccountPolicy(session.user)) {
+    return {
+      ok: false,
+      response: Response.json({
+        error: "Confirmă informarea din cont înainte de a continua.",
+        code: "ACCOUNT_POLICY_REQUIRED",
+        href: "/confirma-reguli",
+      }, { status: 403, headers: { "Cache-Control": "no-store" } }),
     };
   }
 

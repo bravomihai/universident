@@ -1,3 +1,4 @@
+import { readJsonRequest } from "@/lib/api/request-body";
 import { UserRole } from "@/generated/prisma/enums";
 import { authorizeAccountRequest } from "@/lib/api/account-request";
 import { createPatientProfileSlug } from "@/lib/appointments/appointment-route-slug";
@@ -14,8 +15,9 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   const authorization = await authorizeAccountRequest(request, { verifyOrigin: true, roles: [UserRole.PATIENT] });
   if (!authorization.ok) return authorization.response;
-  let body: unknown;
-  try { body = await request.json(); } catch { return Response.json({ error: "Datele trimise nu sunt valide." }, { status: 400 }); }
+  const bodyResult = await readJsonRequest(request);
+  if (!bodyResult.ok) return bodyResult.response;
+  const body = bodyResult.data;
   const parsed = parsePatientProfileInput(body);
   if (!parsed.ok) return Response.json({ error: parsed.error }, { status: 400 });
   const profile = await prisma.$transaction(async (transaction) => {

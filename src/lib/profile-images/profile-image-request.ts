@@ -1,3 +1,4 @@
+import { readRequestBytes, RequestBodyTooLargeError } from "@/lib/api/request-body";
 import {
   MAX_PROFILE_IMAGE_BYTES,
   validateProfileImage,
@@ -20,15 +21,16 @@ export async function readProfileImageRequest(request: Request) {
     return invalidRequest("Formatul cererii nu este acceptat.", "INVALID_REQUEST", 415);
   }
 
-  const contentLength = Number(request.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > maximumRequestBytes) {
-    return invalidRequest("Imaginea poate avea cel mult 2 MB.", "IMAGE_TOO_LARGE", 413);
-  }
-
   let formData: FormData;
   try {
-    formData = await request.formData();
-  } catch {
+    const body = await readRequestBytes(request, maximumRequestBytes);
+    formData = await new Response(body, {
+      headers: { "Content-Type": request.headers.get("content-type")! },
+    }).formData();
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return invalidRequest("Imaginea poate avea cel mult 2 MB.", "IMAGE_TOO_LARGE", 413);
+    }
     return invalidRequest("Imaginea trimisă nu este validă.", "INVALID_REQUEST", 400);
   }
 

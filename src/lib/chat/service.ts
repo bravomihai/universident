@@ -97,6 +97,20 @@ export async function acknowledgeChatMessages(slug: string, actor: Actor, ids: s
   });
 }
 
+export async function reportMedicalChatMessage(slug: string, actor: Actor, messageId: string) {
+  const appointment = await chatAppointment(slug, actor);
+  const message = await prisma.chatMessage.findFirst({
+    where: { id: messageId, appointmentId: appointment.id },
+    select: { id: true },
+  });
+  if (!message) throw new ChatError("NOT_FOUND", "Mesajul nu este disponibil.", 404);
+
+  await prisma.chatMedicalDataReport.createMany({
+    data: { messageId: message.id, reporterUserId: actor.id },
+    skipDuplicates: true,
+  });
+}
+
 export async function lockMailbox(db: Database, appointmentId: string, recipientUserId: string) {
   const key = `universident:chat-mailbox:${appointmentId}:${recipientUserId}`;
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`;
@@ -128,6 +142,9 @@ export async function sendChatMessage(slug: string, actor: Actor, input: { text:
   if (!chatState(appointment).canSend) throw new ChatError("CHAT_CLOSED", "Au trecut cele 7 zile. Conversația poate fi doar citită.", 409);
   await consumeAttempt(actor.id);
   const verdict = await moderate(input.text);
+  if (verdict.reason === "MEDICAL_DATA") {
+    throw new ChatError("MEDICAL_DATA_BLOCKED", "Mesajul pare să transmită sau să solicite informații medicale. Reformulează-l folosind doar detalii despre organizarea programării.", 422);
+  }
   if (verdict.decision !== "ALLOW") throw new ChatError("MESSAGE_BLOCKED", "Mesajul nu a fost trimis deoarece a fost identificat ca posibil abuziv. Reformulează-l fără jigniri sau amenințări și încearcă din nou.", 422);
   try {
     const message = await prisma.$transaction(async (db) => {
@@ -143,11 +160,15 @@ export async function sendChatMessage(slug: string, actor: Actor, input: { text:
         where: { appointmentId_recipientUserId: { appointmentId: fresh.id, recipientUserId } },
         create: { appointmentId: fresh.id, recipientUserId }, update: {},
       });
-      const pending = await db.chatEmailBatch.findFirst({ where: { mailboxId: mailbox.id, status: "PENDING" } });
-      const batch = pending ?? await db.chatEmailBatch.create({ data: { mailboxId: mailbox.id, dueAt: nextEmailDueAt(new Date(), mailbox.lastSentAt) } });
+      const pending = await db.chatEmailBatch.findFirst({ where: { mailboxId: mailbox.id, status: "PENDING" }, select: { id: true } });
+      const createdAt = new Date();
+      const batch = pending ?? await db.chatEmailBatch.create({
+        data: { mailboxId: mailbox.id, dueAt: nextEmailDueAt(createdAt, mailbox.lastSentAt) },
+        select: { id: true },
+      });
       return db.chatMessage.create({ data: {
         appointmentId: fresh.id, senderUserId: actor.id, recipientUserId,
-        clientId: input.clientId, text: input.text, moderationVersion: MODERATION_PROMPT_VERSION, emailBatchId: batch.id,
+        clientId: input.clientId, text: input.text, createdAt, moderationVersion: MODERATION_PROMPT_VERSION, emailBatchId: batch.id,
       } });
     });
     return messageDto(message, actor.id);

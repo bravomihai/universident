@@ -21,7 +21,7 @@ test("private appointment DTO omits internal scheduling and account IDs", () => 
     treatmentNameSnapshot: "Consultație",
     locationNameSnapshot: "Clinică",
     locationAddressSnapshot: "Adresă test",
-    supervisorNameSnapshot: "Dr. Coordonator",
+    studentUniversitySnapshot: "UMF Cluj-Napoca",
     status: "PENDING",
     version: 1,
     statusReason: null,

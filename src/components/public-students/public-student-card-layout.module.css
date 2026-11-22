@@ -1,0 +1,33 @@
+.footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto;
+  align-items: start;
+  column-gap: .5rem;
+  margin-top: auto;
+}
+.lead, .rating, .count { grid-column: 1; }
+.lead { grid-row: 1; }
+.rating { grid-row: 2; margin-top: .25rem; }
+.count { grid-row: 3; margin-top: .25rem; }
+.arrow { grid-column: 2; grid-row: 1 / -1; align-self: end; }
+
+/* Share a content row and three footer rows across cards. Search adds a profile-link row. */
+@supports (grid-template-rows: subgrid) {
+  .directoryItem, .searchItem, .frame {
+    display: grid;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    min-width: 0;
+  }
+  .directoryItem, .frame { grid-row: span 4; }
+  .searchItem { grid-row: span 5; }
+  .searchProfileLink { margin-top: .5rem; }
+  .footer {
+    grid-row: 2 / span 3;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    margin-top: 0;
+  }
+  .searchFooter { margin-top: 1rem; }
+}

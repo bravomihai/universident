@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { AppointmentReviewAuthorRole, UserRole } from "@/generated/prisma/enums";
+import { currentPolicyWhere } from "@/lib/account/policy-confirmations";
 import { patientProfileAccessWhere } from "@/lib/patient/patient-profile-access";
 
 type ReviewAvatarViewer = {
@@ -17,6 +18,7 @@ export function reviewAvatarAccessWhere(
     target: {
       role: UserRole.STUDENT,
       emailVerified: true,
+      ...currentPolicyWhere("studentDeclaration"),
       studentProfile: {
         isPublished: true,
         publicSlug: { not: null },

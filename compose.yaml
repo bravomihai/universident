@@ -1,6 +1,12 @@
+name: universident
+
+x-postgres: &postgres
+  image: postgres:18.4
+
 services:
-  db:
-    image: postgres:18.4
+  db-dev:
+    <<: *postgres
+    profiles: [dev]
     environment:
       POSTGRES_USER: universident
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -8,12 +14,147 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_dev_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U universident -d universident"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U universident -d universident"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  db:
+    <<: *postgres
+    profiles: [prod, tools]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-universident}
+      POSTGRES_USER: ${POSTGRES_USER:-universident}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -h 127.0.0.1 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 1m
+    shm_size: 256mb
+    mem_limit: ${DB_MEMORY_LIMIT:-3g}
+    cpus: ${DB_CPU_LIMIT:-2.0}
+    pids_limit: 512
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      NODE_ENV: production
+      # Migrations retain the schema owner's connection after APP_DATABASE_URL changes.
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public"
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - tools
+    restart: "no"
+    mem_limit: ${MIGRATION_MEMORY_LIMIT:-1g}
+    cpus: ${MIGRATION_CPU_LIMIT:-2.0}
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
+  app:
+    profiles: [prod]
+    build:
+      context: .
+      target: runner
+    env_file: ops/compose/production.env
+    environment:
+      NODE_ENV: production
+      DEPLOYMENT_ENV: ${DEPLOYMENT_ENV:-staging}
+      # Keep the existing connection until the restricted role has been prepared.
+      DATABASE_URL: ${APP_DATABASE_URL:-postgresql://${POSTGRES_USER:-universident}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:-universident}?schema=public}
+      OPENAI_MODERATION_MODEL: ${OPENAI_MODERATION_MODEL:-gpt-4.1-mini}
+      PUBLIC_REQUEST_IP_HEADER: ${PUBLIC_REQUEST_IP_HEADER:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/api/health').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: ${APP_MEMORY_LIMIT:-2g}
+    cpus: ${APP_CPU_LIMIT:-2.0}
+    pids_limit: 256
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
+  chat-email-worker:
+    profiles: [prod]
+    build:
+      context: .
+      target: runner
+    command: ["node", "scripts/chat-email-worker.mjs"]
+    environment:
+      CHAT_WORKER_URL: http://app:3000
+      CHAT_WORKER_SECRET: ${CHAT_WORKER_SECRET:-}
+    healthcheck:
+      test: ["CMD", "node", "scripts/chat-email-worker.mjs", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      app:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+    mem_limit: ${CHAT_WORKER_MEMORY_LIMIT:-384m}
+    cpus: ${CHAT_WORKER_CPU_LIMIT:-0.5}
+    pids_limit: 128
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
 volumes:
+  postgres_dev_data:
   postgres_data:
+
+networks:
+  default:

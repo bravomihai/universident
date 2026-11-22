@@ -48,7 +48,7 @@ test("production needs an explicit public deployment and the confirmed HTTPS ori
 
 test("private pages, auth variants, APIs and booking flows receive noindex even on redirects", () => {
   for (const path of ["/cont", "/cont/mesaje/abcdef", "/cont/programari/123", "/pacienti/slug",
-    "/autentificare", "/inregistrare", "/parola-uitata", "/resetare-parola", "/verifica-email",
+    "/autentificare", "/inregistrare", "/confirma-reguli", "/parola-uitata", "/resetare-parola", "/verifica-email",
     "/api/auth/callback", "/studenti/ana/programare/igienizare/cluj-napoca",
   ]) assert.equal(robotsHeader(path, "universident.ro", publicEnv), "noindex, nofollow", path);
   for (const path of ["/", "/studenti", "/studenti/ana", "/echipa"])
