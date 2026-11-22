@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fullcalendar/react/skeleton.css" layer(base);
+@import "@fullcalendar/react/themes/classic/theme.css" layer(base);
+@import "@fullcalendar/react/themes/classic/palette.css" layer(base);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -187,56 +190,52 @@
 
 @layer components {
   .student-calendar {
-    --fc-border-color: var(--border);
-    --fc-page-bg-color: var(--card);
-    --fc-neutral-bg-color: color-mix(in oklch, var(--muted) 55%, transparent);
-    --fc-neutral-text-color: var(--muted-foreground);
-    --fc-today-bg-color: color-mix(in oklch, var(--primary) 8%, transparent);
-    --fc-now-indicator-color: var(--destructive);
+    --fc-classic-border: var(--border);
+    --fc-classic-background: var(--card);
+    --fc-classic-foreground: var(--foreground);
+    --fc-classic-muted: color-mix(in oklch, var(--muted) 55%, transparent);
+    --fc-classic-muted-foreground: var(--muted-foreground);
+    --fc-classic-today: color-mix(in oklch, var(--primary) 8%, transparent);
+    --fc-classic-now: var(--destructive);
     color: var(--foreground);
     min-width: 0;
   }
 
-  .student-calendar .fc {
+  .student-calendar .calendar-root {
     min-width: 0;
     font-family: inherit;
     font-size: 0.875rem;
   }
 
-  .student-calendar .fc-scrollgrid {
+  .student-calendar .calendar-grid {
     overflow: hidden;
     border-radius: var(--radius-xl);
     background: var(--card);
   }
 
-  .student-calendar .fc-col-header-cell-cushion,
-  .student-calendar .fc-timegrid-axis-cushion,
-  .student-calendar .fc-timegrid-slot-label-cushion {
+  .student-calendar .calendar-day-header,
+  .student-calendar .calendar-slot-label {
     color: var(--muted-foreground);
     font-size: 0.75rem;
     font-weight: 500;
   }
 
-  .student-calendar .fc-col-header-cell-cushion {
+  .student-calendar .calendar-day-header {
     padding-block: 0.65rem;
   }
 
-  .student-calendar .fc-timegrid-slot {
-    height: 1.15rem;
-  }
-
-  .student-calendar .fc-timegrid-event {
+  .student-calendar .calendar-event {
     border-width: 1px;
     border-radius: 0.5rem;
     box-shadow: 0 1px 2px rgb(15 23 42 / 12%);
     cursor: pointer;
   }
 
-  .student-calendar .fc-event-main {
+  .student-calendar .calendar-event-inner {
     color: inherit !important;
   }
 
-  .student-calendar .fc-event:focus-visible {
+  .student-calendar .calendar-event:focus-visible {
     outline: 3px solid color-mix(in oklch, var(--ring) 50%, transparent);
     outline-offset: 2px;
   }
@@ -256,13 +255,13 @@
       0 0 0 4px var(--primary) !important;
   }
 
-  .availability-calendar .fc-event-mirror,
-  .availability-calendar .fc-highlight {
+  .availability-calendar .calendar-event-mirror,
+  .availability-calendar .calendar-highlight {
     opacity: 0 !important;
     pointer-events: none;
   }
 
-  .booking-calendar .fc-timegrid-event {
+  .booking-calendar .calendar-event {
     cursor: pointer;
   }
 
@@ -298,17 +297,12 @@
     text-decoration: line-through;
   }
 
-  .student-calendar .fc-event-dragging {
+  .student-calendar .calendar-event-dragging {
     opacity: 0.8;
   }
 
   @media (max-width: 767px) {
-    .student-calendar .fc-timegrid-axis-frame {
-      justify-content: center;
-    }
-
-    .student-calendar .fc-timegrid-axis-cushion,
-    .student-calendar .fc-timegrid-slot-label-cushion {
+    .student-calendar .calendar-slot-label {
       padding-inline: 0.25rem;
       font-size: 0.6875rem;
     }
