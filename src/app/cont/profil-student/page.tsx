@@ -5,9 +5,9 @@ import type { Metadata } from "next";
 
 import { StudentProfileForm } from "@/components/student/student-profile-form";
 import { StudentProfileImageForm } from "@/components/student/student-profile-image-form";
+import { CancellationReputationLabel } from "@/components/reviews/cancellation-reputation-label";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingSummaryLink } from "@/components/reviews/rating-summary";
-import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
 import { BackLink } from "@/components/ui/back-link";
 import {
     Card,
@@ -79,6 +79,7 @@ export default async function StudentProfilePage() {
         : null;
     const needsDeclaration = await missingAccountPolicy(session.user);
     const initialImageUrl = studentProfileImageUrl(profile?.profileImage);
+    const cancellationsLast10 = appointmentData.studentReputation?.cancellationsLast10 ?? 0;
 
     return (
         <main id="main-content" className="app-page flex flex-1 justify-center px-4 py-10 sm:px-6 sm:py-16">
@@ -105,6 +106,12 @@ export default async function StudentProfilePage() {
                         toate locațiile și tratamentele tale.
                     </p>
                     <RatingSummaryLink summary={reviewData.summary} href="#recenzii" />
+                    <div>
+                        <CancellationReputationLabel
+                            count={cancellationsLast10}
+                            value={formatStudentCancellationReputation(cancellationsLast10)}
+                        />
+                    </div>
                 </div>
 
                 <Card>
@@ -153,14 +160,6 @@ export default async function StudentProfilePage() {
                         />
                     </CardContent>
                 </Card>
-
-                <SchedulingReputationCard
-                    count={appointmentData.studentReputation?.cancellationsLast10 ?? 0}
-                    description="Reper calculat din ultimele 10 programări confirmate."
-                    value={formatStudentCancellationReputation(
-                        appointmentData.studentReputation?.cancellationsLast10 ?? 0,
-                    )}
-                />
 
                 <ProfileReviewList data={reviewData} title="Recenziile tale" />
             </div>

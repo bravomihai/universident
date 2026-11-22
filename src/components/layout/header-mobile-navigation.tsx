@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { AccountMenuIdentity, AccountMenuItems, type AccountMenuProps } from "@/components/account/account-menu";
 import { compactHeaderIconControlClassName, headerIconControlClassName } from "@/components/layout/header-action-styles";
 import { HomeSectionLink } from "@/components/layout/home-section-link";
+import { useHeaderMenuFocus } from "@/components/layout/use-header-menu-focus";
 import { ThemeMenuOptions } from "@/components/theme/theme-selector";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ export function HeaderMobileNavigation({
   account,
 }: HeaderMobileNavigationProps) {
   const pathname = usePathname();
+  const { triggerRef, ...focusHandlers } = useHeaderMenuFocus();
   const studentsCurrent = isCurrentPath(pathname, "/studenti");
   const signInCurrent = isCurrentPath(pathname, "/autentificare");
   const signUpCurrent = isCurrentPath(pathname, "/inregistrare");
@@ -40,6 +42,7 @@ export function HeaderMobileNavigation({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           variant="ghost"
           size="icon"
@@ -56,6 +59,7 @@ export function HeaderMobileNavigation({
         id="mobile-primary-navigation"
         align="end"
         className="w-[min(17rem,calc(100vw-1.5rem))]"
+        {...focusHandlers}
       >
         <DropdownMenuItem
           asChild

@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
 import { PublicStudentLocationCard } from "@/components/public-students/public-student-location-card";
+import { CancellationReputationLabel } from "@/components/reviews/cancellation-reputation-label";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingStars } from "@/components/reviews/rating-summary";
-import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BackLink } from "@/components/ui/back-link";
 import { formatStudentCancellationReputation } from "@/lib/appointments/student-reputation-label";
@@ -97,12 +97,18 @@ export default async function PublicStudentProfilePage({
               </span>
             </p>
             <RatingStars {...profile.reviewData.summary} completedAppointmentsCount={profile.completedAppointmentsCount} />
+            <div>
+              <CancellationReputationLabel
+                count={profile.cancellationsLast10}
+                value={formatStudentCancellationReputation(profile.cancellationsLast10)}
+              />
+            </div>
           </div>
         </header>
 
         {profile.bio ? (
           <section aria-labelledby="public-profile-bio" className="card-adjacent max-w-3xl">
-            <h2 id="public-profile-bio" className="text-xl font-semibold">
+            <h2 id="public-profile-bio" className="text-2xl font-semibold tracking-tight">
               Despre student
             </h2>
             <p className="mt-3 whitespace-pre-line text-muted-foreground">
@@ -111,13 +117,7 @@ export default async function PublicStudentProfilePage({
           </section>
         ) : null}
 
-        <SchedulingReputationCard
-          count={profile.cancellationsLast10}
-          description="Reper calculat din ultimele 10 programări confirmate."
-          value={formatStudentCancellationReputation(profile.cancellationsLast10)}
-        />
-
-        <ProfileReviewList data={profile.reviewData} title="Recenziile studentului" />
+        <ProfileReviewList data={profile.reviewData} showDescription={false} />
 
         <section id="tratamente" aria-labelledby="public-profile-treatments" className="scroll-mt-24 space-y-5">
           <h2 id="public-profile-treatments" className="card-adjacent text-2xl font-semibold tracking-tight">
