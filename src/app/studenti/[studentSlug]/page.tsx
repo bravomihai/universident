@@ -108,7 +108,7 @@ export default async function PublicStudentProfilePage({
 
         {profile.bio ? (
           <section aria-labelledby="public-profile-bio" className="card-adjacent max-w-3xl">
-            <h2 id="public-profile-bio" className="text-xl font-semibold">
+            <h2 id="public-profile-bio" className="text-2xl font-semibold tracking-tight">
               Despre student
             </h2>
             <p className="mt-3 whitespace-pre-line text-muted-foreground">
