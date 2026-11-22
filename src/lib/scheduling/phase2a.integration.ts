@@ -10,6 +10,7 @@ import {
   StudentAvailabilityWeekday,
   UserRole,
 } from "@/generated/prisma/enums";
+import { policyConfirmations } from "@/lib/account/policy-confirmations";
 import { parseCreateAppointmentInput } from "@/lib/appointments/appointment-input";
 import {
   AppointmentDomainError,
@@ -22,7 +23,7 @@ import {
 } from "@/lib/availability/availability-service";
 import { materializeSeriesThrough } from "@/lib/availability/materializer";
 import { listPublicStudentAvailability } from "@/lib/availability/public-availability-service";
-import { archiveStudentSchedulingResource, ResourceArchiveDomainError } from "@/lib/availability/resource-archive-service";
+import { archiveStudentLocation, ResourceArchiveDomainError } from "@/lib/availability/resource-archive-service";
 import { prisma } from "@/lib/prisma";
 import {
   StudentTreatmentDomainError,
@@ -44,7 +45,18 @@ const integrationSkip = integrationEnabled
   ? false
   : "requires PHASE2A_INTEGRATION=1 and an explicit universident_phase2a_test_<timestamp> database";
 
-const NOW = new Date("2026-08-16T06:00:00.000Z");
+const NOW = new Date();
+
+function testDate(daysFromNow: number, hour = 6) {
+  const date = new Date(NOW);
+  date.setUTCDate(date.getUTCDate() + daysFromNow);
+  date.setUTCHours(hour, 0, 0, 0);
+  return date;
+}
+
+function testDay(daysFromNow: number) {
+  return testDate(daysFromNow).toISOString().slice(0, 10);
+}
 const ALL_WEEKDAYS = Object.values(StudentAvailabilityWeekday);
 const TERMINAL_STATUSES_REQUIRING_REASON = new Set<AppointmentStatus>([
   AppointmentStatus.REJECTED,
@@ -85,6 +97,8 @@ async function createFixture() {
       email: `student-${token}@example.test`,
       emailVerified: true,
       role: UserRole.STUDENT,
+      signupPolicyVersion: policyConfirmations.studentDeclaration.version,
+      signupPolicyConfirmedAt: NOW,
     },
   });
   const student = await prisma.studentProfile.create({
@@ -123,12 +137,6 @@ async function createFixture() {
       durationMinutes: 45,
     },
   });
-  const supervisor = await prisma.studentSupervisor.create({
-    data: {
-      studentProfileId: student.id,
-      fullName: "Dr. Supervizor Test",
-    },
-  });
   return {
     studentUser,
     student,
@@ -136,7 +144,6 @@ async function createFixture() {
     location,
     catalogTreatment,
     studentTreatment,
-    supervisor,
   };
 }
 
@@ -187,13 +194,12 @@ async function createSlot(
       slotId: slot.id,
       studentProfileId: fixture.student.id,
       studentTreatmentId: fixture.studentTreatment.id,
-      supervisorId: fixture.supervisor.id,
     },
   });
   return { slot, offering };
 }
 
-async function createSeries(fixture: Fixture, startsOn = "2026-08-17") {
+async function createSeries(fixture: Fixture, startsOn = testDay(1)) {
   const series = await prisma.studentAvailabilitySeries.create({
     data: {
       studentProfileId: fixture.student.id,
@@ -211,7 +217,6 @@ async function createSeries(fixture: Fixture, startsOn = "2026-08-17") {
       seriesId: series.id,
       studentProfileId: fixture.student.id,
       studentTreatmentId: fixture.studentTreatment.id,
-      supervisorId: fixture.supervisor.id,
     },
   });
   return series;
@@ -256,13 +261,13 @@ async function createHistoricalAppointment(
       treatmentNameSnapshot: fixture.catalogTreatment.name,
       locationNameSnapshot: fixture.location.name,
       locationAddressSnapshot: fixture.location.address,
-      supervisorNameSnapshot: fixture.supervisor.fullName,
+      studentUniversitySnapshot: fixture.student.university,
       status,
       statusReason: TERMINAL_STATUSES_REQUIRING_REASON.has(status)
         ? "Motiv terminal pentru verificarea integrității istoricului."
         : null,
       pendingExpiresAt: status === AppointmentStatus.PENDING
-        ? new Date("2026-08-17T06:00:00.000Z")
+        ? testDate(1)
         : null,
     },
   });
@@ -273,7 +278,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     await resetDatabase();
     const fixture = await createFixture();
     const patient = await createPatient("idempotency-constraint");
-    const source = await createSlot(fixture, new Date("2026-09-01T06:00:00.000Z"));
+    const source = await createSlot(fixture, testDate(16));
     const appointment = await createHistoricalAppointment(
       fixture,
       patient,
@@ -320,7 +325,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     const fixture = await createFixture();
     const series = await createSeries(fixture);
     await runSerializableTransaction(prisma, (transaction) =>
-      materializeSeriesThrough(transaction, series.id, "2026-08-31", { now: NOW }),
+      materializeSeriesThrough(transaction, series.id, testDay(15), { now: NOW }),
     );
     const selected = await prisma.studentAvailabilitySlot.findFirstOrThrow({
       where: { seriesId: series.id, startsAt: { gt: new Date() } },
@@ -328,7 +333,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     });
     const barrier = controlledBarrier();
     const materializing = runSerializableTransaction(prisma, (transaction) =>
-      materializeSeriesThrough(transaction, series.id, "2026-09-15", {
+      materializeSeriesThrough(transaction, series.id, testDay(30), {
         now: NOW,
         afterLock: barrier.pause,
       }),
@@ -366,7 +371,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     assert.equal(storedSeries.status, StudentAvailabilitySeriesStatus.CANCELLED);
     assert.equal(activeFutureSlots, 0);
 
-    const ghost = await createSlot(fixture, new Date("2026-09-20T06:00:00.000Z"), 45, series.id);
+    const ghost = await createSlot(fixture, testDate(35), 45, series.id);
     const patient = await createPatient("ghost");
     await assert.rejects(
       createAppointmentRequest(
@@ -384,7 +389,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     const fixture = await createFixture();
     const firstPatient = await createPatient("race-a");
     const secondPatient = await createPatient("race-b");
-    const contested = await createSlot(fixture, new Date("2026-09-01T06:00:00.000Z"));
+    const contested = await createSlot(fixture, testDate(16));
     const rootBarrier = controlledBarrier();
     const first = createAppointmentRequest(
       { id: firstPatient.user.id, name: firstPatient.user.name },
@@ -412,22 +417,22 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     await resetDatabase();
     const pendingFixture = await createFixture();
     const patient = await createPatient("pending");
-    const existingOne = await createSlot(pendingFixture, new Date("2026-09-02T06:00:00.000Z"));
-    const existingTwo = await createSlot(pendingFixture, new Date("2026-09-03T06:00:00.000Z"));
+    const existingOne = await createSlot(pendingFixture, testDate(17));
+    const existingTwo = await createSlot(pendingFixture, testDate(18));
     await createHistoricalAppointment(pendingFixture, patient, existingOne, AppointmentStatus.PENDING).then((appointment) =>
       prisma.appointment.update({
         where: { id: appointment.id },
-        data: { pendingExpiresAt: new Date("2026-08-17T06:00:00.000Z") },
+        data: { pendingExpiresAt: testDate(1) },
       }),
     );
     await createHistoricalAppointment(pendingFixture, patient, existingTwo, AppointmentStatus.PENDING).then((appointment) =>
       prisma.appointment.update({
         where: { id: appointment.id },
-        data: { pendingExpiresAt: new Date("2026-08-17T06:00:00.000Z") },
+        data: { pendingExpiresAt: testDate(1) },
       }),
     );
-    const candidateOne = await createSlot(pendingFixture, new Date("2026-09-04T06:00:00.000Z"));
-    const candidateTwo = await createSlot(pendingFixture, new Date("2026-09-05T06:00:00.000Z"));
+    const candidateOne = await createSlot(pendingFixture, testDate(19));
+    const candidateTwo = await createSlot(pendingFixture, testDate(20));
     const patientBarrier = controlledBarrier();
     const third = createAppointmentRequest(
       { id: patient.user.id, name: patient.user.name },
@@ -458,7 +463,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     );
 
     const idempotentPatient = await createPatient("idempotent");
-    const idempotentSlot = await createSlot(pendingFixture, new Date("2026-09-06T06:00:00.000Z"));
+    const idempotentSlot = await createSlot(pendingFixture, testDate(21));
     const idempotencyKey = `phase2a_${randomUUID().replaceAll("-", "")}`;
     const input = bookingInput(idempotentSlot.slot, idempotentSlot.offering.id, idempotencyKey);
     const initial = await createAppointmentRequest(
@@ -478,7 +483,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
       await prisma.appointment.count({ where: { patientProfileId: idempotentPatient.profile.id } }),
       1,
     );
-    const differentSlot = await createSlot(pendingFixture, new Date("2026-09-07T06:00:00.000Z"));
+    const differentSlot = await createSlot(pendingFixture, testDate(22));
     await assert.rejects(
       createAppointmentRequest(
         { id: idempotentPatient.user.id, name: idempotentPatient.user.name },
@@ -491,7 +496,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     const otherPatient = await createPatient("other-idempotency-owner");
     const otherPatientSlot = await createSlot(
       pendingFixture,
-      new Date("2026-09-08T06:00:00.000Z"),
+      testDate(23),
     );
     const otherPatientAppointment = await createAppointmentRequest(
       { id: otherPatient.user.id, name: otherPatient.user.name },
@@ -504,7 +509,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     const concurrentPatient = await createPatient("concurrent-idempotency");
     const concurrentSlot = await createSlot(
       pendingFixture,
-      new Date("2026-09-09T06:00:00.000Z"),
+      testDate(24),
     );
     const concurrentKey = `phase2a_${randomUUID().replaceAll("-", "")}`;
     const concurrentInput = bookingInput(
@@ -546,7 +551,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     await resetDatabase();
     const fixture = await createFixture();
     const patient = await createPatient("expired");
-    const source = await createSlot(fixture, new Date("2026-09-08T06:00:00.000Z"));
+    const source = await createSlot(fixture, testDate(23));
     const pending = await createHistoricalAppointment(
       fixture,
       patient,
@@ -555,14 +560,14 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     );
     await prisma.appointment.update({
       where: { id: pending.id },
-      data: { pendingExpiresAt: new Date("2026-08-16T05:00:00.000Z") },
+      data: { pendingExpiresAt: new Date(NOW.getTime() - 60 * 60_000) },
     });
     const availability = await listPublicStudentAvailability(
       fixture.student.publicSlug!,
       fixture.catalogTreatment.slug,
       fixture.city.slug,
-      new Date("2026-09-08T00:00:00.000Z"),
-      new Date("2026-09-09T00:00:00.000Z"),
+      testDate(23, 0),
+      testDate(24, 0),
     );
     assert.ok(availability && availability.length > 0);
     const stored = await prisma.appointment.findUniqueOrThrow({ where: { id: pending.id } });
@@ -574,19 +579,18 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     const fixture = await createFixture();
     const series = await createSeries(fixture);
     await runSerializableTransaction(prisma, (transaction) =>
-      materializeSeriesThrough(transaction, series.id, "2026-08-18", { now: NOW }),
+      materializeSeriesThrough(transaction, series.id, testDay(2), { now: NOW }),
     );
     const barrier = controlledBarrier();
     const materializing = runSerializableTransaction(prisma, (transaction) =>
-      materializeSeriesThrough(transaction, series.id, "2026-09-15", {
+      materializeSeriesThrough(transaction, series.id, testDay(30), {
         now: NOW,
         afterLock: barrier.pause,
       }),
     );
     await barrier.waitUntilReached();
     let archiveSettled = false;
-    const archiving = archiveStudentSchedulingResource(
-      "location",
+    const archiving = archiveStudentLocation(
       fixture.student.id,
       fixture.location.id,
     ).finally(() => { archiveSettled = true; });
@@ -617,8 +621,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
       45,
     );
     await assert.rejects(
-      archiveStudentSchedulingResource(
-        "location",
+      archiveStudentLocation(
         ongoingFixture.student.id,
         ongoingFixture.location.id,
       ),
@@ -648,7 +651,7 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
       AppointmentStatus.NO_SHOW,
     ];
     for (const [index, status] of terminalStatuses.entries()) {
-      const startsAt = new Date(Date.UTC(2026, 8, 10 + index, 6, 0, 0, 0));
+      const startsAt = testDate(25 + index);
       const source = await createSlot(fixture, startsAt);
       const appointment = await createHistoricalAppointment(fixture, patient, source, status);
       const movedStart = new Date(startsAt.getTime() + 60 * 60_000);
@@ -658,7 +661,6 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
         studentLocationId: fixture.location.id,
         offerings: [{
           studentTreatmentId: fixture.studentTreatment.id,
-          supervisorId: fixture.supervisor.id,
         }],
         startsAt: movedStart.toISOString(),
         endsAt: movedEnd.toISOString(),

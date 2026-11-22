@@ -15,6 +15,7 @@ type Profile = {
   university: string;
   studyYear: number;
   bio: string | null;
+  showCompletedAppointmentsCount: boolean;
   profileImage: StudentProfileImageReference | null;
   // The server query supplies only the ten most recent confirmed appointments.
   appointments: readonly { status: AppointmentStatus }[];
@@ -24,6 +25,7 @@ export function createPublicStudentProfile(
   profile: Profile,
   treatments: PublicStudentTreatmentDto[],
   reviewData: ProfileReviewData,
+  completedAppointmentsCount: number | null = null,
 ): PublicStudentProfileDto | null {
   if (!profile.publicSlug) return null;
 
@@ -37,6 +39,7 @@ export function createPublicStudentProfile(
     bio: profile.bio,
     treatments,
     reviewData,
+    completedAppointmentsCount: profile.showCompletedAppointmentsCount ? completedAppointmentsCount : null,
     cancellationsLast10: profile.appointments.filter(
       (appointment) => appointment.status === AppointmentStatus.CANCELLED_BY_STUDENT,
     ).length,

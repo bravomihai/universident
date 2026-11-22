@@ -1,5 +1,4 @@
 import { generatePublicBookingSlots, type PublicBookingBlock } from "@/lib/availability/public-booking-slots";
-import { publicStudentLocationKey } from "@/lib/public-students/public-student-location-key";
 import type { PublicStudentTreatmentDto } from "@/lib/public-students/public-student-service";
 
 type ProfileAvailabilityBlock = Omit<PublicBookingBlock, "offerings"> & {
@@ -16,7 +15,6 @@ type ProfileAvailabilityBlock = Omit<PublicBookingBlock, "offerings"> & {
       description: string | null;
       treatment: { name: string; slug: string; description: string; isActive: boolean };
     };
-    supervisor: { fullName: string; academicTitle: string | null };
   }[];
 };
 
@@ -51,9 +49,8 @@ export function getBookablePublicTreatments(
         name: block.studentLocation.name,
         address: block.studentLocation.address,
         city: { name: block.studentLocation.city.name, slug: block.studentLocation.city.slug },
-        supervisor: { fullName: offering.supervisor.fullName, academicTitle: offering.supervisor.academicTitle },
       };
-      if (!treatment.locations.some((item) => publicStudentLocationKey(item) === publicStudentLocationKey(location))) {
+      if (!treatment.locations.some((item) => item.routeKey === location.routeKey)) {
         treatment.locations.push(location);
       }
     }

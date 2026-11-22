@@ -44,7 +44,7 @@ export function TimeField({
           <SelectTrigger
             id={id}
             aria-label={`${label}: ora`}
-            className="h-(--control-height) w-full min-w-0 bg-input/30 px-2 tabular-nums"
+            className="w-full px-2 tabular-nums"
           >
             <SelectValue />
           </SelectTrigger>
@@ -65,7 +65,7 @@ export function TimeField({
         >
           <SelectTrigger
             aria-label={`${label}: minutele`}
-            className="h-(--control-height) w-full min-w-0 bg-input/30 px-2 tabular-nums"
+            className="w-full px-2 tabular-nums"
           >
             <SelectValue />
           </SelectTrigger>

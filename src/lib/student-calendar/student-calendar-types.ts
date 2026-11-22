@@ -38,7 +38,6 @@ export type StudentCalendarEvent = {
   treatmentLocationId: string;
   treatmentName: string;
   locationName: string;
-  supervisorName: string;
   recurrence: StudentCalendarRecurrence;
   appointmentStatus: StudentCalendarAppointmentStatus;
   isException: boolean;
@@ -55,15 +54,9 @@ export type StudentCalendarLocationOption = {
   name: string;
 };
 
-export type StudentCalendarSupervisorOption = {
-  id: string;
-  name: string;
-};
-
 export type StudentCalendarPrototypeCatalog = {
   treatments: StudentCalendarTreatmentOption[];
   locations: StudentCalendarLocationOption[];
-  supervisors: StudentCalendarSupervisorOption[];
 };
 
 export type StudentCalendarMoveScope =

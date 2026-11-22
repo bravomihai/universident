@@ -1,12 +1,12 @@
 # CI/CD and VPS deployment
 
-The workflow updates the existing VPS checkout, builds with `compose.production.yaml`, and replaces the application and chat email worker. Database storage, server configuration, and the reverse proxy remain on the VPS. Automatic deployment requires `VPS_DEPLOY_ENABLED=true`.
+The workflow updates the existing VPS checkout, builds with `compose.yaml` and the production profiles, and replaces the application and chat email worker. Database storage, server configuration, and the reverse proxy remain on the VPS. Automatic deployment requires `VPS_DEPLOY_ENABLED=true`.
 
 ## Architecture and scope
 
 The application uses Next.js standalone output, npm lockfiles, Node 24, and Prisma/PostgreSQL. The existing Dockerfile provides `runner` and `migrator` targets. Production Compose defines `db`, `app`, `chat-email-worker`, and the tools-profile `migrate` service, with a persistent PostgreSQL volume and loopback application port 3000.
 
-CI tests fresh migrations in disposable databases. Production only checks migration status; operators apply reviewed migrations separately. The workflow updates an established installation and does not bootstrap infrastructure. See [dependency security](dependency-security.md) for audit policy and known tooling limitations.
+CI tests fresh migrations in disposable databases. The production workflow checks migration status on an established installation. Operators apply reviewed migrations separately. Use the manual production start to bootstrap an empty Prisma schema. See [dependency security](dependency-security.md) for audit policy and known tooling limitations.
 
 ## Triggers and checks
 
@@ -84,13 +84,15 @@ The VPS also needs its **own existing read access to this GitHub repository** fo
 
 ## VPS prerequisites and retained configuration
 
-Use the existing Linux checkout on branch `main`, with a clean working tree and an `origin` pointing to this repository. Local tracked edits and untracked files must be resolved manually; the script never resets, cleans, stashes, or force-updates the checkout. Ignored `.env` remains in place. Confirm the server uses **this repository's `compose.production.yaml` without additional overrides** before activation. Installations with overrides, a different environment file, project name, or directory require a reviewed script adaptation before activation.
+Use the existing Linux checkout on branch `main`, with a clean working tree and an `origin` pointing to this repository. Local tracked edits and untracked files must be resolved manually; the script never resets, cleans, stashes, or force-updates the checkout. Ignored `.env` remains in place. Confirm the server uses this repository's production Compose configuration without additional overrides. Installations with overrides, a different environment file, project name, or directory require a reviewed script adaptation before activation.
 
 The noninteractive SSH session needs Bash, Git, GNU timeout, flock (util-linux), Docker Engine, and Docker Compose v2.24 or newer on PATH. Allow sufficient disk and memory for the existing Node 24 Docker builds and HTTPS outbound access for npm/fonts/image pulls. The existing database, app, and email worker must all be running and healthy. This pipeline updates an established installation; it refuses to bootstrap a missing database or fix an unhealthy installation automatically.
 
 Keep production application configuration **only in the VPS's existing, untracked `.env`**. Compose requires `POSTGRES_PASSWORD`, `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, `OPENAI_API_KEY`, and `CHAT_WORKER_SECRET`; retain existing database names/users and optional model settings. Compose constructs the internal `DATABASE_URL`. `BETTER_AUTH_URL` must be the final HTTPS origin, and `DEPLOYMENT_ENV=production` explicitly enables public indexing. Do not copy production values to GitHub CI. Protect the file with restrictive permissions readable by the deployment account.
 
 The existing Compose project identity, PostgreSQL volume, database credentials, loopback binding, and external HTTPS proxy must remain the same. Verify automated backups and a tested restore process separately.
+
+The unified `compose.yaml` uses `prod` for the running services and `tools` for the migrator. The streamed deployment script also accepts `compose-production.yaml` or `compose.production.yaml` during initial VPS preflight. After fast-forwarding it selects `compose.yaml` with both production profiles. Production continues to use the `universident` project, the `db`, `app` and `chat-email-worker` services, and the `universident_postgres_data` volume.
 
 ## What a deployment does
 
@@ -122,6 +124,32 @@ This retains the current single-VPS Compose service replacement and its possible
 
 To test against a separate VPS/staging installation first, use a separately cloned repository with these settings targeting that installation and its existing Compose project. Do not run a second project against the production volume.
 
+## Temporary public suspension
+
+For an application-independent HTTP 503 page, reversible nginx flag, app/worker shutdown and reopening, follow the [maintenance procedure](maintenance.md). Installing the repository files does not activate maintenance; the nginx include must be installed and reviewed on the VPS.
+
+## Manual production start
+
+From the production checkout with Make installed and the server `.env` configured, run `make prod`. It takes the same lock as the VPS release script, validates Compose, builds the images, starts PostgreSQL while retaining its existing container, and applies migrations when the Prisma schema is empty. It checks migration status before starting the app and worker. For an existing schema with pending or failed migrations, follow the procedure below before rerunning `make prod`.
+
+## One-time student declaration reminder
+
+Run the following from the production checkout while the database is running to see the recipient count and Romanian email preview. The command uses the existing migrator image to reach the database.
+
+```bash
+mkdir -p .local-dev
+docker compose --profile prod --profile tools run --rm --no-deps \
+  --user "$(id -u):$(id -g)" \
+  --volume "$PWD/scripts:/app/scripts:ro" \
+  --volume "$PWD/src/lib:/app/src/lib:ro" \
+  --volume "$PWD/tsconfig.json:/app/tsconfig.json:ro" \
+  --volume "$PWD/.env:/app/.env:ro" \
+  --volume "$PWD/.local-dev:/app/.local-dev" \
+  migrate node --conditions=react-server --import tsx scripts/send-student-declaration-reminders.ts
+```
+
+Append `--send` only when ready to send. The Resend API key in the VPS `.env` must permit sending from `no-reply@mail.universident.ro`. Keep the campaign directory under `.local-dev` on the same host so a rerun can skip prior attempts. If a send stops with an uncertain result, check the request in Resend Logs before manually clearing the matching attempt file for a retry.
+
 ## Manual migrations, failure recovery, and rollback
 
 If status blocks a deployment, inspect pending SQL, verify the database identity and backup, and review compatibility with the currently running app. Stop automatic releases while preparing changes. Apply approved migrations manually in the same checkout under the shared lock, **before** the next service update. For example, after reviewing the exact checked-out commit:
@@ -131,12 +159,12 @@ cd /absolute/existing/checkout
 lock_path="$(git rev-parse --absolute-git-dir)/universident-deploy.lock"
 (
   flock --exclusive --wait 60 9 || exit 1
-  docker compose -f compose.production.yaml build migrate &&
-    docker compose -f compose.production.yaml run --rm --no-deps migrate &&
-    docker compose -f compose.production.yaml run --rm --no-deps migrate npx --no-install prisma migrate status
+  docker compose --profile prod --profile tools build migrate &&
+    docker compose --profile prod --profile tools run --rm --no-deps migrate &&
+    docker compose --profile prod --profile tools run --rm --no-deps migrate npx --no-install prisma migrate status
 ) 9> "$lock_path"
 ```
 
 These are operator commands, never executed by Actions. Use the same environment/project options as your installation. Do not apply a migration that breaks the old running application without a reviewed maintenance plan. Rerun the successful main workflow with `deploy` after manual migration; status must now be clean. Never use `db push`, reset, or restore over production as an automatic recovery step.
 
-For a failed build/status check, inspect the named stage and correct the underlying issue. For failed health, use `docker compose -f compose.production.yaml ps` and inspect restricted server-side logs/status (which may contain private information); the workflow intentionally does not upload application/database logs. Fix infrastructure/configuration or deploy a reviewed correction. For rollback, assess schema compatibility, revert the bad application change through a reviewed main commit, and run CI/CD. Never automatically roll back the database. Preserve backups and previous images until the release is accepted; disk cleanup remains a separate deliberate maintenance task.
+For a failed build/status check, inspect the named stage and correct the underlying issue. For failed health, use `docker compose --profile prod ps` and inspect restricted server-side logs/status (which may contain private information); the workflow intentionally does not upload application/database logs. Fix infrastructure/configuration or deploy a reviewed correction. For rollback, assess schema compatibility, revert the bad application change through a reviewed main commit, and run CI/CD. Never automatically roll back the database. Preserve backups and previous images until the release is accepted; disk cleanup remains a separate deliberate maintenance task.

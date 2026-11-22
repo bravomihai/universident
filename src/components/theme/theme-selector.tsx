@@ -4,6 +4,7 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { headerIconControlClassName } from "@/components/layout/header-action-styles";
+import { useHeaderMenuFocus } from "@/components/layout/use-header-menu-focus";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -40,10 +41,13 @@ export function ThemeMenuOptions() {
 }
 
 export function ThemeSelector() {
+    const { triggerRef, ...focusHandlers } = useHeaderMenuFocus();
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button
+                    ref={triggerRef}
                     type="button"
                     variant="ghost"
                     size="icon"
@@ -57,7 +61,7 @@ export function ThemeSelector() {
                 </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="hidden min-[420px]:block">
+            <DropdownMenuContent align="end" className="hidden min-[420px]:block" {...focusHandlers}>
                 <ThemeMenuOptions />
             </DropdownMenuContent>
         </DropdownMenu>

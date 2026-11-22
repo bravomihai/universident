@@ -4,13 +4,12 @@ import { notFound } from "next/navigation";
 
 import { PublicStudentAvatar } from "@/components/public-students/public-student-avatar";
 import { PublicStudentLocationCard } from "@/components/public-students/public-student-location-card";
+import { CancellationReputationLabel } from "@/components/reviews/cancellation-reputation-label";
 import { ProfileReviewList } from "@/components/reviews/profile-review-list";
 import { RatingStars } from "@/components/reviews/rating-summary";
-import { SchedulingReputationCard } from "@/components/reviews/scheduling-reputation-card";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BackLink } from "@/components/ui/back-link";
 import { formatStudentCancellationReputation } from "@/lib/appointments/student-reputation-label";
-import { publicStudentLocationKey } from "@/lib/public-students/public-student-location-key";
 import { getPublicStudentProfile } from "@/lib/public-students/public-student-service";
 import { getSeoStudentProfile } from "@/lib/seo/public-data";
 import { studentProfileMetadata } from "@/lib/seo/metadata";
@@ -97,38 +96,37 @@ export default async function PublicStudentProfilePage({
                 {studentStudyDescription(profile.university, profile.studyYear)}
               </span>
             </p>
-            <RatingStars {...profile.reviewData.summary} />
+            <RatingStars {...profile.reviewData.summary} completedAppointmentsCount={profile.completedAppointmentsCount} />
+            <div>
+              <CancellationReputationLabel
+                count={profile.cancellationsLast10}
+                value={formatStudentCancellationReputation(profile.cancellationsLast10)}
+              />
+            </div>
           </div>
         </header>
 
         {profile.bio ? (
-          <section aria-labelledby="public-profile-bio" className="max-w-3xl">
-            <h2 id="public-profile-bio" className="text-xl font-semibold">
+          <section aria-labelledby="public-profile-bio" className="max-w-3xl space-y-3">
+            <h2 id="public-profile-bio" className="card-adjacent text-2xl font-semibold tracking-tight">
               Despre student
             </h2>
-            <p className="mt-3 whitespace-pre-line text-muted-foreground">
-              {profile.bio}
-            </p>
+            <Card size="sm">
+              <CardContent>
+                <p className="whitespace-pre-line break-words text-base text-muted-foreground">
+                  {profile.bio}
+                </p>
+              </CardContent>
+            </Card>
           </section>
         ) : null}
 
-        <SchedulingReputationCard
-          count={profile.cancellationsLast10}
-          description="Reper calculat din ultimele 10 programări confirmate."
-          value={formatStudentCancellationReputation(profile.cancellationsLast10)}
-        />
-
-        <ProfileReviewList data={profile.reviewData} title="Recenziile studentului" />
+        <ProfileReviewList data={profile.reviewData} showDescription={false} />
 
         <section id="tratamente" aria-labelledby="public-profile-treatments" className="scroll-mt-24 space-y-5">
-          <div>
-            <h2 id="public-profile-treatments" className="text-2xl font-semibold tracking-tight">
-              Tratamente și locații
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Alege o locație pentru a vedea orele disponibile pentru tratament.
-            </p>
-          </div>
+          <h2 id="public-profile-treatments" className="card-adjacent text-2xl font-semibold tracking-tight">
+            Tratamente și locații
+          </h2>
 
           <div className="grid gap-5 lg:grid-cols-2">
             {orderedTreatments.map((treatment) => {
@@ -162,12 +160,13 @@ export default async function PublicStudentProfilePage({
 
                     <ul className="space-y-3">
                       {treatment.locations.map((location) => (
-                        <li key={publicStudentLocationKey(location)}>
+                        <li key={location.routeKey}>
                           <PublicStudentLocationCard
                             studentSlug={profile.publicSlug}
                             treatmentSlug={treatment.slug}
                             treatmentName={treatment.name}
                             location={location}
+                            university={profile.university}
                           />
                         </li>
                       ))}
