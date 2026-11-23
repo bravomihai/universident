@@ -350,7 +350,7 @@ export default async function AccountPage() {
               <DashboardLinkCard
                 href="/cont/securitate"
                 icon={ShieldCheck}
-                title="Securitate si gestionarea contului"
+                title="Securitate și gestionarea contului"
                 description="Gestionează datele de autentificare și securitatea contului."
                 action="Gestionează securitatea"
               >
@@ -526,7 +526,7 @@ export default async function AccountPage() {
             <DashboardLinkCard
               href="/cont/securitate"
               icon={ShieldCheck}
-              title="Securitate si gestionarea contului"
+              title="Securitate și gestionarea contului"
               description="Gestionează datele de autentificare și securitatea contului."
               action="Gestionează securitatea"
             >
