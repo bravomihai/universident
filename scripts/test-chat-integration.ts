@@ -66,6 +66,7 @@ try {
     body: JSON.stringify({ email, password }),
   }));
   assert.equal((await signIn(patient.email, `${testPassword}-incorrect`)).status, 401);
+  let patientCookie: string | undefined;
   for (const user of [patient, student]) {
     const login = await signIn(user.email, testPassword);
     assert.equal(login.status, 200, "existing credential accounts must still sign in");
@@ -135,11 +136,14 @@ try {
     assert.equal(laterLogin.status, 200);
     const freshCookie = laterLogin.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
     assert.equal((await chatUnread(new Request(chatRequest(), { headers: { cookie: freshCookie } }))).status, 200);
+    if (user.id === patient.id) patientCookie = freshCookie;
   }
+  assert.ok(patientCookie);
   console.log("PASS: credential sign-in, participant roles, origin checks and session invalidation.");
 
   const pp = await db.patientProfile.create({ data: { userId: patient.id, profileSlug: "pacient-chat-test", dateOfBirth: new Date("1990-01-01") } });
-  const sp = await db.studentProfile.create({ data: { userId: student.id, publicSlug: "student-chat-test", university: "UMFCD", studyYear: 4 } });
+  const studentSlug = "student-chat-test";
+  const sp = await db.studentProfile.create({ data: { userId: student.id, publicSlug: studentSlug, university: "UMFCD", studyYear: 4, isPublished: true, publishedAt: new Date() } });
   const city = await db.city.create({ data: { name: "Oraș test", slug: "oras-test" } });
   const treatment = await db.treatment.create({ data: { name: "Consultație de test", slug: "consultatie-test", description: "Test local" } });
   const location = await db.studentLocation.create({ data: { studentProfileId: sp.id, cityId: city.id, routeKey: "abc123", name: "Cabinet Test", address: "Adresă fictivă" } });
@@ -154,7 +158,31 @@ try {
     treatmentNameSnapshot: treatment.name, locationNameSnapshot: location.name, locationAddressSnapshot: location.address, studentUniversitySnapshot: sp.university,
   };
   const appointment = await db.appointment.create({ data: { ...appointmentData, routeSlug: "consultatie-chat-test", scheduledStartsAt: start, scheduledEndsAt: new Date(start.getTime() + 1_800_000), status: "CONFIRMED", confirmedAt: new Date() } });
-  const pending = await db.appointment.create({ data: { ...appointmentData, routeSlug: "cerere-chat-test", scheduledStartsAt: new Date(start.getTime() + 3_600_000), scheduledEndsAt: new Date(start.getTime() + 5_400_000), pendingExpiresAt: new Date(Date.now() + 3_600_000), status: "PENDING" } });
+  const { POST: bookAppointment } = await import("../src/app/api/studenti/[studentSlug]/programari/route");
+  const privateNote = "Notă privată pentru programarea de test.";
+  const bookingBody = JSON.stringify({
+    slotId: slot.id,
+    offeringId: offering.id,
+    startsAt: new Date(start.getTime() + 3_600_000).toISOString(),
+    idempotencyKey: randomUUID(),
+    patientNote: privateNote,
+  });
+  const book = () => bookAppointment(new Request(`${authOrigin}/api/studenti/${studentSlug}/programari`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: authOrigin, cookie: patientCookie },
+    body: bookingBody,
+  }), { params: Promise.resolve({ studentSlug }) });
+  const booking = await book();
+  assert.equal(booking.status, 201);
+  const { appointment: { routeSlug } } = await booking.json();
+  const retriedBooking = await book();
+  assert.equal(retriedBooking.status, 201);
+  assert.deepEqual(await retriedBooking.json(), { appointment: { routeSlug } });
+  const pending = await db.appointment.findUniqueOrThrow({ where: { routeSlug } });
+  assert.equal(pending.status, "PENDING");
+  const requestJobs = await db.appointmentEmail.findMany({ where: { appointmentId: pending.id, kind: "REQUEST_CREATED" } });
+  assert.equal(requestJobs.length, 1, "repeating the booking request must queue exactly one email");
+  assert.equal(requestJobs[0].status, "PENDING");
   const slug = appointment.chatSlug;
   assert.match(slug, /^[0-9a-f]{12}$/);
   assert.match(pending.chatSlug, /^[0-9a-f]{12}$/);
@@ -278,6 +306,56 @@ try {
   await db.chatSendAttempt.deleteMany();
   const { actOnAppointment } = await import("../src/lib/appointments/appointment-service");
   const { processAppointmentEmails } = await import("../src/lib/appointments/appointment-email-worker");
+  const { POST: runEmailWorker } = await import("../src/app/api/internal/chat-emails/route");
+  const staleJob = await db.appointmentEmail.create({ data: {
+    appointmentId: appointment.id, kind: "REQUEST_CREATED", dueAt: new Date(),
+  } });
+  const requestEmails: Array<{ idempotencyKey: string | null; body: string }> = [];
+  const originalFetch = globalThis.fetch;
+  const jobId = requestJobs[0].id;
+  try {
+    globalThis.fetch = async (resource, options) => {
+      assert.equal(String(resource), "https://api.resend.com/emails");
+      assert.equal(options?.method, "POST");
+      requestEmails.push({
+        idempotencyKey: new Headers(options?.headers).get("Idempotency-Key"),
+        body: String(options?.body),
+      });
+      if (requestEmails.length === 1) return new Response(null, { status: 503 });
+      return Response.json({ id: "fake-resend-request-email" });
+    };
+    const workerResponse = await runEmailWorker(new Request(`${authOrigin}/api/internal/chat-emails`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${process.env.CHAT_WORKER_SECRET}` },
+    }));
+    assert.equal(workerResponse.status, 200);
+    assert.equal((await workerResponse.json()).failed, 1);
+    assert.equal(requestEmails.length, 1, "only the pending request should reach Resend");
+    assert.equal((await db.appointmentEmail.findUniqueOrThrow({ where: { id: staleJob.id } })).status, "SKIPPED");
+
+    const retry = await db.appointmentEmail.findUniqueOrThrow({ where: { id: jobId } });
+    assert.equal(retry.attempts, 1);
+    assert.equal((await processAppointmentEmails(undefined, new Date(retry.dueAt.getTime() - 1))).sent, 0);
+    assert.equal((await processAppointmentEmails(undefined, retry.dueAt)).sent, 1);
+    assert.equal((await processAppointmentEmails(undefined, retry.dueAt)).sent, 0);
+    assert.equal(requestEmails.length, 2, "the successful retry must not be sent again");
+    assert.deepEqual(requestEmails[1], requestEmails[0], "Resend retries must reuse the payload and idempotency key");
+    assert.equal(requestEmails[0].idempotencyKey, `universident-appointment/${jobId}`);
+    const email = JSON.parse(requestEmails[0].body);
+    assert.equal(email.to, student.email);
+    assert.equal(email.from, process.env.EMAIL_FROM);
+    assert.match(email.subject, /cerere de programare/);
+    assert.ok(email.text.includes(`${authOrigin}/cont/programari`));
+    assert.ok(email.html.includes(`href="${authOrigin}/cont/programari"`));
+    for (const value of [patient.name, patient.email, privateNote, treatment.name]) {
+      assert.equal(requestEmails[0].body.includes(value), false, "the email must omit private appointment details");
+    }
+    const sent = await db.appointmentEmail.findUniqueOrThrow({ where: { id: jobId } });
+    assert.equal(sent.status, "SENT");
+    assert.equal(sent.resendEmailId, "fake-resend-request-email");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
   for (const target of [appointment, pending]) {
     await actOnAppointment(target.routeSlug, patient, {
       action: "CANCEL",
@@ -301,7 +379,7 @@ try {
       url: authOrigin + "/cont/programari",
     });
   }
-  console.log("PASS: isolated database tests — access, moderation, idempotency, read receipts, privacy, chat email delivery, appointment cancellation emails, closure and pagination.");
+  console.log("PASS: isolated database tests — access, moderation, idempotency, read receipts, privacy, chat email delivery, appointment request and cancellation emails, closure and pagination.");
   if (process.env.CHAT_KEEP_TEST_DB === "1") {
     const config = Object.fromEntries(["DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET", "CHAT_WORKER_SECRET", "RESEND_API_KEY", "EMAIL_FROM", "OPENAI_API_KEY"].map((key) => [key, process.env[key] ?? ""]));
     config.CHAT_TEST_PASSWORD = testPassword;

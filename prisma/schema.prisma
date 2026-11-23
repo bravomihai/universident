@@ -365,6 +365,7 @@ enum AppointmentEmailKind {
   STUDENT_REVIEW
   PATIENT_REVIEW
   CANCELLED_BY_PATIENT
+  REQUEST_CREATED
 }
 
 enum AppointmentEmailStatus {

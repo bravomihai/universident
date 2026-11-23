@@ -480,6 +480,13 @@ test("Phase 2A PostgreSQL scheduling integration", { skip: integrationSkip }, as
     );
     assert.equal(repeated.id, initial.id);
     assert.equal(
+      await prisma.appointmentEmail.count({
+        where: { appointmentId: initial.id, kind: "REQUEST_CREATED", status: "PENDING" },
+      }),
+      1,
+      "retrying the booking request must preserve exactly one email for the student",
+    );
+    assert.equal(
       await prisma.appointment.count({ where: { patientProfileId: idempotentPatient.profile.id } }),
       1,
     );
