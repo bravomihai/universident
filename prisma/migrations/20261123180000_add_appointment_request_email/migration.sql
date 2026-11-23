@@ -1,0 +1,1 @@
+ALTER TYPE "AppointmentEmailKind" ADD VALUE 'REQUEST_CREATED';

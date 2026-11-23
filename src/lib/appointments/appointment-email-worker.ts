@@ -19,6 +19,10 @@ import {
 import { prisma } from "@/lib/prisma";
 
 const emailCopy = {
+  REQUEST_CREATED: {
+    subject: "Ai primit o cerere de programare pe Universident",
+    message: "Un pacient ți-a trimis o cerere de programare. Poți vedea detaliile și răspunde din cont.",
+  },
   CONFIRMED: {
     subject: "Cererea ta a fost confirmată pe Universident",
     message: "Studentul a acceptat cererea ta. Detaliile programării sunt disponibile în cont.",
@@ -59,6 +63,7 @@ const recipient = { select: { user: { select: { email: true, emailVerified: true
 const appointmentSelect = {
   status: true,
   participantDeleted: true,
+  pendingExpiresAt: true,
   scheduledEndsAt: true,
   patientProfile: recipient,
   studentProfile: recipient,
@@ -71,6 +76,8 @@ function eligibleRecipient(appointment: EmailAppointment | null, kind: Appointme
   if (!appointment || appointment.participantDeleted) return null;
 
   const canSend = {
+    REQUEST_CREATED: appointment.status === "PENDING" &&
+      appointment.pendingExpiresAt !== null && appointment.pendingExpiresAt > now,
     CONFIRMED: appointment.status === "CONFIRMED",
     REJECTED: appointment.status === "REJECTED",
     CANCELLED_BY_PATIENT: appointment.status === "CANCELLED_BY_PATIENT",
@@ -80,7 +87,7 @@ function eligibleRecipient(appointment: EmailAppointment | null, kind: Appointme
   };
 
   if (!canSend[kind]) return null;
-  const forStudent = kind === "STUDENT_REVIEW" || kind === "CANCELLED_BY_PATIENT";
+  const forStudent = kind === "REQUEST_CREATED" || kind === "STUDENT_REVIEW" || kind === "CANCELLED_BY_PATIENT";
   const profile = forStudent ? appointment.studentProfile : appointment.patientProfile;
   return profile.user.emailVerified ? profile.user.email : null;
 }
@@ -142,12 +149,13 @@ export async function processAppointmentEmails(
 
     const owned = { id, leaseToken, status: "SENDING" } as const;
     try {
-      // A review or appointment update may have arrived while claiming the email.
+      // An appointment may have changed or expired while the worker was claiming the email.
       const fresh = await prisma.appointment.findUnique({
         where: { id: candidate.appointmentId },
         select: appointmentSelect,
       });
-      if (eligibleRecipient(fresh, candidate.kind, now) !== to) {
+      const deliveryTime = new Date(Math.max(now.getTime(), Date.now()));
+      if (eligibleRecipient(fresh, candidate.kind, deliveryTime) !== to) {
         await prisma.appointmentEmail.updateMany({
           where: owned, data: { status: "SKIPPED", leaseUntil: null },
         });

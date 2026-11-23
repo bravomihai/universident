@@ -562,6 +562,9 @@ export async function createAppointmentRequest(
             createdAt: now,
           },
         ]);
+        await queueAppointmentEmails(transaction, appointment.id, [
+          { kind: "REQUEST_CREATED", dueAt: now },
+        ]);
         return appointment;
       },
     ));

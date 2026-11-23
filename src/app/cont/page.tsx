@@ -29,6 +29,7 @@ import { missingAccountPolicy } from "@/lib/account/policy-confirmation-service"
 import { requireAccountPageSession } from "@/lib/account/account-page-session";
 import { listAppointmentsForUser } from "@/lib/appointments/appointment-service";
 import { formatUnreadAppointmentNotifications } from "@/lib/appointments/appointment-notification-label";
+import { appointmentNeedsAttention } from "@/lib/appointments/appointment-presentation";
 import { patientProfileImageUrl } from "@/lib/patient/patient-profile-image";
 import { unreadChatCount } from "@/lib/chat/service";
 import { prisma } from "@/lib/prisma";
@@ -54,6 +55,7 @@ type DashboardLinkCardProps = {
   action: string;
   actionOnDesktop?: boolean;
   emphasized?: boolean;
+  needsAttention?: boolean;
   prefetch?: boolean;
   status?: string;
   statusVariant?: "default" | "success";
@@ -68,6 +70,7 @@ function DashboardLinkCard({
   action,
   actionOnDesktop = false,
   emphasized = false,
+  needsAttention = false,
   prefetch,
   status,
   statusVariant = "default",
@@ -80,7 +83,9 @@ function DashboardLinkCard({
       className={clickableCardLinkClassName}
     >
       <Card
-        className={`${clickableCardClassName} ${emphasized ? "bg-primary/[0.04] ring-primary/30" : ""
+        className={`${clickableCardClassName} ${needsAttention
+          ? "ring-orange-400/50 [--card-hover-edge:color-mix(in_oklab,var(--color-orange-400)_75%,transparent)]"
+          : emphasized ? "bg-primary/[0.04] ring-primary/30" : ""
           }`}
       >
         <CardContent
@@ -154,6 +159,10 @@ export default async function AccountPage() {
     session.user.role === UserRole.PATIENT || session.user.role === UserRole.STUDENT
       ? await listAppointmentsForUser(session.user.id, session.user.role)
       : null;
+  const now = new Date();
+  const hasAppointmentsNeedingAttention = appointmentData?.appointments.some((appointment) =>
+    appointmentNeedsAttention(appointment, isStudent ? "STUDENT" : "PATIENT", now),
+  ) ?? false;
 
   const unreadMessages = isStudent || isPatient ? await unreadChatCount(session.user) : 0;
 
@@ -341,7 +350,7 @@ export default async function AccountPage() {
               <DashboardLinkCard
                 href="/cont/securitate"
                 icon={ShieldCheck}
-                title="Securitatea contului"
+                title="Securitate și gestionarea contului"
                 description="Gestionează datele de autentificare și securitatea contului."
                 action="Gestionează securitatea"
               >
@@ -382,9 +391,15 @@ export default async function AccountPage() {
               action="Vezi programările"
               actionOnDesktop
               emphasized={appointmentData.unreadNotificationCount > 0}
+              needsAttention={hasAppointmentsNeedingAttention}
               prefetch={false}
             >
               <div className="space-y-1">
+                {hasAppointmentsNeedingAttention ? (
+                  <p className="font-semibold text-orange-700 dark:text-orange-300">
+                    Există programări care necesită o recenzie.
+                  </p>
+                ) : null}
                 <p
                   className={
                     appointmentData.unreadNotificationCount > 0
@@ -511,7 +526,7 @@ export default async function AccountPage() {
             <DashboardLinkCard
               href="/cont/securitate"
               icon={ShieldCheck}
-              title="Securitatea contului"
+              title="Securitate și gestionarea contului"
               description="Gestionează datele de autentificare și securitatea contului."
               action="Gestionează securitatea"
             >
